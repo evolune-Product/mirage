@@ -17,6 +17,19 @@ async def lifespan(_):
 app = FastAPI(title="Mirage API", version="0.1.0", lifespan=lifespan)
 app.include_router(resources.router, prefix="/v1")
 
+# Auto-register every app/routers/*.py that exposes `router` (and optional `PREFIX`).
+import importlib
+import pkgutil
+
+from . import routers as _routers_pkg
+
+for _m in pkgutil.iter_modules(_routers_pkg.__path__):
+    if _m.name == "resources":
+        continue
+    _mod = importlib.import_module(f"{__package__}.routers.{_m.name}")
+    if hasattr(_mod, "router"):
+        app.include_router(_mod.router, prefix=getattr(_mod, "PREFIX", "/v1"))
+
 
 class SignupIn(BaseModel):
     email: str
