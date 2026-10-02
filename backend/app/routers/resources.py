@@ -1,0 +1,120 @@
+from datetime import datetime, timezone
+
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
+from sqlmodel import Session, select
+
+from ..auth import current_account
+from ..db import Account, Conversation, Persona, Replica, Video, get_session
+
+router = APIRouter()
+
+
+def owned(session: Session, model, id: str, acc: Account):
+    obj = session.get(model, id)
+    if not obj or obj.account_id != acc.id:
+        raise HTTPException(404, f"{model.__name__.lower()} not found")
+    return obj
+
+
+# ---- replicas ----
+class ReplicaIn(BaseModel):
+    name: str
+    train_video_url: str
+
+
+@router.post("/replicas")
+def create_replica(body: ReplicaIn, acc: Account = Depends(current_account), s: Session = Depends(get_session)):
+    r = Replica(account_id=acc.id, **body.model_dump())
+    s.add(r); s.commit(); s.refresh(r)
+    return r  # training job is picked up by workers/
+
+
+@router.get("/replicas")
+def list_replicas(acc: Account = Depends(current_account), s: Session = Depends(get_session)):
+    return s.exec(select(Replica).where(Replica.account_id == acc.id)).all()
+
+
+@router.get("/replicas/{rid}")
+def get_replica(rid: str, acc: Account = Depends(current_account), s: Session = Depends(get_session)):
+    return owned(s, Replica, rid, acc)
+
+
+# ---- personas ----
+class PersonaIn(BaseModel):
+    name: str
+    system_prompt: str
+    replica_id: str | None = None
+    llm: str = "ollama/llama3.2"
+    tts_voice: str = "default"
+    knowledge: str = ""
+
+
+@router.post("/personas")
+def create_persona(body: PersonaIn, acc: Account = Depends(current_account), s: Session = Depends(get_session)):
+    if body.replica_id:
+        owned(s, Replica, body.replica_id, acc)
+    p = Persona(account_id=acc.id, **body.model_dump())
+    s.add(p); s.commit(); s.refresh(p)
+    return p
+
+
+@router.get("/personas")
+def list_personas(acc: Account = Depends(current_account), s: Session = Depends(get_session)):
+    return s.exec(select(Persona).where(Persona.account_id == acc.id)).all()
+
+
+# ---- conversations ----
+class ConversationIn(BaseModel):
+    persona_id: str
+
+
+@router.post("/conversations")
+def create_conversation(body: ConversationIn, acc: Account = Depends(current_account), s: Session = Depends(get_session)):
+    owned(s, Persona, body.persona_id, acc)
+    if acc.credits_seconds <= 0:
+        raise HTTPException(402, "out of credits")
+    c = Conversation(account_id=acc.id, persona_id=body.persona_id)
+    c.room_url = f"/rooms/{c.id}"  # replaced by LiveKit room URL once media server is wired
+    s.add(c); s.commit(); s.refresh(c)
+    return c
+
+
+@router.post("/conversations/{cid}/end")
+def end_conversation(cid: str, acc: Account = Depends(current_account), s: Session = Depends(get_session)):
+    c = owned(s, Conversation, cid, acc)
+    if c.status == "ended":
+        return c
+    c.status, c.ended_at = "ended", datetime.now(timezone.utc)
+    started = c.started_at.replace(tzinfo=timezone.utc) if c.started_at.tzinfo is None else c.started_at
+    c.seconds_used = max(int((c.ended_at - started).total_seconds()), 1)
+    acc.credits_seconds = max(acc.credits_seconds - c.seconds_used, 0)
+    s.add_all([c, acc]); s.commit(); s.refresh(c)
+    return c
+
+
+# ---- videos ----
+class VideoIn(BaseModel):
+    replica_id: str
+    script: str
+
+
+@router.post("/videos")
+def create_video(body: VideoIn, acc: Account = Depends(current_account), s: Session = Depends(get_session)):
+    r = owned(s, Replica, body.replica_id, acc)
+    if r.status != "ready":
+        raise HTTPException(409, "replica not ready")
+    v = Video(account_id=acc.id, **body.model_dump())
+    s.add(v); s.commit(); s.refresh(v)
+    return v
+
+
+@router.get("/videos/{vid}")
+def get_video(vid: str, acc: Account = Depends(current_account), s: Session = Depends(get_session)):
+    return owned(s, Video, vid, acc)
+
+
+# ---- usage ----
+@router.get("/usage")
+def usage(acc: Account = Depends(current_account)):
+    return {"credits_seconds": acc.credits_seconds}
