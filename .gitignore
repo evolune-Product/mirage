@@ -3,3 +3,6 @@ __pycache__/
 *.db
 node_modules/
 models/
+workers/LivePortrait/
+workers/.venv/
+workers/**/animations/
