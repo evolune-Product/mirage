@@ -4,7 +4,9 @@ from typing import Optional
 
 from sqlmodel import Field, Session, SQLModel, create_engine
 
-engine = create_engine("sqlite:///mirage.db", connect_args={"check_same_thread": False})
+import os
+
+engine = create_engine(os.environ.get("MIRAGE_DB_URL", "sqlite:///mirage.db"), connect_args={"check_same_thread": False})
 
 
 def now() -> datetime:
