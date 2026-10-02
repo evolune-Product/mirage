@@ -132,3 +132,48 @@ def test_playground_served(env):
     c, _, _ = env
     r = c.get("/v1/playground")
     assert r.status_code == 200 and "AudioWorklet" in r.text
+
+
+def _run_turn(lip):
+    import asyncio
+    from app.pipeline.session import Session
+
+    events = []
+
+    async def sj(m): events.append(("json", m["type"]))
+    async def sb(b): events.append(("bytes", len(b)))
+
+    class Stt:
+        async def transcribe(self, pcm, sr): return "hello"
+
+    class Llm:
+        async def stream(self, system, history, user):
+            yield "Hello there."
+
+    class Tts:
+        async def synthesize(self, text, voice):
+            yield b"\x01\x00" * 4800
+
+    prov = type("P", (), {"stt": Stt(), "llm": Llm(), "tts": Tts()})()
+    sess = Session(prov, "sys", "v", sj, sb, lipsync=lip)
+    asyncio.run(sess._reply(b"\x00\x00" * 100))
+    return events, sess
+
+
+class _Lip:
+    def __init__(self, fail=False): self.fail = fail
+    async def render(self, pcm):
+        if self.fail: raise RuntimeError("gpu box down")
+        return {"fps": 25.0, "frames": ["AAAA"] * 3}
+
+
+def test_video_segment_is_sent_before_its_audio():
+    events, _ = _run_turn(_Lip())
+    kinds = [e for e in events if e[0] == "bytes" or e[1] == "video_segment"]
+    assert kinds[0] == ("json", "video_segment") and kinds[1][0] == "bytes"
+
+
+def test_lipsync_failure_does_not_break_the_voice_turn():
+    events, sess = _run_turn(_Lip(fail=True))
+    assert any(e[0] == "bytes" for e in events) and ("json", "agent_done") in events
+    assert sess.lipsync is None  # disabled after the failure, voice continues

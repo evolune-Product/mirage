@@ -64,14 +64,18 @@ def build_system_prompt(persona) -> str:
     return sp
 
 
+PIECE_S = float(os.environ.get("MIRAGE_LIPSYNC_PIECE_S", "1.0"))
+
+
 class Session:
     def __init__(self, providers: Providers, system: str, voice: str,
                  send_json: Callable[[dict], Awaitable[None]],
                  send_bytes: Callable[[bytes], Awaitable[None]],
                  end_of_turn_ms: int = 600, energy_threshold: float = 500.0,
-                 retriever: Callable[[str], str] | None = None):
+                 retriever: Callable[[str], str] | None = None, lipsync=None):
         self.p, self.system, self.voice = providers, system, voice
         self.retriever = retriever  # query -> context text from the persona's knowledge base
+        self.lipsync = lipsync  # optional LipsyncClient-like: render(pcm24k) -> {'fps','frames'}
         self.send_json, self.send_bytes = send_json, send_bytes
         self.turn = TurnTaker(end_of_turn_ms=end_of_turn_ms, energy_threshold=energy_threshold)
         self.history: list[dict] = []
@@ -172,7 +176,22 @@ class Session:
                     if first:
                         self.metrics["ttfa_s"] = time.monotonic() - t0
                         first = False
-                    await self.send_bytes(chunk)
+                    if self.lipsync:
+                        # Render + send in ~1 s pieces so the first piece reaches the browser fast; piece k+1 is
+                        # rendered while piece k plays (rendering is faster than real time).
+                        step = int(PIECE_S * 24000) * 2
+                        for off in range(0, len(chunk), step):
+                            piece = chunk[off:off + step]
+                            if self.lipsync:
+                                try:  # video goes first; the client pairs it with the next audio bytes
+                                    seg = await self.lipsync.render(piece)
+                                    if seg.get("frames"):
+                                        await self.send_json({"type": "video_segment", "fps": seg["fps"], "frames": seg["frames"]})
+                                except Exception:  # face is optional: never break the voice turn
+                                    self.lipsync = None
+                            await self.send_bytes(piece)
+                    else:
+                        await self.send_bytes(chunk)
                 spoken.append(sent)  # only count sentences whose audio was fully sent
                 await self.send_json({"type": "transcript", "role": "agent", "text": sent})
             await self.send_json({"type": "agent_done"})

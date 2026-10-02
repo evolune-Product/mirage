@@ -49,10 +49,18 @@ async def stream(ws: WebSocket, cid: str, api_key: str = "", db: DBSession = Dep
         return
 
     from ..knowledge import format_context, retrieve
+    from .. import jobs
+
+    lipsync = None
+    if persona.replica_id and (jobs.replica_dir(persona.replica_id) / "source.mp4").exists():
+        from ..pipeline.lipsync import LipsyncClient
+
+        if await LipsyncClient.available():
+            lipsync = LipsyncClient(persona.replica_id)
 
     pid = persona.id
     sess = Session(providers, build_system_prompt(persona), persona.tts_voice, ws.send_json, ws.send_bytes,
-                   retriever=lambda q: format_context(retrieve(pid, q, k=3)))
+                   retriever=lambda q: format_context(retrieve(pid, q, k=3)), lipsync=lipsync)
     base = conv.seconds_used or 0
 
     def meter():
@@ -65,12 +73,18 @@ async def stream(ws: WebSocket, cid: str, api_key: str = "", db: DBSession = Dep
             meter()
 
     tick = asyncio.create_task(ticker())
-    from .. import jobs
 
     face_url = None
     if persona.replica_id and (jobs.replica_dir(persona.replica_id) / "face.png").exists():
         face_url = f"/v1/files/replicas/{persona.replica_id}/face.png"
-    await ws.send_json({"type": "ready", "input_sample_rate": 16000, "output_sample_rate": 24000, "face_url": face_url})
+    await ws.send_json({"type": "ready", "input_sample_rate": 16000, "output_sample_rate": 24000, "face_url": face_url,
+                         "live_face": lipsync is not None})
+    if lipsync is not None:  # idle loop lets the browser keep the face alive between answers
+        try:
+            idle = await lipsync.idle()
+            await ws.send_json({"type": "idle_loop", "fps": idle["fps"], "frames": idle["frames"]})
+        except Exception:
+            sess.lipsync = None
     try:
         while True:
             msg = await ws.receive()
