@@ -7,3 +7,4 @@ workers/LivePortrait/
 workers/.venv/
 workers/**/animations/
 data/
+workers/Wav2Lip/
