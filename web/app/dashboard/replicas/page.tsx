@@ -1,21 +1,123 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
-import { api, Replica } from "@/lib/api";
-import { Shell, Err, Badge } from "@/components/ui";
+import { AnimatePresence, motion } from "framer-motion";
+import { Check, Cpu, Loader2, Plus, ScanFace, ShieldCheck } from "lucide-react";
+import { API_URL, api, Replica } from "@/lib/api";
+import { Shell, Badge, Empty, Modal, SkeletonCards, CopyButton, toast } from "@/components/ui";
+
+const STEPS = [["awaiting_consent", "Consent"], ["training", "Training"], ["ready", "Ready"]] as const;
+
+function Stepper({ status }: { status: string }) {
+  const idx = status === "error" ? 1 : Math.max(0, STEPS.findIndex(([k]) => k === status));
+  return (
+    <div className="flex items-center">
+      {STEPS.map(([k, label], i) => {
+        const done = i < idx || status === "ready"; const cur = i === idx && status !== "ready";
+        return (
+          <div key={k} className="flex flex-1 items-center last:flex-none">
+            <div className="flex flex-col items-center gap-1">
+              <span className={`grid h-5 w-5 place-items-center rounded-full text-[10px] ring-1 ring-inset ${done ? "bg-mirage-mint text-ink ring-mirage-mint" : cur ? (status === "error" ? "bg-mirage-rose/20 text-mirage-rose ring-mirage-rose" : "bg-mirage-violet/20 text-white ring-mirage-violet") : "text-gray-500 ring-white/15"}`}>
+                {done ? <Check size={11} /> : cur && status === "training" ? <Loader2 size={11} className="animate-spin" /> : i + 1}
+              </span>
+              <span className={`text-[10px] ${done || cur ? "text-gray-300" : "text-gray-600"}`}>{label}</span>
+            </div>
+            {i < STEPS.length - 1 && <span className={`mx-1.5 mb-4 h-px flex-1 ${i < idx || status === "ready" ? "bg-mirage-mint/60" : "bg-white/10"}`} />}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function Face({ r }: { r: Replica }) {
+  const [bad, setBad] = useState(false);
+  return (
+    <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl bg-ink-3 ring-1 ring-white/10">
+      {r.status === "ready" && !bad
+        // eslint-disable-next-line @next/next/no-img-element
+        ? <img src={`${API_URL}/v1/files/replicas/${r.id}/face.png`} alt={r.name} className="h-full w-full object-cover" onError={() => setBad(true)} />
+        : <div className="grid h-full w-full place-items-center bg-[radial-gradient(circle_at_30%_20%,rgba(124,92,255,.35),transparent_70%)] text-gray-500"><ScanFace size={26} /></div>}
+    </div>
+  );
+}
+
 export default function Replicas() {
-  const [list, setList] = useState<Replica[]>([]); const [name, setName] = useState(""); const [url, setUrl] = useState(""); const [err, setErr] = useState("");
-  const load = useCallback(async () => { try { setList(await api<Replica[]>("/v1/replicas")); } catch (x) { setErr((x as Error).message); } }, []);
+  const [list, setList] = useState<Replica[] | null>(null); const [name, setName] = useState(""); const [url, setUrl] = useState("");
+  const [open, setOpen] = useState(false); const [busy, setBusy] = useState(false);
+  const load = useCallback(async () => { try {
+    // The API keeps status=awaiting_consent until a worker picks the job up, so ask whether consent exists and show "training" (queued) in that case.
+    const l = await api<Replica[]>("/v1/replicas");
+    setList(await Promise.all(l.map(async (r) => { if (r.status !== "awaiting_consent") return r; try { const c = await api<{ has_consent: boolean }>(`/v1/replicas/${r.id}/consent`); return c.has_consent ? { ...r, status: "training" } : r; } catch { return r; } })));
+  } catch (x) { toast.error(x); setList((l) => l ?? []); } }, []);
   useEffect(() => { load(); const t = setInterval(load, 5000); return () => clearInterval(t); }, [load]);
-  async function create(e: React.FormEvent) { e.preventDefault(); setErr(""); try { await api("/v1/replicas", { body: { name, train_video_url: url } }); setName(""); setUrl(""); load(); } catch (x) { setErr((x as Error).message); } }
+
+  async function create(e: React.FormEvent) {
+    e.preventDefault(); setBusy(true);
+    try { await api("/v1/replicas", { body: { name, train_video_url: url } }); setName(""); setUrl(""); setOpen(false); toast.success("Replica created. Next: give consent."); load(); }
+    catch (x) { toast.error(x); } finally { setBusy(false); }
+  }
   const [cons, setCons] = useState<{ rid: string; cid: string; phrase: string } | null>(null); const [said, setSaid] = useState(""); const [who, setWho] = useState("");
-  async function startConsent(rid: string) { setErr(""); try { const c = await api<{ challenge_id: string; phrase: string }>(`/v1/replicas/${rid}/consent/challenge`, { method: "POST", body: {} }); setCons({ rid, cid: c.challenge_id, phrase: c.phrase }); setSaid(""); } catch (x) { setErr((x as Error).message); } }
-  async function submitConsent() { if (!cons) return; setErr(""); try { await api(`/v1/replicas/${cons.rid}/consent`, { body: { challenge_id: cons.cid, speaker_name: who, audio_url: "dashboard://typed-confirmation", transcript: said } }); setCons(null); load(); } catch (x) { setErr((x as Error).message); } }
-  return (<Shell title="Replicas"><form onSubmit={create} className="card mb-6 grid gap-3 md:grid-cols-[1fr_2fr_auto] md:items-end">
-    <div><label className="label">Name</label><input className="input" required value={name} onChange={e => setName(e.target.value)} /></div>
-    <div><label className="label">Training video URL</label><input className="input" type="url" required value={url} onChange={e => setUrl(e.target.value)} /></div><button className="btn">Create</button></form><Err m={err} />
-    {cons && <div className="card mb-6"><p className="label">Consent for {cons.rid}</p><p className="mb-3 text-sm text-gray-300">The person in the training video must confirm. Read this phrase aloud, then type it exactly below:</p>
-      <p className="mb-3 rounded-lg bg-white/5 p-3 text-sm">{cons.phrase}</p>
-      <div className="grid gap-3 md:grid-cols-[1fr_2fr_auto] md:items-end"><div><label className="label">Your name</label><input className="input" value={who} onChange={e => setWho(e.target.value)} /></div>
-      <div><label className="label">Phrase you said</label><input className="input" value={said} onChange={e => setSaid(e.target.value)} /></div><button className="btn" disabled={!who || !said} onClick={submitConsent}>Confirm consent</button></div></div>}
-    <div className="space-y-2">{list.map(r => <div key={r.id} className="card flex items-center justify-between"><div><p className="font-medium">{r.name}</p><p className="text-xs text-gray-500">{r.id}</p></div><div className="flex items-center gap-3">{r.status === "awaiting_consent" && <button className="btn-ghost" onClick={() => startConsent(r.id)}>Give consent</button>}<Badge s={r.status} /></div></div>)}{!list.length && <p className="text-gray-500">No replicas yet.</p>}</div></Shell>);
+  async function startConsent(rid: string) {
+    try { const c = await api<{ challenge_id: string; phrase: string }>(`/v1/replicas/${rid}/consent/challenge`, { method: "POST", body: {} }); setCons({ rid, cid: c.challenge_id, phrase: c.phrase }); setSaid(""); }
+    catch (x) { toast.error(x); }
+  }
+  async function submitConsent() {
+    if (!cons) return;
+    try { await api(`/v1/replicas/${cons.rid}/consent`, { body: { challenge_id: cons.cid, speaker_name: who, audio_url: "dashboard://typed-confirmation", transcript: said } }); setCons(null); toast.success("Consent recorded. Training is queued."); load(); }
+    catch (x) { toast.error(x); }
+  }
+  const newBtn = <button className="btn-grad" onClick={() => setOpen(true)}><Plus size={16} />New replica</button>;
+
+  return (
+    <Shell title="Replicas" subtitle="A replica is the face and look of your agent, learned from a short video of a consenting person." action={newBtn}>
+      {list === null ? <SkeletonCards /> : list.length === 0 ? (
+        <Empty kind="replica" title="No replicas yet" hint="Add a short, front-facing training video. We will ask the person on camera to confirm consent before anything is trained." action={newBtn} />
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <AnimatePresence initial={false}>
+            {list.map((r) => (
+              <motion.div layout key={r.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className={`card flex flex-col gap-4 ${cons?.rid === r.id ? "md:col-span-2 xl:col-span-3" : ""}`}>
+                <div className="flex items-start gap-4">
+                  <Face r={r} />
+                  <div className="min-w-0 flex-1"><p className="truncate font-medium">{r.name}</p><p className="truncate font-mono text-xs text-gray-500">{r.id}</p><div className="mt-2"><Badge s={r.status} /></div></div>
+                </div>
+                <Stepper status={r.status} />
+                {r.status === "awaiting_consent" && cons?.rid !== r.id && (
+                  <button className="btn" onClick={() => startConsent(r.id)}><ShieldCheck size={15} />Give consent</button>
+                )}
+                {r.status === "training" && (
+                  <div className="rounded-xl border border-mirage-cyan/20 bg-mirage-cyan/5 p-3 text-xs leading-relaxed text-gray-300">
+                    <p className="mb-1 flex items-center gap-1.5 font-medium text-mirage-cyan"><Cpu size={13} />Waiting for a worker</p>
+                    Consent is recorded. Training runs in a separate background process, so this replica stays queued until a worker picks it up. Start one from the backend folder:
+                    <div className="mt-2 flex items-center justify-between gap-2 rounded-lg bg-black/40 px-2.5 py-1.5 font-mono text-[11px] text-gray-200"><span className="truncate">python workers/run_worker.py</span><CopyButton text="python workers/run_worker.py" label="" /></div>
+                  </div>
+                )}
+                {r.status === "error" && <p className="rounded-xl bg-mirage-rose/10 p-3 text-xs text-mirage-rose">Training failed. Check the worker logs, then create the replica again.</p>}
+                {cons?.rid === r.id && (
+                  <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                    <p className="label">Consent for {cons.rid}</p>
+                    <p className="mb-3 text-sm text-gray-300">The person in the training video must confirm. Read this phrase aloud, then type it exactly below:</p>
+                    <p className="mb-3 rounded-lg border border-mirage-amber/20 bg-mirage-amber/5 p-3 font-display text-xl leading-snug">{cons.phrase}</p>
+                    <div className="grid gap-3 md:grid-cols-[1fr_2fr]">
+                      <div><label className="label">Your name</label><input className="input" value={who} onChange={(e) => setWho(e.target.value)} /></div>
+                      <div><label className="label">Phrase you said</label><input className="input" value={said} onChange={(e) => setSaid(e.target.value)} /></div>
+                    </div>
+                    <div className="mt-4 flex gap-2"><button className="btn-grad" disabled={!who || !said} onClick={submitConsent}>Confirm consent</button><button className="btn-ghost" onClick={() => setCons(null)}>Cancel</button></div>
+                  </div>
+                )}
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </div>
+      )}
+      <Modal open={open} onClose={() => setOpen(false)} title="New replica">
+        <form onSubmit={create} className="space-y-4">
+          <div><label className="label">Name</label><input className="input" required autoFocus placeholder="e.g. Founder" value={name} onChange={(e) => setName(e.target.value)} /></div>
+          <div><label className="label">Training video URL</label><input className="input" type="url" required placeholder="https://..." value={url} onChange={(e) => setUrl(e.target.value)} />
+            <p className="mt-1.5 text-xs text-gray-500">A public link to a 1-2 minute video, one face, good light.</p></div>
+          <button className="btn-grad w-full" disabled={busy}>{busy ? <Loader2 size={15} className="animate-spin" /> : null}Create replica</button>
+        </form>
+      </Modal>
+    </Shell>
+  );
 }

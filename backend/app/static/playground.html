@@ -2,16 +2,26 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Mirage Playground</title>
 <style>
-body{font:15px system-ui;max-width:640px;margin:2rem auto;padding:0 1rem;background:#0f1115;color:#e8e8ee}
-input,button{font:inherit;padding:.5rem .7rem;border-radius:6px;border:1px solid #333;background:#1a1d24;color:inherit}
-button{cursor:pointer;background:#5b5bf0;border:0}button.sec{background:#2a2e38}
-.row{display:flex;gap:.5rem;margin:.5rem 0}.row input{flex:1}
-#log{height:340px;overflow:auto;background:#161920;border-radius:8px;padding:.75rem;margin-top:1rem}
-.u{color:#8ecbff}.a{color:#b6f2c0}.s{color:#888;font-size:13px}
-#state{margin:.5rem 0;color:#aaa}
-#face{display:none;width:200px;height:200px;object-fit:cover;border-radius:50%;margin:.5rem 0;border:3px solid #2a2e38;transition:box-shadow .15s}
-#face.talk{animation:talk .5s ease-in-out infinite alternate;border-color:#5b5bf0}
-@keyframes talk{from{box-shadow:0 0 0 0 #5b5bf055}to{box-shadow:0 0 0 14px #5b5bf000}}
+*{box-sizing:border-box}
+body{font:14px/1.5 Inter,system-ui,-apple-system,sans-serif;max-width:680px;margin:0 auto;padding:1.25rem 1rem 2rem;background:#0b0a10;background-image:radial-gradient(36rem 18rem at 85% -5%,#7c5cff22,transparent),radial-gradient(28rem 16rem at 0 0,#ff4d8d14,transparent);color:#ece9f2;min-height:100vh}
+h2{font:400 30px/1.1 "Instrument Serif",Georgia,serif;margin:.2rem 0 1rem;background:linear-gradient(120deg,#ff9e5e,#ff4d8d 45%,#7c5cff);-webkit-background-clip:text;background-clip:text;color:transparent;display:inline-block}
+input,button{font:inherit;padding:.6rem .85rem;border-radius:12px;border:1px solid #ffffff1a;background:#12111a;color:inherit;outline:none;transition:border-color .15s,box-shadow .15s,filter .15s}
+input:focus{border-color:#ff4d8db3;box-shadow:0 0 0 3px #ff4d8d33}
+input::placeholder{color:#6b6878}
+button{cursor:pointer;border:0;font-weight:600;color:#fff;background:linear-gradient(120deg,#ff9e5e,#ff4d8d 45%,#7c5cff);box-shadow:0 8px 24px -10px #ff4d8d99;border-radius:999px;padding:.6rem 1.3rem}
+button:hover:not(:disabled){filter:brightness(1.1)}
+button.sec{background:#ffffff0d;border:1px solid #ffffff1f;box-shadow:none;color:#d6d3df;font-weight:500}
+button.sec:hover:not(:disabled){background:#ffffff1a}
+button:disabled{opacity:.4;cursor:not-allowed}
+.row{display:flex;gap:.5rem;margin:.5rem 0;flex-wrap:wrap}.row input{flex:1;min-width:0}
+#log{height:300px;overflow:auto;background:#12111acc;border:1px solid #ffffff14;border-radius:16px;padding:.9rem 1rem;margin-top:.75rem;scrollbar-width:thin;scrollbar-color:#333 transparent}
+#log div{margin:.25rem 0}
+.u{color:#8fd8ff}.a{color:#ffd9b8}.s{color:#7d7a8a;font-size:12px;font-family:ui-monospace,monospace}
+#state{margin:.9rem 0 .2rem;color:#a9a5b8;font:12px ui-monospace,SFMono-Regular,monospace;text-transform:uppercase;letter-spacing:.14em;text-align:center}
+#state::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:#9cf0c4;margin-right:.55rem;vertical-align:1px;box-shadow:0 0 8px #9cf0c4}
+#face{display:none;width:200px;height:200px;object-fit:cover;border-radius:50%;margin:1rem auto .25rem;border:3px solid #ffffff1f;box-shadow:0 0 0 6px #ffffff08,0 20px 60px -20px #7c5cff88;transition:box-shadow .15s,border-color .3s}
+#face.talk{animation:talk .6s ease-in-out infinite alternate;border-color:#ff4d8d}
+@keyframes talk{from{box-shadow:0 0 0 6px #ff4d8d55,0 0 40px 4px #ff4d8d55,0 0 80px 10px #7c5cff33}to{box-shadow:0 0 0 16px #ff4d8d00,0 0 70px 14px #ff4d8d88,0 0 120px 24px #7c5cff55}}
 </style></head><body>
 <h2>Mirage voice playground</h2>
 <div class="row"><input id="key" placeholder="API key (mk_...)"></div>
