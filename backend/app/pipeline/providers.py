@@ -33,7 +33,7 @@ class OllamaLLM:
         msgs = [{"role": "system", "content": system}, *history, {"role": "user", "content": user}]
         async with httpx.AsyncClient(timeout=None) as c:
             async with c.stream(
-                "POST", f"{self.host}/api/chat", json={"model": self.model, "messages": msgs, "stream": True}
+                "POST", f"{self.host}/api/chat", json={"model": self.model, "messages": msgs, "stream": True, "keep_alive": "30m"}
             ) as r:
                 async for line in r.aiter_lines():
                     if not line:
