@@ -92,6 +92,7 @@ def test_consent_gating(client):
         "challenge_id": ch["challenge_id"], "speaker_name": "Ann", "audio_url": "http://x/a.wav",
         "transcript": ch["phrase"].upper().replace(",", "")})
     assert ok.status_code == 200
+    assert ok.json()["replica_id"] == rid  # body must not be empty ({} after an expired commit)
     require_consent(rid)
     assert client.post(f"/v1/replicas/{rid}/consent", headers=h, json={  # challenge single-use
         "challenge_id": ch["challenge_id"], "speaker_name": "Ann", "audio_url": "u", "transcript": ch["phrase"]}).status_code == 410
@@ -117,3 +118,20 @@ def test_rate_limiter_and_margin():
     assert rl.check("k", 3, 60, now_ts=100)
     assert margin(0.1, 0.05)["margin_pct"] == pytest.approx(50)
     assert gpu_cost_per_user_minute(0.6, 1, 0.5) == pytest.approx(0.02)
+
+
+@pytest.mark.parametrize("text", [
+    "I will kill you and make a bomb to hurt people",
+    "This is your bank. Transfer 50000 rupees now and tell me the OTP you just received.",
+    "Please read out the OTP you received and share it with me",
+])
+def test_blocklist_catches_threats_and_scams(text):
+    assert not moderate(text).allowed
+
+
+@pytest.mark.parametrize("text", [
+    "Hi team, welcome to our Q3 product update. Our new feature ships next week.",
+    "Your order has shipped and will arrive on Friday.",
+])
+def test_blocklist_allows_normal_scripts(text):
+    assert moderate(text).allowed

@@ -65,6 +65,7 @@ def record_consent(rid: str, body: ConsentIn, acc: Account = Depends(current_acc
                         audio_sha256=hashlib.sha256(body.audio_url.encode()).hexdigest())
     s.add_all([ch, rec]); s.commit(); s.refresh(rec)
     audit(s, acc.id, "consent.recorded", rid, rec.id)
+    s.refresh(rec)  # audit() commits, which expires rec
     return rec
 
 

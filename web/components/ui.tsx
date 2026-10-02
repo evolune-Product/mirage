@@ -10,7 +10,7 @@ export function Badge({ s }: { s: string }) {
 }
 export const Err = ({ m }: { m: string }) => m ? <p className="mt-3 rounded-lg bg-red-500/10 p-3 text-sm text-red-300">{m}</p> : null;
 
-const nav = [["/dashboard","Overview"],["/dashboard/replicas","Replicas"],["/dashboard/personas","Personas"],["/dashboard/conversations","Conversations"],["/dashboard/videos","Videos"],["/dashboard/keys","API keys & docs"]];
+const nav = [["/dashboard","Overview"],["/dashboard/replicas","Replicas"],["/dashboard/personas","Personas"],["/dashboard/conversations","Conversations"],["/dashboard/videos","Videos"],["/dashboard/billing","Billing"],["/dashboard/keys","API keys & docs"]];
 
 export function Shell({ title, children }: { title: string; children: ReactNode }) {
   const path = usePathname(); const router = useRouter(); const [ok, setOk] = useState(false);

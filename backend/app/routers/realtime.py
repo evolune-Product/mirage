@@ -65,7 +65,12 @@ async def stream(ws: WebSocket, cid: str, api_key: str = "", db: DBSession = Dep
             meter()
 
     tick = asyncio.create_task(ticker())
-    await ws.send_json({"type": "ready", "input_sample_rate": 16000, "output_sample_rate": 24000})
+    from .. import jobs
+
+    face_url = None
+    if persona.replica_id and (jobs.replica_dir(persona.replica_id) / "face.png").exists():
+        face_url = f"/v1/files/replicas/{persona.replica_id}/face.png"
+    await ws.send_json({"type": "ready", "input_sample_rate": 16000, "output_sample_rate": 24000, "face_url": face_url})
     try:
         while True:
             msg = await ws.receive()

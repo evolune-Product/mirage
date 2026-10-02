@@ -14,6 +14,12 @@ from .models_billing import AuditLog, ConsentRecord
 
 # ---------- moderation ----------
 DEFAULT_BLOCKLIST = [
+    r"\b(i|we)\s+(will|am\s+going\s+to|'ll)\s+(kill|murder|shoot|stab|hurt|beat)\b",
+    r"\b(make|build|making|building)\s+(a\s+)?(bomb|explosive|weapon)s?\b",
+    r"\b(kill|murder|hurt|harm)\s+(you|him|her|them|people|everyone)\b",
+    r"\b(otp|one[- ]time\s+password|cvv|pin\s+number)\b.{0,40}\b(share|send|tell|give|read)\b",
+    r"\b(share|send|tell|give|read)\b.{0,40}\b(otp|one[- ]time\s+password|cvv|pin\s+number)\b",
+    r"\b(this\s+is|i\s+am)\s+(your\s+)?(bank|police|tax\s+officer)\b.{0,60}\b(transfer|pay|send)\b",
     r"\bchild\s+(porn|sexual)", r"\bcsam\b", r"\bkill\s+yourself\b",
     r"\bhow\s+to\s+(make|build)\s+a\s+(bomb|nerve\s+agent)\b",
     r"\bsend\s+(me\s+)?your\s+(password|otp|cvv)\b",
@@ -36,12 +42,13 @@ def _blocklist():
 def moderate(text: str) -> ModerationResult:
     reasons = [f"blocklist:{p.pattern}" for p in _blocklist() if p.search(text)]
     classifier = "blocklist"
-    model = os.getenv("MIRAGE_MODERATION_OLLAMA_MODEL")
+    model = os.getenv("MIRAGE_MODERATION_OLLAMA_MODEL", "qwen3:8b")  # "" disables; 1B models misclassify too often
     if model and not reasons:
         classifier = f"blocklist+ollama/{model}"
         try:
             r = httpx.post(os.getenv("OLLAMA_URL", "http://localhost:11434") + "/api/generate", timeout=20, json={
                 "model": model, "stream": False,
+                "options": {"temperature": 0, "num_predict": 400}, "think": False,
                 "prompt": "You are a content safety classifier. Answer with exactly SAFE or UNSAFE "
                           "(UNSAFE = sexual content involving minors, violence incitement, fraud/impersonation "
                           "scams, harassment).\nText:\n" + text[:4000] + "\nAnswer:"})

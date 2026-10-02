@@ -54,7 +54,7 @@ class Mirage:
 
     # personas
     def create_persona(self, name: str, system_prompt: str, replica_id: Optional[str] = None,
-                       llm: str = "ollama/llama3.2", tts_voice: str = "default", knowledge: str = "") -> dict:
+                       llm: str = "ollama/llama3.2:1b", tts_voice: str = "default", knowledge: str = "") -> dict:
         return self._req("POST", "/personas", json={"name": name, "system_prompt": system_prompt,
                          "replica_id": replica_id, "llm": llm, "tts_voice": tts_voice, "knowledge": knowledge})
     def list_personas(self) -> list: return self._req("GET", "/personas")

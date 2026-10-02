@@ -176,6 +176,10 @@ class Session:
                 spoken.append(sent)  # only count sentences whose audio was fully sent
                 await self.send_json({"type": "transcript", "role": "agent", "text": sent})
             await self.send_json({"type": "agent_done"})
+        except asyncio.CancelledError:
+            raise
+        except Exception as e:  # e.g. LLM model missing: tell the client instead of failing silently
+            await self.send_json({"type": "error", "message": f"{type(e).__name__}: {e}"[:300]})
         finally:
             # Called on completion and on cancel: history keeps only what was actually voiced.
             if user_text:

@@ -245,6 +245,9 @@ def process_video(vid: str, deps: Deps) -> bool:
         s.add(v); s.commit()
         err = None
         try:
+            from .safety import moderate_or_raise
+
+            moderate_or_raise(v.script)  # defense in depth: re-check even though the API checked at creation
             rep = s.get(Replica, v.replica_id)
             if rep is None or rep.status != "ready":
                 raise RuntimeError("replica not ready")

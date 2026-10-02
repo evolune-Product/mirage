@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { api, Persona, Replica } from "@/lib/api";
 import { Shell, Err } from "@/components/ui";
-const empty = { name: "", system_prompt: "", knowledge: "", replica_id: "", tts_voice: "default", llm: "ollama/llama3.2" };
+const empty = { name: "", system_prompt: "", knowledge: "", replica_id: "", tts_voice: "default", llm: "ollama/llama3.2:1b" };
 export default function Personas() {
   const [list, setList] = useState<Persona[]>([]); const [reps, setReps] = useState<Replica[]>([]); const [f, setF] = useState(empty); const [editing, setEditing] = useState(""); const [err, setErr] = useState("");
   const load = useCallback(async () => { try { setList(await api<Persona[]>("/v1/personas")); setReps(await api<Replica[]>("/v1/replicas")); } catch (x) { setErr((x as Error).message); } }, []);

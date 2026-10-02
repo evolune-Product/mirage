@@ -9,11 +9,15 @@ button{cursor:pointer;background:#5b5bf0;border:0}button.sec{background:#2a2e38}
 #log{height:340px;overflow:auto;background:#161920;border-radius:8px;padding:.75rem;margin-top:1rem}
 .u{color:#8ecbff}.a{color:#b6f2c0}.s{color:#888;font-size:13px}
 #state{margin:.5rem 0;color:#aaa}
+#face{display:none;width:200px;height:200px;object-fit:cover;border-radius:50%;margin:.5rem 0;border:3px solid #2a2e38;transition:box-shadow .15s}
+#face.talk{animation:talk .5s ease-in-out infinite alternate;border-color:#5b5bf0}
+@keyframes talk{from{box-shadow:0 0 0 0 #5b5bf055}to{box-shadow:0 0 0 14px #5b5bf000}}
 </style></head><body>
 <h2>Mirage voice playground</h2>
 <div class="row"><input id="key" placeholder="API key (mk_...)"></div>
 <div class="row"><input id="cid" placeholder="Conversation id (c_...)"></div>
 <div class="row"><button id="go">Start</button><button id="int" class="sec" disabled>Interrupt</button><button id="stop" class="sec" disabled>Stop</button></div>
+<img id="face" alt="agent">
 <div id="state">idle</div>
 <div id="log"></div>
 <script>
@@ -52,6 +56,7 @@ $('go').onclick=async()=>{
     if(typeof ev.data!=='string')return play(ev.data);
     const m=JSON.parse(ev.data);
     if(m.type==='ready'){$('state').textContent='listening - speak';
+      if(m.face_url){const f=$('face');f.src=location.origin+m.face_url;f.style.display='block'}
       const src=inCtx.createMediaStreamSource(stream);mic=new AudioWorkletNode(inCtx,'pcm16');
       mic.port.onmessage=e=>{if(ws.readyState===1)ws.send(e.data)};src.connect(mic);
       $('int').disabled=$('stop').disabled=false;$('go').disabled=true}
@@ -59,9 +64,9 @@ $('go').onclick=async()=>{
     else if(m.type==='transcript'){
       if(m.role==='user'){line('u','You: '+m.text);$('state').textContent='thinking...'}
       else{if(!cur){cur=document.createElement('div');cur.className='a';cur.textContent='Agent: ';log.appendChild(cur)}
-        cur.textContent+=m.text+' ';$('state').textContent='speaking';}}
-    else if(m.type==='agent_done'){cur=null;$('state').textContent='listening - speak'}
-    else if(m.type==='interrupted'){stopPlayback();cur=null;line('s','[interrupted]');$('state').textContent='listening - speak'}
+        cur.textContent+=m.text+' ';$('state').textContent='speaking';$('face').classList.add('talk')}}
+    else if(m.type==='agent_done'){cur=null;$('face').classList.remove('talk');$('state').textContent='listening - speak'}
+    else if(m.type==='interrupted'){$('face').classList.remove('talk');stopPlayback();cur=null;line('s','[interrupted]');$('state').textContent='listening - speak'}
     else if(m.type==='error')line('s','error: '+m.message);
   };
 };
