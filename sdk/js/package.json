@@ -1,0 +1,10 @@
+{
+  "name": "@mirage/sdk",
+  "version": "0.1.0",
+  "description": "TypeScript fetch client for the Mirage CVI API (zero runtime deps)",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": { "build": "tsc" },
+  "devDependencies": { "typescript": "^5.4.0" }
+}

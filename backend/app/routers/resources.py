@@ -5,6 +5,8 @@ from pydantic import BaseModel
 from sqlmodel import Session, select
 
 from ..auth import current_account
+from ..billing import record_usage
+from ..safety import moderate_or_raise
 from ..db import Account, Conversation, Persona, Replica, Video, get_session
 
 router = APIRouter()
@@ -25,7 +27,7 @@ class ReplicaIn(BaseModel):
 
 @router.post("/replicas")
 def create_replica(body: ReplicaIn, acc: Account = Depends(current_account), s: Session = Depends(get_session)):
-    r = Replica(account_id=acc.id, **body.model_dump())
+    r = Replica(account_id=acc.id, status="awaiting_consent", **body.model_dump())
     s.add(r); s.commit(); s.refresh(r)
     return r  # training job is picked up by workers/
 
@@ -55,6 +57,17 @@ def create_persona(body: PersonaIn, acc: Account = Depends(current_account), s: 
     if body.replica_id:
         owned(s, Replica, body.replica_id, acc)
     p = Persona(account_id=acc.id, **body.model_dump())
+    s.add(p); s.commit(); s.refresh(p)
+    return p
+
+
+@router.put("/personas/{pid}")
+def update_persona(pid: str, body: PersonaIn, acc: Account = Depends(current_account), s: Session = Depends(get_session)):
+    p = owned(s, Persona, pid, acc)
+    if body.replica_id:
+        owned(s, Replica, body.replica_id, acc)
+    for k, v in body.model_dump().items():
+        setattr(p, k, v)
     s.add(p); s.commit(); s.refresh(p)
     return p
 
@@ -90,7 +103,14 @@ def end_conversation(cid: str, acc: Account = Depends(current_account), s: Sessi
     c.seconds_used = max(int((c.ended_at - started).total_seconds()), 1)
     acc.credits_seconds = max(acc.credits_seconds - c.seconds_used, 0)
     s.add_all([c, acc]); s.commit(); s.refresh(c)
+    record_usage(s, acc, c.seconds_used, f"conv:{c.id}")
+    s.refresh(c)  # record_usage commits, which expires c
     return c
+
+
+@router.get("/conversations")
+def list_conversations(acc: Account = Depends(current_account), s: Session = Depends(get_session)):
+    return s.exec(select(Conversation).where(Conversation.account_id == acc.id)).all()
 
 
 # ---- videos ----
@@ -104,9 +124,15 @@ def create_video(body: VideoIn, acc: Account = Depends(current_account), s: Sess
     r = owned(s, Replica, body.replica_id, acc)
     if r.status != "ready":
         raise HTTPException(409, "replica not ready")
+    moderate_or_raise(body.script)
     v = Video(account_id=acc.id, **body.model_dump())
     s.add(v); s.commit(); s.refresh(v)
     return v
+
+
+@router.get("/videos")
+def list_videos(acc: Account = Depends(current_account), s: Session = Depends(get_session)):
+    return s.exec(select(Video).where(Video.account_id == acc.id)).all()
 
 
 @router.get("/videos/{vid}")

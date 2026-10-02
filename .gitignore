@@ -6,3 +6,4 @@ models/
 workers/LivePortrait/
 workers/.venv/
 workers/**/animations/
+data/

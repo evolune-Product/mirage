@@ -15,6 +15,19 @@ async def lifespan(_):
 
 
 app = FastAPI(title="Mirage API", version="0.1.0", lifespan=lifespan)
+
+import os
+
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=os.environ.get("MIRAGE_CORS_ORIGINS", "http://localhost:3000").split(","),
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+app.mount("/static", StaticFiles(directory=os.path.join(os.path.dirname(__file__), "static")), name="static")
 app.include_router(resources.router, prefix="/v1")
 
 # Auto-register every app/routers/*.py that exposes `router` (and optional `PREFIX`).

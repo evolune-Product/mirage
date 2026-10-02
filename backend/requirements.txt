@@ -1,0 +1,14 @@
+fastapi
+uvicorn[standard]
+sqlmodel
+pydantic-settings
+httpx
+websockets
+python-multipart
+faster-whisper
+kokoro-onnx
+soundfile
+numpy
+fastembed
+pypdf
+pytest
