@@ -44,7 +44,7 @@ void main(){
   if(uMode==1.) col = mix(col, cyan, .55);
   col += vSeed*.15;
   float depthFade = smoothstep(-1.2, 1.2, -gl_FragCoord.z*0.0 + vN*.0 + 1.0);
-  gl_FragColor = vec4(col*0.85, a*(.30+vSeed*.35)*depthFade);
+  gl_FragColor = vec4(col*0.85, a*(.42+vSeed*.4)*depthFade);
 }`;
 
 type Props = { state?: OrbState; level?: number; className?: string; autoCycle?: boolean; density?: number };
