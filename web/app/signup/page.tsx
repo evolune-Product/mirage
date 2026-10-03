@@ -4,7 +4,19 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, KeyRound, Loader2, Mail, ShieldCheck, Sparkles } from "lucide-react";
-import { api, setKey } from "@/lib/api";
+import { API_URL, api, setKey } from "@/lib/api";
+
+/** Optional proof of work (only when the server sets MIRAGE_SIGNUP_POW_BITS): find a nonce so sha256(challenge:nonce) has `bits` leading zero bits. */
+async function solvePow(): Promise<{ pow_challenge?: string; pow_nonce?: string }> {
+  const ch = await fetch(`${API_URL}/v1/signup/challenge`).then((r) => r.json()).catch(() => ({ bits: 0 }));
+  if (!ch.bits) return {};
+  const enc = new TextEncoder();
+  for (let i = 0; ; i++) {
+    const d = new Uint8Array(await crypto.subtle.digest("SHA-256", enc.encode(`${ch.challenge}:${i}`)));
+    let n = 0; for (const b of d) { if (b === 0) { n += 8; continue; } n += Math.clz32(b) - 24; break; }
+    if (n >= ch.bits) return { pow_challenge: ch.challenge, pow_nonce: String(i) };
+  }
+}
 import Orb from "@/components/site/Orb";
 import Logo from "@/components/site/Logo";
 import { Toaster, toast } from "@/components/ui";
@@ -13,13 +25,13 @@ export default function Signup() {
   const r = useRouter();
   const [mode, setMode] = useState<"new" | "have">("new");
   const [email, setEmail] = useState(""); const [pasted, setPasted] = useState("");
-  const [err, setErr] = useState(""); const [busy, setBusy] = useState(false);
+  const [hp, setHp] = useState(""); const [err, setErr] = useState(""); const [busy, setBusy] = useState(false);
 
   async function go(e: React.FormEvent) {
     e.preventDefault(); setErr("");
     if (!/^\S+@\S+\.\S+$/.test(email.trim())) return setErr("Enter a valid email address.");
     setBusy(true);
-    try { const j = await api<{ api_key: string }>("/v1/signup", { body: { email: email.trim() }, key: "" }); setKey(j.api_key); r.push("/dashboard"); }
+    try { const j = await api<{ api_key: string }>("/v1/signup", { body: { email: email.trim(), website: hp, ...(await solvePow()) }, key: "" }); setKey(j.api_key); r.push("/dashboard"); }
     catch (x) { setErr((x as Error).message); toast.error(x); } finally { setBusy(false); }
   }
   async function useKey(e: React.FormEvent) {
@@ -45,6 +57,7 @@ export default function Signup() {
                 <label className="label" htmlFor="email">Email</label>
                 <div className="relative"><Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500" />
                   <input id="email" className="input !pl-10" type="email" autoComplete="email" placeholder="you@company.com" required value={email} onChange={(e) => { setEmail(e.target.value); setErr(""); }} /></div>
+                <input type="text" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" value={hp} onChange={(e) => setHp(e.target.value)} style={{ position: "absolute", left: "-9999px", width: 1, height: 1, opacity: 0 }} />
                 {err && <p className="mt-2 text-xs text-mirage-rose">{err}</p>}
                 <button className="btn-grad mt-5 w-full !py-3" disabled={busy}>{busy ? <><Loader2 size={16} className="animate-spin" />Creating your key...</> : <>Sign up<ArrowRight size={16} /></>}</button>
               </motion.form>

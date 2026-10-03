@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager
 
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, HTTPException, Request
 from pydantic import BaseModel
 from sqlmodel import Session
 
@@ -89,11 +89,31 @@ for _m in pkgutil.iter_modules(_routers_pkg.__path__):
 
 class SignupIn(BaseModel):
     email: str
+    website: str = ""        # honeypot: hidden in the signup form, real users leave it empty
+    pow_challenge: str = ""  # only when MIRAGE_SIGNUP_POW_BITS > 0 (GET /v1/signup/challenge)
+    pow_nonce: str = ""
 
 
 @app.post("/v1/signup")
-def signup(body: SignupIn, s: Session = Depends(get_session)):
-    acc = Account(email=body.email)
+def signup(body: SignupIn, request: Request, s: Session = Depends(get_session)):
+    import secrets as _secrets
+
+    from . import signup_guard as sg
+    from .hardening import client_ip
+
+    if sg.is_honeypot(body.website):  # a bot filled the hidden field: look successful, create nothing
+        return {"account_id": "acc_" + _secrets.token_hex(6), "api_key": "mk_" + _secrets.token_urlsafe(24), "credits_seconds": 600}
+    sg.check(body.email, client_ip(request.scope), body.pow_challenge, body.pow_nonce)
+    email = body.email.strip()
+    if sg.unique_email_enforced():
+        from sqlmodel import select
+
+        norm = sg.normalize_email(email)
+        dom = norm.partition("@")[2]
+        rows = s.exec(select(Account.email).where(Account.email.ilike(f"%@{dom}"))).all()
+        if any(sg.normalize_email(e) == norm for e in rows):
+            raise HTTPException(409, {"error": "email_taken", "message": "An account with this email already exists. Sign in with your API key."})
+    acc = Account(email=email)
     s.add(acc); s.commit(); s.refresh(acc)
     return {"account_id": acc.id, "api_key": acc.api_key, "credits_seconds": acc.credits_seconds}
 
