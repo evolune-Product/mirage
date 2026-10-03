@@ -25,8 +25,10 @@ Auth: header `x-api-key: mk_...` on everything except `/v1/signup`, `/v1/billing
 
 ## Conversations
 - `POST /v1/conversations` `{persona_id}` -> 402 if out of credits; `POST /v1/conversations/{cid}/end` (deducts seconds)
-- WebSocket `/v1/conversations/{cid}/stream?api_key=`; close codes 4401 bad key, 4404 not found, 4402 ended/no credits
-- `GET /v1/playground` HTML test page (`?cid=&api_key=`)
+- `POST /v1/realtime/ticket` `{conversation_id}` (header `x-api-key`) -> `{ticket, expires_in, ws_path}`: single-use, ~30 s, bound to that conversation
+- WebSocket `/v1/conversations/{cid}/stream?ticket=wt_...`; close codes 4401 bad/expired/used ticket, 4404 not found, 4402 ended/no credits, 4429 rate limit / too many concurrent sessions, 1009 frame too large. `?api_key=` still works only when the server sets `MIRAGE_ALLOW_KEY_IN_URL=1` (back-compat; the key then appears in URLs/proxy logs)
+- `GET /v1/signup/challenge` -> `{bits: 0}` or a proof-of-work challenge (`MIRAGE_SIGNUP_POW_BITS`); `POST /v1/signup` accepts optional `pow_challenge`, `pow_nonce` and a honeypot field `website` (must stay empty)
+- `GET /v1/playground` HTML test page (`?cid=`; the key is typed in or handed over by an embedding dashboard with postMessage)
 
 ## Videos
 - `POST /v1/videos` `{replica_id, script}`; `GET /v1/videos/{vid}`. Scripts should be passed through `safety.moderate_or_raise` (not yet wired into resources.py; see below).
