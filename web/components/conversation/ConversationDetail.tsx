@@ -1,12 +1,14 @@
 "use client";
 import { useEffect, useState } from "react";
-import { CheckCircle2, Circle, Clock, Gauge, Wrench, MessageSquareQuote, Play } from "lucide-react";
+import { BookOpen, TrendingUp, CheckCircle2, Circle, Clock, Gauge, Wrench, MessageSquareQuote, Play } from "lucide-react";
 import { api, Conversation, Turn, PersonaConfig, fmtDate, fmtDur } from "@/lib/api";
 import { Modal, Badge, CopyButton, Skeleton, Section } from "@/components/ui";
 
 type Transcript = { summary: string; status: string; turns: Turn[] };
 type Metrics = { user_turns: number; agent_turns: number; avg_first_audio_ms: number | null; p95_first_audio_ms: number | null; interruptions: number; guardrail_hits: number; tool_calls: number };
 type ObjRow = { name: string; completed: boolean; evidence: string; variables: Record<string, unknown> };
+type Insight = { sentiment: number; label: string; trend: string; topics: string[]; user_talk_ratio: number; questions: number; user_words: number; agent_words: number };
+type Cite = { seq: number; sources: { title: string; url: string | null; score: number; snippet: string }[] };
 type ToolCall = { tool: string; arguments: Record<string, unknown>; result: string; ok: boolean; duration_ms: number; created_at: string };
 
 const clock = (ms: number) => { const s = Math.max(0, Math.round(ms / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; };
@@ -19,13 +21,16 @@ function Tile({ label, value, sub }: { label: string; value: string; sub?: strin
 export default function ConversationDetail({ conv, personaName, onClose, onPlay }: { conv: Conversation | null; personaName: string; onClose: () => void; onPlay: (c: Conversation) => void }) {
   const [tr, setTr] = useState<Transcript | null>(null); const [m, setM] = useState<Metrics | null | undefined>(undefined);
   const [objs, setObjs] = useState<ObjRow[] | null>(null); const [cfgObjs, setCfgObjs] = useState<string[]>([]); const [calls, setCalls] = useState<ToolCall[]>([]);
+  const [ins, setIns] = useState<Insight | null>(null); const [cites, setCites] = useState<Record<number, Cite["sources"]>>({});
   useEffect(() => {
-    if (!conv) return; setTr(null); setM(undefined); setObjs(null); setCalls([]); setCfgObjs([]);
+    if (!conv) return; setTr(null); setM(undefined); setObjs(null); setCalls([]); setCfgObjs([]); setIns(null); setCites({});
     const id = conv.id; let live = true;
     api<Transcript>(`/v1/conversations/${id}/transcript`).then((t) => live && setTr(t)).catch(() => live && setTr({ summary: "", status: conv.status, turns: [] }));
     api<Metrics>(`/v1/conversations/${id}/metrics`).then((x) => live && setM(x)).catch(() => live && setM(null));
     api<ObjRow[]>(`/v1/conversations/${id}/objectives`).then((x) => live && setObjs(x)).catch(() => live && setObjs([]));
     api<ToolCall[]>(`/v1/conversations/${id}/tool-calls`).then((x) => live && setCalls(x)).catch(() => {});
+    api<Insight>(`/v1/conversations/${id}/insights`).then((x) => live && setIns(x)).catch(() => {});
+    api<Cite[]>(`/v1/conversations/${id}/citations`).then((x) => live && setCites(Object.fromEntries(x.map((c) => [c.seq, c.sources])))).catch(() => {});
     api<PersonaConfig>(`/v1/personas/${conv.persona_id}/config`).then((c) => live && setCfgObjs(c.objectives.map((o) => o.name))).catch(() => {});
     return () => { live = false; };
   }, [conv]);
@@ -58,6 +63,17 @@ export default function ConversationDetail({ conv, personaName, onClose, onPlay 
             </div>)}
         </Section>
 
+        {ins && (
+          <Section title="Sentiment" icon={<TrendingUp size={16} className="text-mirage-mint" />} hint="Scored locally from the user's words; a rough signal, not a verdict.">
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4" data-testid="insights">
+              <Tile label="Overall" value={ins.label} sub={`score ${ins.sentiment.toFixed(2)}`} />
+              <Tile label="Trend" value={ins.trend} />
+              <Tile label="User talk share" value={Math.round(ins.user_talk_ratio * 100) + "%"} sub={`${ins.user_words} / ${ins.agent_words} words`} />
+              <Tile label="Questions asked" value={String(ins.questions)} />
+            </div>
+            {ins.topics.length > 0 && <div className="mt-2.5 flex flex-wrap gap-1.5">{ins.topics.map((x) => <span key={x} className="rounded-full bg-white/10 px-2 py-0.5 text-[11px] text-gray-300">{x}</span>)}</div>}
+          </Section>)}
+
         {rows.length > 0 && (
           <Section title="Objectives" hint="Marked complete by the judge model during the conversation.">
             <ul className="space-y-2">{rows.map((o) => (
@@ -87,6 +103,8 @@ export default function ConversationDetail({ conv, personaName, onClose, onPlay 
                     {t.first_audio_ms != null && <span className="rounded bg-mirage-cyan/10 px-1.5 py-0.5 font-mono normal-case text-mirage-cyan">first audio {ms(t.first_audio_ms)}</span>}
                     {t.interrupted && <span className="rounded bg-mirage-amber/10 px-1.5 py-0.5 normal-case text-mirage-amber">interrupted</span>}</p>
                   {t.text}
+                  {cites[t.seq]?.length > 0 && <details className="mt-2 text-xs text-gray-400" data-testid="citations"><summary className="flex cursor-pointer select-none items-center gap-1 hover:text-white"><BookOpen size={12} />Sources ({cites[t.seq].length})</summary>
+                    <ul className="mt-1.5 space-y-1.5">{cites[t.seq].map((s, i) => <li key={i} className="rounded-lg bg-black/30 p-2"><p className="font-medium text-gray-300">{s.url ? <a className="text-mirage-cyan hover:underline" href={s.url} target="_blank" rel="noreferrer">{s.title}</a> : s.title}</p><p className="mt-0.5 line-clamp-2 text-gray-500">{s.snippet}</p></li>)}</ul></details>}
                 </div>
               </li>))}</ol>)}
         </Section>

@@ -13,6 +13,7 @@ type A = {
   videos: { total: number; by_status: Record<string, number>; per_day: { date: string; videos: number }[] };
   replicas: { total: number; ready: number }; credits_seconds: number;
 };
+type Ins = { conversations: number; avg_sentiment: number | null; labels: Record<string, number>; declining: number; top_topics: { topic: string; count: number }[]; by_day: { date: string; avg_sentiment: number; conversations: number }[] };
 const RANGES = [7, 30, 90];
 const VIOLET = "#7c5cff", CYAN = "#5ce1e6", MINT = "#9cf0c4", ROSE = "#ff4d8d", AMBER = "#ff9e5e";
 const lat = (v: number | null) => (v == null ? "-" : v >= 1000 ? (v / 1000).toFixed(2) + " s" : Math.round(v) + " ms");
@@ -29,8 +30,9 @@ function Card({ title, sub, children, table }: { title: string; sub?: string; ch
 const NoData = ({ text }: { text: string }) => <div className="grid h-40 place-items-center rounded-xl border border-dashed border-white/15 text-sm text-gray-500">{text}</div>;
 
 export default function Analytics() {
-  const [days, setDays] = useState(30); const [d, setD] = useState<A | null>(null);
+  const [days, setDays] = useState(30); const [d, setD] = useState<A | null>(null); const [ins, setIns] = useState<Ins | null>(null);
   useEffect(() => { let live = true; setD(null); api<A>(`/v1/analytics?days=${days}`).then((r) => live && setD(r)).catch((x) => { toast.error(x); }); return () => { live = false; }; }, [days]);
+  useEffect(() => { let live = true; setIns(null); api<Ins>(`/v1/analytics/insights?days=${days}`).then((r) => live && setIns(r)).catch(() => {}); return () => { live = false; }; }, [days]);
   const range = (
     <div className="inline-flex rounded-full border border-white/10 bg-white/5 p-0.5" role="tablist" aria-label="Date range">
       {RANGES.map((r) => <button key={r} role="tab" aria-selected={days === r} onClick={() => setDays(r)} className={`rounded-full px-3.5 py-1 text-xs transition ${days === r ? "bg-white text-ink" : "text-gray-400 hover:text-white"}`}>{r}d</button>)}
@@ -66,6 +68,16 @@ export default function Analytics() {
                 <StatusBar parts={[{ label: "ready", value: st.ready ?? 0, color: MINT }, { label: "rendering", value: (st.rendering ?? 0) + (st.training ?? 0), color: CYAN }, { label: "queued", value: st.queued ?? 0, color: VIOLET }, { label: "error", value: st.error ?? 0, color: ROSE }]} />
                 {d.videos.per_day.length > 0 && <div className="mt-5"><BarChart height={90} title="Videos per day" data={d.videos.per_day.map((v) => ({ label: v.date, value: v.videos }))} color={AMBER} unit="videos" /></div>}
               </>)}
+            </Card>
+          </div>)}
+        {ins && ins.conversations > 0 && (
+          <div className="mt-4 grid gap-4 lg:grid-cols-2" data-testid="sentiment">
+            <Card title="Sentiment" sub={`${ins.conversations} analysed conversations, ${ins.declining} getting worse`}>
+              <StatusBar parts={[{ label: "positive", value: ins.labels.positive ?? 0, color: MINT }, { label: "neutral", value: ins.labels.neutral ?? 0, color: CYAN }, { label: "negative", value: ins.labels.negative ?? 0, color: ROSE }]} />
+              <p className="mt-3 text-xs text-gray-400">Average score {ins.avg_sentiment?.toFixed(2)} (-1 to 1)</p>
+            </Card>
+            <Card title="What people ask about" sub="Most frequent topics in user turns">
+              {ins.top_topics.length === 0 ? <NoData text="No topics yet" /> : <HBars color={VIOLET} rows={ins.top_topics.map((x) => ({ label: x.topic, value: x.count }))} />}
             </Card>
           </div>)}
       </>)}
