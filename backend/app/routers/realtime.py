@@ -27,6 +27,21 @@ router = APIRouter()
 STATIC = Path(__file__).resolve().parents[1] / "static"
 
 
+def _make_retriever(pid: str, rt):
+    from ..knowledge import format_context, retrieve, select_hits
+
+    def go(q: str) -> str:
+        hits = retrieve(pid, q, k=3)
+        if rt is not None:
+            try:
+                rt.note_hits(select_hits(hits))  # what the agent is actually given = what it can be cited for
+            except Exception:  # noqa: BLE001
+                pass
+        return format_context(hits)
+
+    return go
+
+
 async def _prepare(lipsync) -> None:
     try:
         await lipsync.prepare()
@@ -187,7 +202,14 @@ async def _run(ws, cid, acc, conv, persona, db, link, inbox, pump_task, allow_fa
 
     sess = Session(providers, rt.system_prompt(build_system_prompt(persona)) if rt else build_system_prompt(persona),
                    voice, rt.wrap_send(tx_json) if rt else tx_json, tx_bytes,
-                   retriever=lambda q: format_context(retrieve(pid, q, k=3)), lipsync=lipsync)
+                   retriever=_make_retriever(pid, rt), lipsync=lipsync)
+    if rt is not None and rt.tuning is not None:  # interruption sensitivity / turn patience (voice-tuning API)
+        try:
+            from .. import voice_tuning
+
+            voice_tuning.apply(sess, rt.tuning)
+        except Exception:  # noqa: BLE001
+            pass
     try:  # intelligence layer: grounding scaffold + perception (the agent sees camera/screen frames); never blocks the call
         from ..llm_backends import ground_session
         from ..perception import attach as _attach_perception

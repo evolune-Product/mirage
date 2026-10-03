@@ -19,6 +19,7 @@ from . import db, languages, llm_backends as lb, webhooks
 from .models_features import (ConversationMeta, ConversationMetric, MemoryScope, ObjectiveProgress, PersonaConfig,
                               PersonaTool, ToolCallLog, TranscriptTurn)
 from .secretbox import decrypt
+from . import models_gap  # noqa: F401  (registers tables)
 
 _ensured: set[int] = set()
 log = logging.getLogger("mirage.runtime")
@@ -94,6 +95,9 @@ class ConversationRuntime:
         self._pending_user = False
         self._judge_running = False
         self._done: set[str] = set()
+        self.pron_rules: list = []
+        self.tuning = None
+        self._pending_hits: list[dict] = []
         self.stats = {"tool_calls": 0, "guardrail_hits": 0, "interruptions": 0}
 
     # ---- construction ----
@@ -112,6 +116,14 @@ class ConversationRuntime:
         tools += [t for t in builtin_tools.tools_for(s, persona.id, conv.account_id) if t.name not in have]
         mem = memories_for(s, persona.id, meta.participant_id) if (cfg is None or cfg.memory_enabled) else []
         rt = cls(conv, persona, cfg, meta, tools, mem)
+        try:  # gap features: pronunciation glossary + interruption tuning (a failure here must never block a call)
+            from . import pronunciation
+            from .models_gap import PronunciationEntry, VoiceTuning
+
+            rt.pron_rules = pronunciation.compile_rules(s.exec(select(PronunciationEntry).where(PronunciationEntry.persona_id == persona.id)).all())
+            rt.tuning = s.get(VoiceTuning, persona.id)
+        except Exception:  # noqa: BLE001
+            log.exception("gap feature config failed to load")
         for o in s.exec(select(ObjectiveProgress).where(ObjectiveProgress.conversation_id == conv.id)).all():
             if o.completed:
                 rt._done.add(o.name)
@@ -174,7 +186,19 @@ class ConversationRuntime:
                                 {"conversation_id": self.cid, "persona_id": self.persona_id}, self._on_tool)
         if self.guardrails:
             llm = lb.GuardedLLM(llm, self.guardrails, self.fallback, self._on_guardrail)
+        if self.pron_rules:
+            from .pronunciation import PronunciationTTS
+
+            tts = PronunciationTTS(tts, self.pron_rules)
         return Providers(stt, llm, tts)
+
+    def note_hits(self, hits: list[dict]) -> None:
+        """Called (from the retrieval thread) with the excerpts given to the LLM for the turn in progress."""
+        self._pending_hits = list(hits)
+
+    def _citation_payload(self) -> list[dict]:
+        return [{"doc_id": h.get("doc_id", ""), "title": h.get("title", ""), "score": round(float(h.get("score", 0)), 3),
+                 "snippet": h.get("text", "")[:240]} for h in self._pending_hits]
 
     def _on_tool(self, info: dict) -> None:
         self.stats["tool_calls"] += 1
@@ -207,6 +231,7 @@ class ConversationRuntime:
                 if t == "transcript":
                     if msg.get("role") == "user":
                         self._flush_agent(False)
+                        self._pending_hits = []
                         self._add_turn("user", msg.get("text", ""))
                         self._pending_user = True
                     else:
@@ -216,7 +241,11 @@ class ConversationRuntime:
                         self._pending_user = False
                         self._agent_buf.append(msg.get("text", ""))
                 elif t == "agent_done":
+                    cites = self._citation_payload()
+                    self._cite_seq = self._seq
                     self._flush_agent(False)
+                    if cites:
+                        await inner({"type": "citations", "sources": cites})
                     self._spawn(self._judge())
                 elif t == "interrupted":
                     self.stats["interruptions"] += 1
@@ -236,8 +265,25 @@ class ConversationRuntime:
             s.commit()
         self._seq += 1
 
+    def _save_citations(self, seq: int) -> None:
+        if not self._pending_hits:
+            return
+        from .models_gap import KnowledgeSource, TurnCitation
+
+        with DB(db.engine) as s:
+            for i, h in enumerate(self._pending_hits):
+                src = s.get(KnowledgeSource, h.get("doc_id", ""))
+                s.add(TurnCitation(conversation_id=self.cid, seq=seq, rank=i, doc_id=h.get("doc_id", ""), title=h.get("title", ""),
+                                   url=src.url if src else "", score=float(h.get("score", 0)), snippet=h.get("text", "")[:400]))
+            s.commit()
+        self._pending_hits = []
+
     def _flush_agent(self, interrupted: bool) -> None:
         if self._agent_buf:
+            try:
+                self._save_citations(self._seq)
+            except Exception:  # noqa: BLE001
+                log.exception("citation recording failed")
             self._add_turn("assistant", " ".join(self._agent_buf), self._agent_latency, interrupted)
         self._agent_buf, self._agent_latency = [], None
 
@@ -445,6 +491,12 @@ async def finalize_conversation(cid: str, reason: str = "ended") -> bool:
                 p95_first_audio_ms=float(lat[min(len(lat) - 1, int(len(lat) * 0.95))]) if lat else None,
                 interruptions=len([t for t in agent_turns if t.interrupted]), tool_calls=tool_calls))
         s.commit()
+        try:
+            from . import insights
+
+            insights.compute_and_store(s, cid)
+        except Exception:  # noqa: BLE001
+            log.exception("insights failed")
         webhooks.emit(account_id, "conversation.ended", {
             "conversation_id": cid, "persona_id": conv.persona_id, "seconds_used": seconds, "reason": reason,
             "summary": summary, "objectives": objectives}, session=s)

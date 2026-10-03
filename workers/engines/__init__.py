@@ -101,6 +101,7 @@ def create(name: str, device: str) -> LipsyncEngine:
 
 # Non-engine components that cannot be used in a commercial build. Scripts call require_commercial_safe() first.
 COMPONENTS_BLOCKED = {
+    # flashhead is NOT blocked: README says Apache-2.0 for code+weights (unverified by counsel; see docs/LICENSES.md).
     "liveportrait": "LivePortrait loads InsightFace buffalo_l (det_10g.onnx, 2d106det.onnx): models are non-commercial "
                     "research only (LivePortrait/LICENSE + insightface README). Replace the cropper with MediaPipe or buy an "
                     "InsightFace licence.",

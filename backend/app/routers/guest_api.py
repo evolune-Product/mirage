@@ -96,13 +96,31 @@ def _reserved(s: Session, token: str) -> int:
     return total
 
 
+def _check_window(s: Session, token: str) -> None:
+    """Scheduled links (gap_api.ShareSchedule) are only joinable inside their window."""
+    from ..models_gap import ShareSchedule
+
+    x = s.get(ShareSchedule, token)
+    if x is None:
+        return
+    now = datetime.now(timezone.utc)
+    if now < cr.utc(x.starts_at):
+        raise HTTPException(425, {"message": "this call has not started yet", "opens_at": cr.utc(x.starts_at).isoformat()})
+    if x.ends_at and now > cr.utc(x.ends_at):
+        raise HTTPException(410, "this scheduled call is over")
+
+
 @router.get("/guest/{token}/info")
 def info(token: str, s: Session = Depends(get_session)):
     l = _link(s, token)
+    from ..models_gap import ShareSchedule
+
+    sched = s.get(ShareSchedule, token)
     p = s.get(Persona, l.persona_id)
     remaining = max(l.max_total_seconds - l.used_seconds - _reserved(s, token), 0)
     return {"persona_name": p.name if p else "", "label": l.label, "max_seconds": min(l.max_seconds, remaining),
-            "available": remaining >= 10}
+            "available": remaining >= 10,
+            "opens_at": cr.utc(sched.starts_at) if sched else None, "closes_at": cr.utc(sched.ends_at) if sched else None}
 
 
 class GuestStartIn(BaseModel):
@@ -112,6 +130,7 @@ class GuestStartIn(BaseModel):
 @router.post("/guest/{token}/conversations")
 def start(token: str, request: Request, body: GuestStartIn | None = None, s: Session = Depends(get_session)):
     l = _link(s, token)
+    _check_window(s, token)
     from .. import widgets
 
     widgets.enforce(s, token, request.headers)  # allowed embedding domains (widget settings), no-op when none are set

@@ -141,7 +141,25 @@ def default_face_extractor(video: Path, out_png: Path) -> dict:
         return {"ok": False, "error": (r.stderr or r.stdout)[-400:] or "face extractor failed"}
 
 
+def flashhead_ready() -> bool:
+    """SoulX-FlashHead (generative face, workers/render_flashhead.py) is installed. MIRAGE_VIDEO_RENDERER=liveportrait|flashhead|auto."""
+    want = os.environ.get("MIRAGE_VIDEO_RENDERER", "auto").lower()
+    if want == "liveportrait":
+        return False
+    fh = WORKERS_DIR / "SoulX-FlashHead" / "models/SoulX-FlashHead-1_3B/Model_Lite/diffusion_pytorch_model.safetensors"
+    return (WORKERS_DIR / ".venv-flash/bin/python").exists() and fh.exists()
+
+
 def default_renderer(image: Path, wav: Path, out_mp4: Path, fps: float) -> dict:
+    if flashhead_ready():
+        r = run([str(WORKERS_DIR / ".venv-flash/bin/python"), str(WORKERS_DIR / "render_flashhead.py"), "--image", str(image),
+                 "--audio", str(wav), "--out", str(out_mp4)], timeout=6 * 3600)
+        try:
+            res = json.loads(r.stdout.strip().splitlines()[-1])
+        except Exception:
+            res = {"ok": False, "error": (r.stderr or r.stdout)[-400:] or "flashhead renderer failed"}
+        if res.get("ok") or os.environ.get("MIRAGE_VIDEO_RENDERER", "auto").lower() == "flashhead":
+            return res  # explicit flashhead: surface its failure; auto: fall through to LivePortrait
     r = run([str(WORKERS_PY), str(WORKERS_DIR / "render_liveportrait.py"), "--image", str(image),
              "--audio", str(wav), "--out", str(out_mp4), "--fps", str(fps)], timeout=6 * 3600)
     try:
