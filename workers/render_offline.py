@@ -38,6 +38,7 @@ def main():
     ap.add_argument("--restore", default="none")
     ap.add_argument("--seconds", type=float)
     ap.add_argument("--workdir", default="/tmp/mirage_offline")
+    ap.add_argument("--win", type=float, help="base window seconds (longer = more natural head motion)")
     ap.add_argument("--no-track", action="store_true")
     ap.add_argument("--sharpen", type=float, default=0.6)
     ap.add_argument("--seamless", action="store_true")
@@ -58,7 +59,7 @@ def main():
     device = fr.pick_device()
     tracker = None if a.no_track else fl.FaceTracker()
     t0 = time.time()
-    base = fr.prepare_base(rdir, tracker)
+    base = fr.prepare_base(rdir, tracker, win_s=a.win)
     print(f"base: {len(base.frames)} frames crop={base.info['crop']} overlays={base.info['overlays']} "
           f"jaw_mean={base.info['jaw_mean']:.3f} (global {base.info['jaw_global_mean']:.3f}) prep {time.time()-t0:.1f}s", flush=True)
     a16 = load_audio16(a.audio, a.seconds)
