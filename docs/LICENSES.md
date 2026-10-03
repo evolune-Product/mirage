@@ -104,3 +104,9 @@ blockers that the flag does **not** remove are listed in section 5 (eSpeak NG GP
 * `MIRAGE_COMMERCIAL_ALLOW_UNCLEAR=1`: operator opt-in, after legal review, that unlocks UNCLEAR-but-vendor-permissive engines (MuseTalk). It never unlocks research-only engines.
 * Licence metadata lives next to the code: `workers/engines/*.py` (`LicenceInfo`, `Weight`), tests in `backend/tests/test_engines.py`.
 * `MIRAGE_LIPSYNC_ENGINE=auto|viseme|musetalk|wav2lip` selects the engine; default `auto` = Wav2Lip in dev (unchanged behaviour), MuseTalk (if allowed and loadable) else viseme under the flag.
+
+## SoulX-FlashHead (candidate generative face model)
+- Soul-AILab/SoulX-FlashHead, 1.3B diffusion transformer, audio-driven whole-face + head motion, real-time streaming on NVIDIA.
+- README states Apache-2.0 for code and weights (unverified by a lawyer; check each bundled VAE/wav2vec2 licence before commercial use).
+- Mac (MPS) port: `workers/patches/flashhead-mps.patch` + `flashhead_mac_compat.py`; run in `workers/.venv-flash` (transformers 4.57.3).
+- Measured on M1 Pro, Model_Lite: ~19x slower than real time (6 s clip = 113 s). Real-time needs an NVIDIA GPU (unverified here).

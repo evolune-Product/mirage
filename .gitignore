@@ -18,3 +18,5 @@ backend/.venv-tts/
 backend/**/.venv-*/
 .venv-clone/
 workers/JoyVASA/
+.venv-flash/
+workers/SoulX-FlashHead/

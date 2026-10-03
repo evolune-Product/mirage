@@ -1,0 +1,131 @@
+diff --git a/flash_head/ltx_video/ltx_vae.py b/flash_head/ltx_video/ltx_vae.py
+index 579a23b..1286733 100644
+--- a/flash_head/ltx_video/ltx_vae.py
++++ b/flash_head/ltx_video/ltx_vae.py
+@@ -7,7 +7,7 @@ class LtxVAE:
+         self,
+         pretrained_model_type_or_path,
+         dtype = torch.bfloat16,
+-        device = "cuda",
++        device = "mps",
+     ):
+         self.model = CausalVideoAutoencoder.from_pretrained(pretrained_model_type_or_path)
+         self.model = self.model.eval().requires_grad_(False).to(device).to(dtype)
+diff --git a/flash_head/src/distributed/usp_device.py b/flash_head/src/distributed/usp_device.py
+index 80cec10..b36f32f 100644
+--- a/flash_head/src/distributed/usp_device.py
++++ b/flash_head/src/distributed/usp_device.py
+@@ -31,5 +31,5 @@ def get_device(ulysses_degree, ring_degree):
+ 
+         logger.info(f'rank={get_world_group().rank} device={str(device)}')
+     else:
+-        device = "cuda"
++        device = "mps"
+     return device
+\ No newline at end of file
+diff --git a/flash_head/src/modules/flash_head_model.py b/flash_head/src/modules/flash_head_model.py
+index 989cd7c..506aa49 100755
+--- a/flash_head/src/modules/flash_head_model.py
++++ b/flash_head/src/modules/flash_head_model.py
+@@ -67,8 +67,8 @@ def flash_attention(q: torch.Tensor, k: torch.Tensor, v: torch.Tensor, num_heads
+     return x
+ 
+ def sinusoidal_embedding_1d(dim, position):
+-    sinusoid = torch.outer(position.type(torch.float64), torch.pow(
+-        10000, -torch.arange(dim//2, dtype=torch.float64, device=position.device).div(dim//2)))
++    sinusoid = torch.outer(position.type(torch.float32), torch.pow(
++        10000, -torch.arange(dim//2, dtype=torch.float32, device=position.device).div(dim//2)))
+     x = torch.cat([torch.cos(sinusoid), torch.sin(sinusoid)], dim=1)
+     return x.to(position.dtype)
+ 
+@@ -86,8 +86,8 @@ def precompute_freqs_cis(dim: int, end: int = 1024, theta: float = 10000.0):
+     freqs = 1.0 / (theta ** (torch.arange(0, dim, 2)
+                    [: (dim // 2)].double() / dim))
+     freqs = torch.outer(torch.arange(end, device=freqs.device), freqs)
+-    freqs_cis = torch.polar(torch.ones_like(freqs), freqs)  # complex64
+-    return freqs_cis
++    # real (cos, sin) pairs instead of complex128: Apple MPS has no float64/complex support
++    return torch.stack([torch.cos(freqs), torch.sin(freqs)], dim=-1).float()  # [end, dim/2, 2]
+ 
+ def pad_freqs(original_tensor, target_len):
+     seq_len, s1, s2 = original_tensor.shape
+@@ -117,14 +117,13 @@ def rope_apply(x, freqs, grid_sizes, use_usp=False, sp_size=1, sp_rank=0):
+     seq_len = f * h * w
+ 
+     # precompute multipliers
+-    x_i = torch.view_as_complex(x[0, :s].to(torch.float64).reshape(
+-        s, n, -1, 2)) # [L, N, C/2] # 极坐标
++    x_i = x[0, :s].float().reshape(s, n, -1, 2)  # [L, N, C/2, 2]
+     freqs_i = torch.cat([
+-        freqs[0][:f].view(f, 1, 1, -1).expand(f, h, w, -1),
+-        freqs[1][:h].view(1, h, 1, -1).expand(f, h, w, -1),
+-        freqs[2][:w].view(1, 1, w, -1).expand(f, h, w, -1)
++        freqs[0][:f].view(f, 1, 1, -1, 2).expand(f, h, w, -1, 2),
++        freqs[1][:h].view(1, h, 1, -1, 2).expand(f, h, w, -1, 2),
++        freqs[2][:w].view(1, 1, w, -1, 2).expand(f, h, w, -1, 2)
+     ],
+-                        dim=-1).reshape(seq_len, 1, -1) # seq_lens, 1,  3 * dim / 2 (T H W)
++                        dim=-2).reshape(seq_len, 1, -1, 2) # seq_lens, 1,  3 * dim / 2, 2 (T H W)
+ 
+     if use_usp:
+         # apply rotary embedding
+@@ -135,8 +134,10 @@ def rope_apply(x, freqs, grid_sizes, use_usp=False, sp_size=1, sp_rank=0):
+         x_i = torch.view_as_real(x_i * freqs_i_rank).flatten(2)
+         x_i = torch.cat([x_i, x[0, s:]])
+     else:
+-        x_i = torch.view_as_real(x_i * freqs_i).flatten(2)
+-        x_i = torch.cat([x_i, x[0, seq_len:]])
++        a, b = x_i[..., 0], x_i[..., 1]
++        c_, s_ = freqs_i[..., 0], freqs_i[..., 1]
++        x_i = torch.stack([a * c_ - b * s_, a * s_ + b * c_], dim=-1).flatten(2)
++        x_i = torch.cat([x_i.to(x.dtype), x[0, seq_len:]])
+     return x_i.unsqueeze(0).to(x.dtype)
+ 
+ 
+diff --git a/flash_head/src/pipeline/flash_head_pipeline.py b/flash_head/src/pipeline/flash_head_pipeline.py
+index 6d0b757..c64d684 100644
+--- a/flash_head/src/pipeline/flash_head_pipeline.py
++++ b/flash_head/src/pipeline/flash_head_pipeline.py
+@@ -16,8 +16,9 @@ from flash_head.utils.utils import match_and_blend_colors_torch, resize_and_cent
+ from flash_head.utils.facecrop import process_image
+ 
+ # compile models to speedup inference
+-COMPILE_MODEL = True
+-COMPILE_VAE = True
++import torch as _t
++COMPILE_MODEL = _t.cuda.is_available()
++COMPILE_VAE = _t.cuda.is_available()
+ # use parallel vae to speedup decode/encode, only support WanVAE
+ USE_PARALLEL_VAE = True
+ 
+@@ -58,7 +59,7 @@ class FlashHeadPipeline:
+         checkpoint_dir,
+         model_type,
+         wav2vec_dir,
+-        device="cuda",
++        device="mps",
+         param_dtype=torch.bfloat16,
+         use_usp=False,
+         num_timesteps=1000,
+diff --git a/flash_head/wan/modules/vae.py b/flash_head/wan/modules/vae.py
+index 98fed26..98074c4 100644
+--- a/flash_head/wan/modules/vae.py
++++ b/flash_head/wan/modules/vae.py
+@@ -957,7 +957,7 @@ class WanVAE:
+         z_dim=16,
+         vae_path="cache/vae_step_411000.pth",
+         dtype=torch.float,
+-        device="cuda",
++        device="mps",
+         parallel=False,
+         use_tiling=False,
+         use_2d_split=True,
+diff --git a/generate_video.py b/generate_video.py
+index f395ac7..d6fd497 100644
+--- a/generate_video.py
++++ b/generate_video.py
+@@ -1,3 +1,4 @@
++import mac_compat  # noqa: F401
+ # Copyright 2024-2025 The Alibaba Wan Team Authors. All rights reserved.
+ import argparse
+ import os
