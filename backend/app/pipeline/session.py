@@ -155,6 +155,7 @@ class Session:
         self._piece_i = 0
         self._t0 = time.monotonic()
         self._lip_fail, self._lip_ok = 0, False
+        self._idle_phase: tuple[int, float, float] | None = None
         self.history: list[dict] = []
         self._rem = b""
         self._preroll: deque[bytes] = deque(maxlen=PREROLL_FRAMES)
@@ -279,12 +280,16 @@ class Session:
             if self.lipsync:
                 try:
                     need = int(MIN_RENDER_S * 24000) * 2  # the lip-sync model needs >= ~0.2 s of mel frames: pad, then trim
-                    seg = await self.lipsync.render(piece + bytes(max(0, need - len(piece))))
+                    kw = self._first_piece_kwargs() if self._piece_i == 1 else {}
+                    seg = await self.lipsync.render(piece + bytes(max(0, need - len(piece))), **kw)
                     frames = seg.get("frames") or []
                     if len(piece) < need:
                         frames = frames[:max(1, round(len(piece) / 48000 * seg.get("fps", 25)))]
                     if frames:
-                        await self.send_json({"type": "video_segment", "fps": seg["fps"], "frames": frames})
+                        msg = {"type": "video_segment", "fps": seg["fps"], "frames": frames}
+                        if seg.get("end_phase") is not None:  # lets the client resume its idle loop where the face left off
+                            msg["end_phase"] = seg["end_phase"]
+                        await self.send_json(msg)
                     self._lip_fail, self._lip_ok = 0, True
                 except Exception:  # face is optional: never break the voice turn
                     # A service that never worked is switched off at once; one that worked gets a few retries so a
@@ -294,6 +299,18 @@ class Session:
                         self.lipsync = None
             await self.send_bytes(piece)
             self.metrics.setdefault("ttfa_s", time.monotonic() - self._t0)  # first audio byte on the wire
+
+    def set_idle_phase(self, phase: int, fps: float = 25.0) -> None:
+        """Client reports its idle-loop ping-pong index so the first rendered piece continues from it (no head pop)."""
+        self._idle_phase = (int(phase), float(fps), time.monotonic())
+
+    def _first_piece_kwargs(self) -> dict:
+        ph = self._idle_phase
+        if not ph:
+            return {}
+        k, fps, t = ph
+        # idle advances at `fps` while we synthesise; add ~0.15 s for transfer + decode before the segment is shown
+        return {"phase": int(k + (time.monotonic() - t + 0.15) * fps), "fade_in": True}
 
     # ---- reply pipeline ----
     async def warmup(self) -> None:

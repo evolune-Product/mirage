@@ -56,7 +56,7 @@ function ListeningClip({ rid }: { rid: string }) {
           </div>
         ) : <p className="mb-3 rounded-xl border border-dashed border-white/15 p-3.5 text-sm text-gray-500">No listening clip set.</p>}
         <form onSubmit={save} className="space-y-2">
-          <Field label={clip ? "Replace with a new clip URL" : "Clip URL"} hint="The server downloads it (video, 2-60 s, max 200 MB). Direct upload from the browser is not supported by the API."><input className="input" type="url" required placeholder="https://.../listening.mp4" value={url} onChange={(e) => setUrl(e.target.value)} /></Field>
+          <Field label={clip ? "Replace with a new clip URL" : "Clip URL"} hint="The server downloads it (video, 1-120 s, max 200 MB). Direct upload from the browser is not supported by the API."><input className="input" type="url" required placeholder="https://.../listening.mp4" value={url} onChange={(e) => setUrl(e.target.value)} /></Field>
           <button className="btn" disabled={busy}>{busy ? <Spinner size={14} /> : <Upload size={14} />}Save clip</button>
         </form></>)}
     </Section>

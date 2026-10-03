@@ -14,3 +14,5 @@ workers/MuseTalk/
 *.whl
 web/.next-*/
 demo_assets/
+backend/.venv-tts/
+backend/**/.venv-*/

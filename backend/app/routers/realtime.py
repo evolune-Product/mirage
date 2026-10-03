@@ -22,6 +22,25 @@ router = APIRouter()
 STATIC = Path(__file__).resolve().parents[1] / "static"
 
 
+async def _prepare(lipsync) -> None:
+    try:
+        await lipsync.prepare()
+    except Exception:  # optional warm-up
+        pass
+
+
+async def send_idle_loop(ws, sess, lipsync) -> None:
+    """Never blocks the microphone loop: pushes `idle_loop` when the (possibly cold) base clip is ready; on failure the
+    session just continues voice-only."""
+    try:
+        idle = await lipsync.idle()
+        await ws.send_json({"type": "idle_loop", "fps": idle["fps"], "frames": idle["frames"]})
+    except asyncio.CancelledError:
+        raise
+    except Exception:
+        sess.lipsync = None
+
+
 @router.get("/playground", include_in_schema=False)
 def playground():
     return HTMLResponse((STATIC / "playground.html").read_text())
@@ -62,6 +81,7 @@ async def stream(ws: WebSocket, cid: str, api_key: str = "", db: DBSession = Dep
 
         if await LipsyncClient.available():
             lipsync = LipsyncClient(persona.replica_id)
+            asyncio.create_task(_prepare(lipsync))  # warm the replica's base clip while models warm up
 
     pid = persona.id
     from ..convo_runtime import ConversationRuntime  # feature layer: transcripts, greeting, tools, guardrails, i18n
@@ -97,12 +117,9 @@ async def stream(ws: WebSocket, cid: str, api_key: str = "", db: DBSession = Dep
         pass
     await ws.send_json({"type": "ready", "input_sample_rate": 16000, "output_sample_rate": 24000, "face_url": face_url,
                          "live_face": lipsync is not None})
-    if lipsync is not None:  # idle loop lets the browser keep the face alive between answers
-        try:
-            idle = await lipsync.idle()
-            await ws.send_json({"type": "idle_loop", "fps": idle["fps"], "frames": idle["frames"]})
-        except Exception:
-            sess.lipsync = None
+    idle_task = None
+    if lipsync is not None:  # idle loop keeps the face alive between answers; fetched in the background (cold: ~8 s)
+        idle_task = asyncio.create_task(send_idle_loop(ws, sess, lipsync))
     if rt:
         rt.start(sess, ws, base, acc.credits_seconds)  # greeting + time/credit watchdog
     try:
@@ -114,14 +131,19 @@ async def stream(ws: WebSocket, cid: str, api_key: str = "", db: DBSession = Dep
                 await sess.feed(msg["bytes"])
             elif msg.get("text"):
                 try:
-                    if json.loads(msg["text"]).get("type") == "interrupt":
+                    m = json.loads(msg["text"])
+                    if m.get("type") == "interrupt":
                         await sess.interrupt()
+                    elif m.get("type") == "idle_phase":  # client's idle ping-pong index (head-pop-free speech start)
+                        sess.set_idle_phase(m.get("phase", 0), m.get("fps", 25))
                 except ValueError:
                     pass
     except WebSocketDisconnect:
         pass
     finally:
         tick.cancel()
+        if idle_task:
+            idle_task.cancel()
         await sess.close()
         if rt:
             await rt.stop()

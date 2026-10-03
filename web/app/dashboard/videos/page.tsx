@@ -149,7 +149,7 @@ export default function Videos() {
                   <span className="grid h-8 w-8 place-items-center rounded-lg bg-white/5 text-gray-400">{b.kind === "translate" ? <Languages size={15} /> : <Layers size={15} />}</span>
                   <div className="min-w-0 flex-1 basis-40"><p className="text-sm capitalize">{b.kind} batch - {b.total} videos</p><p className="truncate font-mono text-[11px] text-gray-500">{b.id} - {fmtDate(b.created_at)}</p></div>
                   <div className="w-32"><div className="h-1.5 overflow-hidden rounded-full bg-white/10"><div className="h-full bg-mirage-gradient" style={{ width: (done / Math.max(1, b.total)) * 100 + "%" }} /></div><p className="mt-1 text-[11px] text-gray-500">{done}/{b.total} ready{err ? `, ${err} failed` : ""}</p></div>
-                  <Badge s={b.completed ? (err ? "error" : "completed") : "rendering"} /><ChevronDown size={15} className={`text-gray-500 transition ${isOpen ? "rotate-180" : ""}`} />
+                  <Badge s={b.completed ? (err ? "error" : "completed") : (b.counts.queued ?? 0) === b.total ? "queued" : "rendering"} /><ChevronDown size={15} className={`text-gray-500 transition ${isOpen ? "rotate-180" : ""}`} />
                 </button>
                 {isOpen && <ul className="space-y-1.5 border-t border-white/5 px-4 py-3">{(b.items ?? []).map((it) => (
                   <li key={it.video_id} className="flex items-center gap-3 text-xs"><span className="w-14 shrink-0 font-mono text-gray-500">{b.kind === "translate" ? (it.language || "orig") : `#${it.row_index + 1}`}</span><span className="min-w-0 flex-1 truncate text-gray-300">{it.script}</span><Badge s={it.status} />

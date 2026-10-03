@@ -21,6 +21,17 @@ async def lifespan(_):
     tasks = []
     if _os.environ.get("MIRAGE_WEBHOOK_LOOP", "1") != "0":
         tasks = [asyncio.create_task(_wh.run_loop()), asyncio.create_task(_cr.reaper_loop())]
+    if _os.environ.get("MIRAGE_PRELOAD", "1") != "0":
+        async def _preload():  # background: the server accepts requests immediately; the first call is then warm
+            try:
+                from .pipeline.session import get_providers, warmup_providers
+
+                p = await asyncio.to_thread(get_providers, "")
+                await warmup_providers(p, "")
+            except Exception:  # noqa: BLE001 - an optimisation, never fatal
+                pass
+
+        tasks.append(asyncio.create_task(_preload()))
     try:
         yield
     finally:

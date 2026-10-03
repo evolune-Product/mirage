@@ -240,27 +240,38 @@ export default function PersonaDrawer({ open, onClose, persona, reps, onSaved }:
     if (pid) { await api(`/v1/personas/${pid}`, { method: "PUT", body }); return pid; }
     const p = await api<Persona>("/v1/personas", { body }); setPid(p.id); return p.id;
   }
-  async function saveConfig(id: string) {
-    const custom: Record<string, unknown> = { base_url: cfg.custom_llm.base_url, model: cfg.custom_llm.model };
-    if (clearKey) custom.api_key = ""; else if (apiKey) custom.api_key = apiKey;
-    const c = await api<PersonaConfig>(`/v1/personas/${id}/config`, { method: "PUT", body: {
-      language: cfg.language, greeting: cfg.greeting, guardrail_fallback: cfg.guardrail_fallback, memory_enabled: cfg.memory_enabled, stt_model: cfg.stt_model,
-      objectives: cfg.objectives.filter((o) => o.name.trim()), guardrails: cfg.guardrails.filter((g) => g.name.trim()), custom_llm: custom } });
-    const { persona_id: _p, ...rest } = c; void _p; setCfg(rest); setApiKey(""); setClearKey(false);
+  type Section = "voice" | "behavior" | "model";
+  // Each tab saves only its own fields (PUT is a partial update), so an invalid rule on the Behavior tab never blocks saving the Model tab.
+  async function saveConfig(id: string, section: Section) {
+    let body: Record<string, unknown> = {};
+    if (section === "voice") body = { language: cfg.language, stt_model: cfg.stt_model, memory_enabled: cfg.memory_enabled };
+    if (section === "behavior") {
+      const gr = cfg.guardrails.filter((g) => g.name.trim() || g.rule.trim() || g.forbidden_phrases.length);
+      const bad = gr.findIndex((g) => !g.rule.trim()); if (bad >= 0) throw new Error(`Guardrail ${bad + 1} needs a rule.`);
+      const ob = cfg.objectives.filter((o) => o.name.trim() || o.description.trim()); const nobad = ob.findIndex((o) => !o.name.trim()); if (nobad >= 0) throw new Error(`Objective ${nobad + 1} needs a name.`);
+      body = { greeting: cfg.greeting, guardrail_fallback: cfg.guardrail_fallback, objectives: ob, guardrails: gr };
+    }
+    if (section === "model") {
+      const custom: Record<string, unknown> = { base_url: cfg.custom_llm.base_url, model: cfg.custom_llm.model };
+      if (clearKey) custom.api_key = ""; else if (apiKey) custom.api_key = apiKey;
+      body = { custom_llm: custom };
+    }
+    const c = await api<PersonaConfig>(`/v1/personas/${id}/config`, { method: "PUT", body });
+    const { persona_id: _p, ...rest } = c; void _p; setCfg(rest); if (section === "model") { setApiKey(""); setClearKey(false); }
   }
   async function submitGeneral(e: React.FormEvent) {
     e.preventDefault(); setBusy(true);
     try { const had = !!pid; await savePersona(); toast.success(had ? "Persona saved." : "Persona created. Now add some knowledge below."); onSaved(); }
     catch (x) { toast.error(x); } finally { setBusy(false); }
   }
-  async function submitConfig(label: string, alsoPersona = false) {
+  async function submitConfig(label: string, section: Section, alsoPersona = false) {
     if (!pid) return; setBusy(true);
-    try { if (alsoPersona) await savePersona(); await saveConfig(pid); toast.success(label + " saved."); onSaved(); }
+    try { if (alsoPersona) await savePersona(); await saveConfig(pid, section); toast.success(label + " saved."); onSaved(); }
     catch (x) { toast.error(x); } finally { setBusy(false); }
   }
-  const SaveBtn = ({ label, persona: p = false }: { label: string; persona?: boolean }) => (
+  const SaveBtn = ({ label, section, persona: p = false }: { label: string; section: Section; persona?: boolean }) => (
     <div className="sticky bottom-0 -mx-5 -mb-5 mt-6 border-t border-white/10 bg-ink-2/95 px-5 py-3 backdrop-blur">
-      <button type="button" className="btn-grad w-full" disabled={busy} onClick={() => submitConfig(label, p)}>{busy ? <Spinner /> : <Save size={15} />}Save {label.toLowerCase()}</button>
+      <button type="button" className="btn-grad w-full" disabled={busy} onClick={() => submitConfig(label, section, p)}>{busy ? <Spinner /> : <Save size={15} />}Save {label.toLowerCase()}</button>
     </div>
   );
 
@@ -308,7 +319,7 @@ export default function PersonaDrawer({ open, onClose, persona, reps, onSaved }:
           <Field label="Speech-recognition model (optional)" hint="Leave empty for the automatic choice (larger model for Hindi, CJK, Arabic, etc.)."><input className="input font-mono" placeholder="e.g. small" value={cfg.stt_model} onChange={(e) => setCfg({ ...cfg, stt_model: e.target.value })} /></Field>
           <Toggle checked={cfg.memory_enabled} onChange={(v) => setCfg({ ...cfg, memory_enabled: v })} label="Remember past conversations" hint="Recall summaries from earlier conversations with the same participant." />
         </div>)}
-        <SaveBtn label="Voice and language" persona />
+        <SaveBtn label="Voice and language" section="voice" persona />
       </>)}
 
       {tab === "behavior" && !locked && (<>
@@ -335,13 +346,13 @@ export default function PersonaDrawer({ open, onClose, persona, reps, onSaved }:
               <div key={i} className="space-y-2.5 rounded-xl border border-white/10 bg-white/[0.03] p-3.5">
                 <div className="flex items-end gap-2"><div className="flex-1"><label className="label">Name</label><input className="input" aria-label={`Guardrail ${i + 1} name`} placeholder="no_legal_advice" value={g.name} onChange={(e) => updGr(i, { name: e.target.value })} /></div>
                   <button type="button" aria-label={`Remove guardrail ${i + 1}`} className="mb-0.5 rounded-lg p-2 text-gray-500 hover:bg-mirage-rose/10 hover:text-mirage-rose" onClick={() => setCfg({ ...cfg, guardrails: cfg.guardrails.filter((_, j) => j !== i) })}><Trash2 size={15} /></button></div>
-                <div><label className="label">Rule</label><input className="input" aria-label={`Guardrail ${i + 1} rule`} placeholder="Never give legal advice" value={g.rule} onChange={(e) => updGr(i, { rule: e.target.value })} /></div>
+                <div><label className="label">Rule</label><input className="input" aria-label={`Guardrail ${i + 1} rule`} placeholder="Required: e.g. Never give legal advice" value={g.rule} onChange={(e) => updGr(i, { rule: e.target.value })} /></div>
                 <div><label className="label">Forbidden phrases</label><input className="input font-mono text-xs" aria-label={`Guardrail ${i + 1} forbidden phrases`} placeholder="comma separated" value={g.forbidden_phrases.join(", ")} onChange={(e) => updGr(i, { forbidden_phrases: csv(e.target.value) })} /></div>
               </div>))}</div>
             <div className="mt-3"><Field label="Fallback line"><input className="input" aria-label="Guardrail fallback" value={cfg.guardrail_fallback} onChange={(e) => setCfg({ ...cfg, guardrail_fallback: e.target.value })} /></Field></div>
           </Section>
         </>)}
-        <SaveBtn label="Behavior" />
+        <SaveBtn label="Behavior" section="behavior" />
       </>)}
 
       {tab === "model" && !locked && (<>
@@ -361,7 +372,7 @@ export default function PersonaDrawer({ open, onClose, persona, reps, onSaved }:
             </div>
           </Section>
         )}
-        <SaveBtn label="Model" />
+        <SaveBtn label="Model" section="model" />
       </>)}
 
       {tab === "tools" && pid && <Tools pid={pid} />}

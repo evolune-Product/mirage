@@ -44,7 +44,9 @@ registerProcessor('pcm16',P)`;
 
 // ---- live face: idle loop + lip-synced segments scheduled against the audio clock ----
 const LIVE=window.__live={segments:0,speakingFrames:0,idleFrames:0,decodeMs:0,tUser:0,tFirst:0};
-let idleImgs=[],idleFps=25,segs=[],pendingSeg=null,vctx=null;
+let idleImgs=[],idleFps=25,segs=[],pendingSeg=null,vctx=null,anchor={t:0,k:0},lastEnd=null,wasSpeaking=false;
+function idleK(){const n=idleImgs.length;return n>1?(anchor.k+Math.floor((performance.now()-anchor.t)/1000*idleFps))%(2*n-2):0}
+function reportPhase(){if(ws&&ws.readyState===1&&idleImgs.length)ws.send(JSON.stringify({type:'idle_phase',phase:idleK(),fps:idleFps}))}
 function decode(frames){const t=performance.now();return Promise.all(frames.map(b=>new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.onerror=()=>r(null);i.src='data:image/jpeg;base64,'+b}))).then(a=>{LIVE.decodeMs=Math.round(performance.now()-t);return a.filter(Boolean)})}
 function startVideo(){const c=$('vid');vctx=c.getContext('2d');c.width=idleImgs[0].naturalWidth;c.height=idleImgs[0].naturalHeight;c.style.display='block';$('face').style.display='none';requestAnimationFrame(drawLoop)}
 function drawLoop(){
@@ -52,8 +54,8 @@ function drawLoop(){
   const ct=outCtx?outCtx.currentTime:-1;
   segs=segs.filter(sg=>ct<sg.t0+sg.imgs.length/sg.fps+0.5);
   const sg=segs.find(x=>ct>=x.t0&&ct<x.t0+x.imgs.length/x.fps);
-  if(sg){img=sg.imgs[Math.min(sg.imgs.length-1,Math.floor((ct-sg.t0)*sg.fps))];if(!LIVE.tFirst&&LIVE.tUser)LIVE.tFirst=performance.now();LIVE.speakingFrames++}
-  else if(idleImgs.length){const n=idleImgs.length,k=Math.floor(performance.now()/1000*idleFps)%(2*n-2);img=idleImgs[k<n?k:2*n-2-k];LIVE.idleFrames++}
+  if(sg){wasSpeaking=true;if(sg.endPhase!=null)lastEnd=sg.endPhase;img=sg.imgs[Math.min(sg.imgs.length-1,Math.floor((ct-sg.t0)*sg.fps))];if(!LIVE.tFirst&&LIVE.tUser)LIVE.tFirst=performance.now();LIVE.speakingFrames++}
+  else if(idleImgs.length){if(wasSpeaking){wasSpeaking=false;if(lastEnd!=null){anchor={t:performance.now(),k:lastEnd};lastEnd=null}}const n=idleImgs.length,k=idleK();img=idleImgs[k<n?k:2*n-2-k];LIVE.idleFrames++}
   if(img)vctx.drawImage(img,0,0,c.width,c.height);
   requestAnimationFrame(drawLoop)}
 function stopPlayback(){sources.forEach(s=>{try{s.onended=null;s.stop()}catch(e){}});sources=[];nextT=0;segs=[];pendingSeg=null}
@@ -64,7 +66,7 @@ function play(buf){
   const ab=outCtx.createBuffer(1,f.length,24000);ab.copyToChannel(f,0);
   const s=outCtx.createBufferSource();s.buffer=ab;s.connect(outCtx.destination);
   nextT=Math.max(nextT,outCtx.currentTime+0.03);s.start(nextT);
-  if(pendingSeg){segs.push({t0:nextT,imgs:pendingSeg.imgs,fps:pendingSeg.fps});pendingSeg=null;LIVE.segments++}
+  if(pendingSeg){segs.push({t0:nextT,imgs:pendingSeg.imgs,fps:pendingSeg.fps,endPhase:pendingSeg.endPhase});pendingSeg=null;LIVE.segments++}
   nextT+=ab.duration;
   sources.push(s);s.onended=()=>{sources=sources.filter(x=>x!==s)};
 }
@@ -90,10 +92,10 @@ $('go').onclick=async()=>{
       mic.port.onmessage=e=>{if(ws.readyState===1)ws.send(e.data)};src.connect(mic);
       $('int').disabled=$('stop').disabled=false;$('go').disabled=true}
     else if(m.type==='idle_loop'){const a=await decode(m.frames);idleImgs=a;idleFps=m.fps;if(a.length)startVideo()}
-    else if(m.type==='video_segment'){const a=await decode(m.frames);pendingSeg={imgs:a,fps:m.fps}}
-    else if(m.type==='speech_start'){$('state').textContent='hearing you...'}
+    else if(m.type==='video_segment'){const a=await decode(m.frames);pendingSeg={imgs:a,fps:m.fps,endPhase:m.end_phase}}
+    else if(m.type==='speech_start'){reportPhase();$('state').textContent='hearing you...'}
     else if(m.type==='transcript'){
-      if(m.role==='user'){LIVE.tUser=performance.now();LIVE.tFirst=0;line('u','You: '+m.text);$('state').textContent='thinking...'}
+      if(m.role==='user'){reportPhase();LIVE.tUser=performance.now();LIVE.tFirst=0;line('u','You: '+m.text);$('state').textContent='thinking...'}
       else{if(!cur){cur=document.createElement('div');cur.className='a';cur.textContent='Agent: ';log.appendChild(cur)}
         cur.textContent+=m.text+' ';$('state').textContent='speaking';$('face').classList.add('talk')}}
     else if(m.type==='agent_done'){cur=null;$('face').classList.remove('talk');$('state').textContent='listening - speak'}
