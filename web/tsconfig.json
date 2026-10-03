@@ -37,7 +37,8 @@
     ".next-safe/types/**/*.ts",
     ".next-mktb/types/**/*.ts",
     ".next-dash/types/**/*.ts",
-    ".next-dash-build/types/**/*.ts"
+    ".next-dash-build/types/**/*.ts",
+    ".next-final/types/**/*.ts"
   ],
   "exclude": [
     "node_modules"
