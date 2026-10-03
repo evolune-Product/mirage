@@ -1,14 +1,17 @@
-fastapi
-uvicorn[standard]
-sqlmodel
-pydantic-settings
-httpx
-websockets
-python-multipart
-faster-whisper
-kokoro-onnx
-soundfile
-numpy
-fastembed
-pypdf
-pytest
+# Direct dependencies, pinned to the versions verified in the working venv (Python 3.14.7, Oct 2026).
+# requirements.lock is the full `pip freeze` for exact reproduction.
+fastapi==0.142.2
+uvicorn[standard]==0.54.0
+sqlmodel==0.0.47
+pydantic-settings==2.15.0
+httpx==0.28.1
+websockets==17.1
+python-multipart==0.0.32
+faster-whisper==1.2.1
+kokoro-onnx==0.4.7
+onnxruntime==1.30.0
+soundfile==0.14.0
+numpy==2.5.3
+fastembed==0.8.1
+pypdf==6.19.0
+cryptography==50.0.2

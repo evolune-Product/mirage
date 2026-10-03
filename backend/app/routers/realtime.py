@@ -14,8 +14,9 @@ from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 from sqlmodel import Session as DBSession, select
 
+from ..auth import account_for_key
 from ..db import Account, Conversation, Persona, get_session
-from ..pipeline.session import Session, build_system_prompt, get_providers
+from ..pipeline.session import Session, build_system_prompt, get_providers, warmup_providers
 
 router = APIRouter()
 STATIC = Path(__file__).resolve().parents[1] / "static"
@@ -28,7 +29,7 @@ def playground():
 
 @router.websocket("/conversations/{cid}/stream")
 async def stream(ws: WebSocket, cid: str, api_key: str = "", db: DBSession = Depends(get_session)):
-    acc = db.exec(select(Account).where(Account.api_key == api_key)).first() if api_key else None
+    acc = account_for_key(db, api_key) if api_key else None
     if not acc:
         await ws.close(code=4401, reason="invalid api key")
         return
@@ -48,6 +49,10 @@ async def stream(ws: WebSocket, cid: str, api_key: str = "", db: DBSession = Dep
         await ws.close(code=1011)
         return
 
+    # Pay one-time latency costs (LLM load + prompt prefill, TTS engine start) now, concurrently with the setup below,
+    # so the first spoken turn is as fast as the later ones.
+    warm = asyncio.create_task(warmup_providers(providers, build_system_prompt(persona)))
+
     from ..knowledge import format_context, retrieve
     from .. import jobs
 
@@ -59,7 +64,15 @@ async def stream(ws: WebSocket, cid: str, api_key: str = "", db: DBSession = Dep
             lipsync = LipsyncClient(persona.replica_id)
 
     pid = persona.id
-    sess = Session(providers, build_system_prompt(persona), persona.tts_voice, ws.send_json, ws.send_bytes,
+    from ..convo_runtime import ConversationRuntime  # feature layer: transcripts, greeting, tools, guardrails, i18n
+
+    try:
+        rt = ConversationRuntime.build(db, conv, persona)
+        providers = rt.wrap_providers(providers)
+    except Exception:  # a bad feature config must never block the call
+        rt = None
+    sess = Session(providers, rt.system_prompt(build_system_prompt(persona)) if rt else build_system_prompt(persona),
+                   persona.tts_voice, rt.wrap_send(ws.send_json) if rt else ws.send_json, ws.send_bytes,
                    retriever=lambda q: format_context(retrieve(pid, q, k=3)), lipsync=lipsync)
     base = conv.seconds_used or 0
 
@@ -76,7 +89,12 @@ async def stream(ws: WebSocket, cid: str, api_key: str = "", db: DBSession = Dep
 
     face_url = None
     if persona.replica_id and (jobs.replica_dir(persona.replica_id) / "face.png").exists():
-        face_url = f"/v1/files/replicas/{persona.replica_id}/face.png"
+        from .. import signing  # signed, expiring link (safety-infra)
+        face_url = signing.sign_path(f"/v1/files/replicas/{persona.replica_id}/face.png")
+    try:
+        await asyncio.wait_for(warm, 60)
+    except Exception:  # warm-up is an optimisation: never block or fail the call because of it
+        pass
     await ws.send_json({"type": "ready", "input_sample_rate": 16000, "output_sample_rate": 24000, "face_url": face_url,
                          "live_face": lipsync is not None})
     if lipsync is not None:  # idle loop lets the browser keep the face alive between answers
@@ -85,6 +103,8 @@ async def stream(ws: WebSocket, cid: str, api_key: str = "", db: DBSession = Dep
             await ws.send_json({"type": "idle_loop", "fps": idle["fps"], "frames": idle["frames"]})
         except Exception:
             sess.lipsync = None
+    if rt:
+        rt.start(sess, ws, base, acc.credits_seconds)  # greeting + time/credit watchdog
     try:
         while True:
             msg = await ws.receive()
@@ -103,4 +123,6 @@ async def stream(ws: WebSocket, cid: str, api_key: str = "", db: DBSession = Dep
     finally:
         tick.cancel()
         await sess.close()
+        if rt:
+            await rt.stop()
         meter()

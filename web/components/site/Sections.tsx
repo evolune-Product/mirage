@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { ArrowRight, BookOpen, Check, Cpu, Database, Headphones, Minus, ShieldCheck, Sparkles, Terminal, Video, Globe, GraduationCap, LifeBuoy, Briefcase, X, ChevronDown, Code2, Server, Gauge } from "lucide-react";
-import Orb from "./Orb";
+import LazyOrb from "./LazyOrb";
+import Logo from "./Logo";
 import Reveal from "./Reveal";
 import { CodeMock, ConsentMock, ConversationMock, KnowledgeMock, LatencyBars } from "./Mockups";
 import HowItWorks from "./HowItWorks";
+import { useCases } from "@/lib/usecases";
 
 const wrap = "mx-auto w-full max-w-7xl px-5";
 const H2 = ({ children, light }: { children: React.ReactNode; light?: boolean }) => <h2 className={`font-display text-4xl leading-[1.05] sm:text-5xl md:text-6xl ${light ? "text-ink" : "text-white"}`}>{children}</h2>;
@@ -14,13 +16,13 @@ export function Hero() {
     <section className="relative overflow-hidden bg-ink pb-20 pt-12 md:pb-28 md:pt-20">
       <div className="pointer-events-none absolute inset-0 bg-grid-faint [background-size:56px_56px] [mask-image:radial-gradient(ellipse_at_50%_30%,black,transparent_70%)]" />
       <div className="pointer-events-none absolute left-1/2 top-0 h-[520px] w-[900px] -translate-x-1/2 rounded-full bg-mirage-violet/20 blur-[120px]" />
-      <div className="pointer-events-none absolute left-1/2 top-[40px] hidden h-[820px] w-[820px] -translate-x-1/2 opacity-50 md:block"><Orb autoCycle className="h-full w-full" /></div>
+      <div className="pointer-events-none absolute left-1/2 top-[40px] hidden h-[820px] w-[820px] -translate-x-1/2 opacity-70 md:block"><LazyOrb autoCycle className="h-full w-full" /></div>
       <div className={`${wrap} relative text-center`}>
         <Reveal><span className="glass inline-flex items-center gap-2 rounded-full px-4 py-1.5 font-mono text-xs text-gray-300"><Sparkles size={12} className="text-mirage-amber" /> Open-core conversational video AI</span></Reveal>
         <Reveal delay={0.08}><h1 className="mx-auto mt-6 max-w-4xl font-display text-[2.9rem] leading-[1] text-white sm:text-6xl md:text-7xl lg:text-[5.5rem]">Talk to an AI that <It>answers</It> in about a second.</h1></Reveal>
         <Reveal delay={0.16}><p className="mx-auto mt-6 max-w-2xl text-base text-gray-300 md:text-lg">Mirage is the open-core platform for conversational video agents, consent-based replicas and generated video. Use the API, or self-host the whole voice stack for $0 per minute.</p></Reveal>
-        <Reveal delay={0.24}><div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row"><Link href="/signup" className="btn-grad px-7 py-3.5 text-base">Start free <ArrowRight size={16} /></Link><Link href="/dashboard" className="btn-ghost px-7 py-3.5 text-base">Open dashboard</Link></div><p className="mt-4 text-xs text-gray-400">Free plan includes 10 minutes. No card needed.</p></Reveal>
-        <Orb autoCycle className="mx-auto mt-6 h-[300px] w-full sm:h-[380px] md:hidden" />
+        <Reveal delay={0.24}><div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row"><Link href="/signup" className="btn-grad px-7 py-3.5 text-base">Talk to a demo <ArrowRight size={16} /></Link><Link href="/#try" className="btn-ghost px-7 py-3.5 text-base">Try it below</Link></div><p className="mt-4 text-xs text-gray-400">Free plan includes 10 minutes. No card needed.</p></Reveal>
+        <LazyOrb autoCycle density={1.6} className="mx-auto -mt-2 h-[380px] w-[120%] max-w-none -translate-x-[8%] sm:h-[460px] md:hidden" />
         <div className="glass absolute left-0 top-[26%] hidden animate-float rounded-xl px-4 py-3 text-left xl:block"><p className="font-mono text-[10px] uppercase text-gray-400">time to first audio</p><p className="font-display text-3xl text-white">~1.4s</p></div>
         <div className="glass absolute right-0 top-[38%] hidden animate-float rounded-xl px-4 py-3 text-left [animation-delay:-2s] xl:block"><p className="font-mono text-[10px] uppercase text-gray-400">voice stack, self-hosted</p><p className="font-display text-3xl text-white">$0<span className="text-base text-gray-400">/min</span></p></div>
         <div className="glass absolute left-[3%] top-[42%] hidden animate-float rounded-xl px-4 py-3 text-left [animation-delay:-4s] xl:block"><p className="flex items-center gap-1.5 font-mono text-[10px] uppercase text-mirage-mint"><ShieldCheck size={12} /> consent verified</p><p className="text-sm text-gray-200">Revocable, audit-logged</p></div>
@@ -104,15 +106,14 @@ export function Pipeline() {
 }
 
 export function UseCases() {
-  const cases = [[LifeBuoy, "Support agents", "A face for your help center, grounded in your docs."], [GraduationCap, "Tutors and coaching", "Patient, always-available practice partners."], [Briefcase, "Sales and onboarding", "Walk new users through your product, on demand."], [Globe, "Kiosks and embeds", "Drop the widget into any site with a script tag."], [Video, "Personalized video", "Generate scripted videos from a consented replica."], [BookOpen, "Interactive training", "Role-play scenarios with a persona that remembers context."]] as const;
   return (
     <section className="bg-cream py-20 text-ink md:py-32"><div className={wrap}>
       <Reveal><div className="max-w-3xl"><p className="eyebrow !text-[#c2410c]">Use cases</p><div className="mt-3"><H2 light>Built for the places people <It>talk</It> to software</H2></div></div></Reveal>
       <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {cases.map(([Icon, t, d], i) => (
-          <Reveal key={t} delay={(i % 3) * 0.08}><div className="group h-full rounded-3xl border border-black/10 bg-white p-7 transition duration-300 hover:-translate-y-1.5 hover:shadow-[0_24px_60px_-24px_rgba(124,92,255,.5)]">
-            <span className="grid h-12 w-12 place-items-center rounded-2xl bg-mirage-gradient text-white"><Icon size={22} /></span><h3 className="mt-6 font-display text-3xl">{t}</h3><p className="mt-2 text-black/70">{d}</p>
-            <p className="mt-5 flex items-center gap-1 text-sm font-medium text-black/60 transition group-hover:text-mirage-rose">Build it <ArrowRight size={14} className="transition group-hover:translate-x-1" /></p></div></Reveal>
+        {useCases.map((u, i) => (
+          <Reveal key={u.slug} delay={(i % 3) * 0.08}><Link href={`/use-cases/${u.slug}`} className="group block h-full rounded-3xl border border-black/10 bg-white p-7 transition duration-300 hover:-translate-y-1.5 hover:shadow-[0_24px_60px_-24px_rgba(124,92,255,.5)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-mirage-violet">
+            <span className="grid h-12 w-12 place-items-center rounded-2xl bg-mirage-gradient text-white"><u.Icon size={22} /></span><h3 className="mt-6 font-display text-3xl">{u.name}</h3><p className="mt-2 text-black/70">{u.short}</p>
+            <p className="mt-5 flex items-center gap-1 text-sm font-medium text-black/70 transition group-hover:text-[#c2185b]">See how <ArrowRight size={14} className="transition group-hover:translate-x-1" /></p></Link></Reveal>
         ))}
       </div>
     </div></section>
@@ -137,7 +138,7 @@ export function Developers() {
         <p className="mt-5 text-gray-300 md:text-lg">Authenticate with an x-api-key header. Create a replica, a persona, then start a conversation and connect to its stream.</p>
         <ol className="mt-6 space-y-2 font-mono text-sm text-gray-200">{["POST /v1/replicas", "POST /v1/personas", "POST /v1/conversations", "WS   /v1/conversations/{id}/stream?api_key="].map((s, i) => <li key={s} className="flex gap-3"><span className="text-mirage-rose">{i + 1}</span><span className="break-all">{s}</span></li>)}</ol>
         <div className="mt-8 grid gap-3 sm:grid-cols-2">{pts.map(([I, t, d]) => <div key={t} className="flex gap-3 rounded-xl border border-white/10 p-4"><I size={20} className="mt-0.5 shrink-0 text-mirage-cyan" /><div><p className="text-sm font-medium text-white">{t}</p><p className="text-xs text-gray-400">{d}</p></div></div>)}</div>
-        <Link href="/dashboard/keys" className="btn-grad mt-8">Get an API key <ArrowRight size={16} /></Link></Reveal>
+        <div className="mt-8 flex flex-wrap gap-3"><Link href="/dashboard/keys" className="btn-grad">Get an API key <ArrowRight size={16} /></Link><Link href="/docs" className="btn-ghost">Read the docs</Link></div></Reveal>
       <Reveal delay={0.1} y={40}><CodeMock /></Reveal>
     </div></section>
   );
@@ -160,7 +161,7 @@ const plans = [
   { n: "Free", p: "$0", per: "", d: "10 minutes to try it.", l: ["10 minutes included", "Full API access", "Community support"], cta: "Start free", href: "/signup" },
   { n: "Starter", p: "$19", per: "/mo", d: "For side projects and pilots.", l: ["120 minutes per month", "$0.20 per minute overage", "Replicas, personas, videos"], cta: "Choose Starter", href: "/signup" },
   { n: "Pro", p: "$79", per: "/mo", d: "For products in production.", l: ["600 minutes per month", "$0.15 per minute overage", "Everything in Starter"], cta: "Choose Pro", href: "/signup", hot: true },
-  { n: "Self-host", p: "Free", per: "", d: "Run the whole stack yourself.", l: ["Open-core, full API", "$0 per minute voice stack", "Bring your own hardware"], cta: "Read the docs", href: "/dashboard/keys" },
+  { n: "Self-host", p: "Free", per: "", d: "Run the whole stack yourself.", l: ["Open-core, full API", "$0 per minute voice stack", "Bring your own hardware"], cta: "Read the docs", href: "/docs/deploy" },
 ];
 export function Pricing({ light = false }: { light?: boolean }) {
   return (
@@ -215,24 +216,29 @@ export function FinalCTA() {
   return (
     <section className="relative overflow-hidden bg-ink py-24 md:py-36">
       <div className={`${wrap} relative text-center`}>
-        <Orb autoCycle density={0.8} className="mx-auto mb-4 h-[260px] w-full max-w-xl md:h-[340px]" />
+        <LazyOrb autoCycle density={0.8} className="mx-auto mb-4 h-[260px] w-full max-w-xl md:h-[340px]" />
         <Reveal><h2 className="mx-auto max-w-3xl font-display text-5xl leading-[1] text-white md:text-7xl">Give your product a <It>face</It> and a voice.</h2>
           <p className="mx-auto mt-6 max-w-xl text-gray-200 md:text-lg">Start on the free plan or clone the repo and run it yourself.</p>
-          <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row"><Link href="/signup" className="btn-grad px-8 py-4 text-base">Start free <ArrowRight size={16} /></Link><Link href="/dashboard" className="btn-ghost px-8 py-4 text-base backdrop-blur">Open dashboard</Link></div></Reveal>
+          <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row"><Link href="/signup" className="btn-grad px-8 py-4 text-base">Talk to a demo <ArrowRight size={16} /></Link><Link href="/docs" className="btn-ghost px-8 py-4 text-base backdrop-blur">Read the docs</Link></div></Reveal>
       </div>
     </section>
   );
 }
 
 export function Footer() {
-  const cols = [["Product", [["Conversations", "/#product"], ["Replicas", "/#product"], ["Video generation", "/#product"], ["Roadmap", "/#roadmap"]]], ["Developers", [["API keys", "/dashboard/keys"], ["How it works", "/#how"], ["Dashboard", "/dashboard"], ["Self-host", "/#developers"]]], ["Company", [["Pricing", "/pricing"], ["FAQ", "/#faq"], ["Sign up", "/signup"]]]] as const;
+  const cols = [
+    ["Product", [["Conversations", "/#product"], ["Replicas", "/#product"], ["Video generation", "/#product"], ["Compare", "/compare"], ["Roadmap", "/#roadmap"]]],
+    ["Use cases", useCases.map((u) => [u.name, `/use-cases/${u.slug}`])],
+    ["Developers", [["Docs", "/docs"], ["API reference", "/docs/api"], ["Self-host", "/docs/deploy"], ["API keys", "/dashboard/keys"], ["Changelog", "/changelog"]]],
+    ["Company", [["Pricing", "/pricing"], ["About", "/about"], ["Security", "/security"], ["Terms", "/terms"], ["Privacy", "/privacy"]]],
+  ] as const;
   return (
     <footer className="border-t border-white/10 bg-ink-2 pb-10 pt-16"><div className={wrap}>
-      <div className="grid gap-10 md:grid-cols-[1.5fr_repeat(3,1fr)]">
-        <div><span className="font-display text-3xl text-white">Mirage</span><p className="mt-3 max-w-xs text-sm text-gray-400">Open-core conversational video AI. Self-host it or use the API.</p></div>
-        {cols.map(([t, l]) => <nav key={t} aria-label={t}><p className="font-mono text-xs uppercase tracking-widest text-gray-500">{t}</p><ul className="mt-4 space-y-2.5">{l.map(([a, h]) => <li key={a}><Link href={h} className="text-sm text-gray-300 hover:text-white">{a}</Link></li>)}</ul></nav>)}
+      <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.4fr_repeat(4,1fr)]">
+        <div><Link href="/" aria-label="Mirage home"><Logo className="text-white" /></Link><p className="mt-3 max-w-xs text-sm text-gray-400">Open-core conversational video AI. Self-host it or use the API.</p></div>
+        {cols.map(([t, l]) => <nav key={t} aria-label={t}><p className="font-mono text-xs uppercase tracking-widest text-gray-400">{t}</p><ul className="mt-4 space-y-2.5">{l.map(([a, h]) => <li key={a}><Link href={h} className="text-sm text-gray-300 hover:text-white">{a}</Link></li>)}</ul></nav>)}
       </div>
-      <div className="mt-14 flex flex-col justify-between gap-3 border-t border-white/10 pt-6 text-xs text-gray-500 sm:flex-row"><p>&copy; 2026 Mirage. All rights reserved.</p><p>Replicas require the explicit, revocable consent of the person depicted.</p></div>
+      <div className="mt-14 flex flex-col justify-between gap-3 border-t border-white/10 pt-6 text-xs text-gray-400 sm:flex-row"><p>&copy; 2026 Mirage. All rights reserved.</p><p>Replicas require the explicit, revocable consent of the person depicted.</p></div>
     </div></footer>
   );
 }

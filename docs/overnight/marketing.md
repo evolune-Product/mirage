@@ -1,0 +1,7 @@
+# Marketing site overnight notes (mkt)
+
+Built: /docs (+ api, deploy, benchmarks, testing; searchable, sidebar + on-page TOC; markdown copied to web/content/docs, rendered by web/components/site/md.tsx), /use-cases and six detail pages (data in web/lib/usecases.ts), /security, /about, /changelog (web/lib/commits.ts is a snapshot of `git log`; regenerate to refresh), /compare, /terms and /privacy (templates, noindex, marked "have counsel review"), landing "Try it" section (orb states + simulated typing conversation), "Talk to a demo" CTAs to /signup, lazy-loaded three.js orb (LazyOrb: dynamic import, only near viewport, skips silently with no WebGL), bigger mobile hero orb, footer/nav relinked, sitemap.ts, robots.ts, app/icon.svg, opengraph-image.tsx, canonical tags, skip link, global focus-visible outline.
+
+Verified: tsc clean; production build (separate dist dir) succeeds with all routes prerendered; Playwright at 1440 and 390 over all pages: no horizontal overflow, one h1 per page, no img without alt, no console errors except WebGL context errors in the shared swiftshader environment (before the no-WebGL guard was added); docs search works.
+
+Unverified: real GPU WebGL rendering of the orb on the new pages (headless swiftshader contexts were being refused), OG image output visually, Lighthouse score, mobile hamburger menu with the new links, set NEXT_PUBLIC_SITE_URL for real canonical/sitemap host. Edited outside ownership: web/app/globals.css (one focus-visible rule). Dev server also appended .next-mkt types to tsconfig include.

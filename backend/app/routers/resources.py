@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
@@ -80,6 +80,12 @@ def list_personas(acc: Account = Depends(current_account), s: Session = Depends(
 # ---- conversations ----
 class ConversationIn(BaseModel):
     persona_id: str
+    # optional (feature layer): memory scope, extra context, {{variables}}, hard time cap, language override
+    participant_id: str = ""
+    context: str = ""
+    variables: dict[str, str] = {}
+    max_seconds: int | None = None
+    language: str | None = None
 
 
 @router.post("/conversations")
@@ -89,12 +95,15 @@ def create_conversation(body: ConversationIn, acc: Account = Depends(current_acc
         raise HTTPException(402, "out of credits")
     c = Conversation(account_id=acc.id, persona_id=body.persona_id)
     c.room_url = f"/rooms/{c.id}"  # replaced by LiveKit room URL once media server is wired
+    from ..convo_runtime import on_conversation_created
+
+    on_conversation_created(s, c, body.model_dump(exclude={"persona_id"}))  # validates options, emits conversation.started
     s.add(c); s.commit(); s.refresh(c)
     return c
 
 
 @router.post("/conversations/{cid}/end")
-def end_conversation(cid: str, acc: Account = Depends(current_account), s: Session = Depends(get_session)):
+def end_conversation(cid: str, background: BackgroundTasks, acc: Account = Depends(current_account), s: Session = Depends(get_session)):
     c = owned(s, Conversation, cid, acc)
     if c.status == "ended":
         return c
@@ -105,6 +114,9 @@ def end_conversation(cid: str, acc: Account = Depends(current_account), s: Sessi
     s.add_all([c, acc]); s.commit(); s.refresh(c)
     record_usage(s, acc, c.seconds_used, f"conv:{c.id}")
     s.refresh(c)  # record_usage commits, which expires c
+    from ..convo_runtime import finalize_conversation
+
+    background.add_task(finalize_conversation, c.id, "ended")  # summary -> memory, metrics, webhooks
     return c
 
 

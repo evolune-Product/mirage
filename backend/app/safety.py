@@ -70,18 +70,37 @@ def moderate_or_raise(text: str) -> None:
 class RateLimiter:
     def __init__(self):
         self._hits: dict = defaultdict(deque)
+        self._win: dict = {}
         self._lock = threading.Lock()
+        self._calls = 0
 
-    def check(self, key: str, limit: int, window: float = 60.0, now_ts: float | None = None) -> bool:
+    def check_ex(self, key: str, limit: int, window: float = 60.0, now_ts: float | None = None) -> tuple[bool, float]:
+        """-> (allowed, retry_after_seconds). Records the hit only when allowed."""
         t = now_ts if now_ts is not None else time.monotonic()
         with self._lock:
+            self._calls += 1
+            if self._calls % 2000 == 0:
+                self._prune(t)
             q = self._hits[key]
+            self._win[key] = window
             while q and q[0] <= t - window:
                 q.popleft()
             if len(q) >= limit:
-                return False
+                return False, max(q[0] + window - t, 0.0)
             q.append(t)
-            return True
+            return True, 0.0
+
+    def check(self, key: str, limit: int, window: float = 60.0, now_ts: float | None = None) -> bool:
+        return self.check_ex(key, limit, window, now_ts)[0]
+
+    def _prune(self, t: float) -> None:
+        for k in [k for k, q in self._hits.items() if not q or q[-1] <= t - self._win.get(k, 60.0)]:
+            self._hits.pop(k, None)
+            self._win.pop(k, None)
+
+    def reset(self) -> None:
+        with self._lock:
+            self._hits.clear(); self._win.clear()
 
 
 limiter = RateLimiter()
@@ -121,3 +140,67 @@ def require_consent(replica_id: str, session: Session | None = None) -> None:
             ok = has_consent(s, replica_id)
     if not ok:
         raise ConsentRequired(replica_id)
+
+
+# ---------- consent phrase matching (ASR-tolerant) ----------
+CODE_WORDS = ["amber", "river", "stone", "cedar", "lunar", "pixel", "ember", "north"]
+
+
+def norm_tokens(t: str) -> list[str]:
+    return re.sub(r"[^a-z0-9]+", " ", (t or "").lower()).split()
+
+
+def phrase_code(phrase: str) -> list[str]:
+    m = re.search(r"code is ([a-z]+)\W+([a-z]+)\W+([a-z]+)", phrase.lower())
+    return list(m.groups()) if m else []
+
+
+def _ratio(a: str, b: str) -> float:
+    from difflib import SequenceMatcher
+    return SequenceMatcher(None, a, b).ratio()
+
+
+def _word_matches(tok: str, want: str) -> bool:
+    if tok == want:
+        return True
+    if tok in CODE_WORDS:  # an exact *other* code word is never a typo of this one
+        return False
+    r = _ratio(tok, want)
+    return r >= 0.8 and r > max((_ratio(tok, w) for w in CODE_WORDS if w != want), default=0)
+
+
+def code_words_present(phrase: str, transcript: str) -> bool:
+    """All three random code words must appear, in order. Tolerates one-character ASR slips but never
+    accepts a different code word (amber vs ember are told apart)."""
+    want = phrase_code(phrase)
+    if not want:
+        return False
+    toks = norm_tokens(transcript)
+    pos = 0
+    for w in want:
+        for i in range(pos, len(toks)):
+            if _word_matches(toks[i], w):
+                pos = i + 1
+                break
+        else:
+            return _code_in_compact(want, transcript)
+    return True
+
+
+def _code_in_compact(want: list[str], transcript: str) -> bool:
+    """ASR sometimes glues spoken words together ('cederemberpixel'): exact substrings, in order, after 'code'."""
+    c = "".join(norm_tokens(transcript))
+    i = c.rfind("code")
+    c = c[i + 4:] if i >= 0 else c
+    pos = 0
+    for w in want:
+        j = c.find(w, pos)
+        if j < 0:
+            return False
+        pos = j + len(w)
+    return True
+
+
+def phrase_score(phrase: str, transcript: str) -> float:
+    from difflib import SequenceMatcher
+    return SequenceMatcher(None, norm_tokens(phrase), norm_tokens(transcript)).ratio()

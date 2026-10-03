@@ -1,12 +1,12 @@
 import json
 import re
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from sqlmodel import Session
 
-from .. import db, jobs
+from .. import db, jobs, settings, signing
 from ..auth import current_account
 from ..db import Account, Replica, Video, get_session
 from ..models_extra import JobClaim, VideoMeta, ensure_tables
@@ -55,18 +55,31 @@ def job_status(kind: str, ref_id: str, acc: Account = Depends(current_account), 
             "webhook": meta.webhook_status if meta else None}
 
 
-# Public by unguessable id (browsers/video players cannot send x-api-key). Move behind signed URLs for production.
+def _require_signature(request: Request, path: str) -> None:
+    """Signed, expiring URLs (see signing.py). Unsigned access only when MIRAGE_ALLOW_PUBLIC_FILES is on
+    (default: dev only)."""
+    q = request.query_params
+    if signing.verify(path, q.get("exp"), q.get("sig")):
+        return
+    if "sig" in q:  # a signature was given but is wrong/expired: never fall back to public access
+        raise HTTPException(403, "invalid or expired file link")
+    if not settings.allow_public_files():
+        raise HTTPException(403, "signed link required; call POST /v1/files/sign")
+
+
 @router.get("/files/videos/{name}")
-def get_video_file(name: str):
+def get_video_file(name: str, request: Request):
     vid = name.removesuffix(".mp4")
     if not _ID.match(vid) or not jobs.video_path(vid).exists():
         raise HTTPException(404, "not found")
-    return FileResponse(jobs.video_path(vid), media_type="video/mp4")
+    _require_signature(request, f"/v1/files/videos/{name}")
+    return FileResponse(jobs.video_path(vid), media_type="video/mp4", headers={"Cache-Control": "private, max-age=300"})
 
 
 @router.get("/files/replicas/{rid}/face.png")
-def get_face(rid: str):
+def get_face(rid: str, request: Request):
     p = jobs.replica_dir(rid) / "face.png"
     if not _ID.match(rid) or not p.exists():
         raise HTTPException(404, "not found")
-    return FileResponse(p, media_type="image/png")
+    _require_signature(request, f"/v1/files/replicas/{rid}/face.png")
+    return FileResponse(p, media_type="image/png", headers={"Cache-Control": "private, max-age=300"})

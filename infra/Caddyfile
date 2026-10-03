@@ -1,0 +1,9 @@
+# Reverse proxy with automatic TLS (Let's Encrypt). Replace the hostnames; DNS A records must point here.
+app.example.com {
+	reverse_proxy 127.0.0.1:3000
+}
+api.example.com {
+	# request_body max_size is enforced again by Mirage (MIRAGE_MAX_UPLOAD_BYTES)
+	request_body { max_size 30MB }
+	reverse_proxy 127.0.0.1:8000   # WebSockets (/v1/conversations/*/stream) are proxied automatically
+}

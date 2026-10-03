@@ -1,0 +1,24 @@
+# lip-sync service (lipsync_server.py) - pinned to what was verified on the M1 Mac (python 3.11)
+torch>=2.3
+torchvision
+numpy>=1.26,<2.4
+scipy
+librosa==0.11.0
+opencv-python-headless>=4.9,<4.12
+fastapi
+uvicorn[standard]
+httpx
+mediapipe==0.10.21        # face tracking; mediapipe 1.0.x aborts on macOS (Metal service), 0.10.21 works. Linux: any recent
+protobuf<5
+absl-py
+attrs
+sentencepiece
+# optional quality engine (render_offline.py --engine musetalk)
+diffusers==0.30.2
+transformers==4.39.2
+huggingface_hub<0.31
+accelerate
+einops
+omegaconf
+# optional restoration (render_offline.py --restore sr)  -> torch only, weights download on first use
+onnxruntime   # only for --restore gfpgan (not recommended: slow + artifacts on this footage)

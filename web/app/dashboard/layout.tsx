@@ -3,20 +3,30 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { LayoutDashboard, ScanFace, UserRound, MessagesSquare, Clapperboard, CreditCard, KeyRound, LogOut, Menu, X } from "lucide-react";
+import { LayoutDashboard, ScanFace, UserRound, MessagesSquare, Clapperboard, CreditCard, KeyRound, LogOut, Menu, X, BarChart3, Webhook, Settings } from "lucide-react";
 import Logo from "@/components/site/Logo";
 import { Toaster } from "@/components/ui";
 import { api, clearKey, getKey } from "@/lib/api";
 
-const nav = [
-  { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
-  { href: "/dashboard/replicas", label: "Replicas", icon: ScanFace },
-  { href: "/dashboard/personas", label: "Personas", icon: UserRound },
-  { href: "/dashboard/conversations", label: "Conversations", icon: MessagesSquare },
-  { href: "/dashboard/videos", label: "Videos", icon: Clapperboard },
-  { href: "/dashboard/billing", label: "Billing", icon: CreditCard },
-  { href: "/dashboard/keys", label: "API keys & docs", icon: KeyRound },
+const groups = [
+  { title: "Studio", items: [
+    { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
+    { href: "/dashboard/replicas", label: "Replicas", icon: ScanFace },
+    { href: "/dashboard/personas", label: "Personas", icon: UserRound },
+    { href: "/dashboard/conversations", label: "Conversations", icon: MessagesSquare },
+    { href: "/dashboard/videos", label: "Videos", icon: Clapperboard },
+  ] },
+  { title: "Insights", items: [{ href: "/dashboard/analytics", label: "Analytics", icon: BarChart3 }] },
+  { title: "Developers", items: [
+    { href: "/dashboard/webhooks", label: "Webhooks", icon: Webhook },
+    { href: "/dashboard/keys", label: "API keys & docs", icon: KeyRound },
+  ] },
+  { title: "Account", items: [
+    { href: "/dashboard/billing", label: "Billing", icon: CreditCard },
+    { href: "/dashboard/settings", label: "Settings", icon: Settings },
+  ] },
 ];
+const nav = groups.flatMap((g) => g.items);
 type Status = { plan: { name: string; included_minutes: number }; credits_seconds: number };
 
 function Sidebar({ path, credits, onNav, signOut }: { path: string; credits: Status | null; onNav: () => void; signOut: () => void }) {
@@ -27,17 +37,24 @@ function Sidebar({ path, credits, onNav, signOut }: { path: string; credits: Sta
   return (
     <div className="flex h-full flex-col">
       <Link href="/" className="flex items-center px-5 py-5"><Logo /></Link>
-      <nav className="flex-1 space-y-0.5 px-3">
-        {nav.map(({ href, label, icon: I }) => {
-          const on = path === href;
-          return (
-            <Link key={href} href={href} onClick={onNav} className={`group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition ${on ? "text-white" : "text-gray-400 hover:bg-white/5 hover:text-white"}`}>
-              {on && <motion.span layoutId="navbg" className="absolute inset-0 rounded-lg bg-white/[0.08] ring-1 ring-white/10" />}
-              {on && <span className="absolute -left-3 top-2 bottom-2 w-0.5 rounded bg-mirage-gradient" />}
-              <I size={17} className={`relative ${on ? "text-mirage-rose" : ""}`} /><span className="relative">{label}</span>
-            </Link>
-          );
-        })}
+      <nav className="flex-1 space-y-4 overflow-y-auto px-3 pb-2">
+        {groups.map((g) => (
+          <div key={g.title}>
+            <p className="mb-1 px-3 font-mono text-[10px] uppercase tracking-[0.18em] text-gray-600">{g.title}</p>
+            <div className="space-y-0.5">
+              {g.items.map(({ href, label, icon: I }) => {
+                const on = path === href;
+                return (
+                  <Link key={href} href={href} onClick={onNav} className={`group relative flex items-center gap-3 rounded-lg px-3 py-1.5 text-sm transition ${on ? "text-white" : "text-gray-400 hover:bg-white/5 hover:text-white"}`}>
+                    {on && <motion.span layoutId="navbg" className="absolute inset-0 rounded-lg bg-white/[0.08] ring-1 ring-white/10" />}
+                    {on && <span className="absolute -left-3 top-2 bottom-2 w-0.5 rounded bg-mirage-gradient" />}
+                    <I size={16} className={`relative ${on ? "text-mirage-rose" : ""}`} /><span className="relative">{label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
       <div className="m-3 space-y-3 rounded-xl border border-white/10 bg-ink-3/70 p-3.5">
         <div className="flex items-center justify-between">

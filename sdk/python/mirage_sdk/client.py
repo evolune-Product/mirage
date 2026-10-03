@@ -76,8 +76,9 @@ class Mirage:
         return self._req("GET", f"/personas/{pid}/memories", params={"limit": limit})
 
     # conversations
-    def create_conversation(self, persona_id: str) -> dict:
-        return self._req("POST", "/conversations", json={"persona_id": persona_id})
+    def create_conversation(self, persona_id: str, **options) -> dict:
+        """options: participant_id, context, variables={...}, max_seconds, language"""
+        return self._req("POST", "/conversations", json={"persona_id": persona_id, **options})
     def end_conversation(self, cid: str) -> dict: return self._req("POST", f"/conversations/{cid}/end")
 
     # videos
@@ -91,3 +92,93 @@ class Mirage:
     def checkout(self, provider: str, sku: str, kind: str = "topup", **urls) -> dict:
         return self._req("POST", "/billing/checkout", json={"provider": provider, "kind": kind, "sku": sku, **urls})
     def moderate(self, text: str) -> dict: return self._req("POST", "/moderation/check", json={"text": text})
+
+    # ---- transcripts, summaries, objectives, tools log, metrics ----
+    def get_transcript(self, cid: str) -> dict: return self._req("GET", f"/conversations/{cid}/transcript")
+    def get_transcript_text(self, cid: str) -> str:
+        r = self._http.get(f"/v1/conversations/{cid}/transcript", params={"format": "text"}, headers={"x-api-key": self.api_key or ""})
+        r.raise_for_status()
+        return r.text
+    def get_summary(self, cid: str) -> dict: return self._req("GET", f"/conversations/{cid}/summary")
+    def get_objectives(self, cid: str) -> list: return self._req("GET", f"/conversations/{cid}/objectives")
+    def get_tool_calls(self, cid: str) -> list: return self._req("GET", f"/conversations/{cid}/tool-calls")
+    def get_conversation_metrics(self, cid: str) -> dict: return self._req("GET", f"/conversations/{cid}/metrics")
+
+    # ---- persona config / tools ----
+    def get_persona_config(self, pid: str) -> dict: return self._req("GET", f"/personas/{pid}/config")
+    def set_persona_config(self, pid: str, **fields) -> dict:
+        """language, greeting, objectives=[{name, description, success_criteria, output_variables}],
+        guardrails=[{rule, forbidden_phrases}], guardrail_fallback, memory_enabled,
+        custom_llm={base_url, model, api_key}, stt_model. Only the given fields change."""
+        return self._req("PUT", f"/personas/{pid}/config", json=fields)
+    def add_tool(self, pid: str, name: str, webhook_url: str, description: str = "", parameters: Optional[dict] = None,
+                 secret: Optional[str] = None, timeout_s: float = 8.0) -> dict:
+        return self._req("POST", f"/personas/{pid}/tools", json={
+            "name": name, "description": description, "webhook_url": webhook_url, "secret": secret, "timeout_s": timeout_s,
+            "parameters": parameters or {"type": "object", "properties": {}}})
+    def list_tools(self, pid: str) -> list: return self._req("GET", f"/personas/{pid}/tools")
+    def delete_tool(self, pid: str, tool_id: str) -> Any: return self._req("DELETE", f"/personas/{pid}/tools/{tool_id}")
+
+    # ---- webhooks ----
+    def webhook_events(self) -> dict: return self._req("GET", "/webhooks/events")
+    def create_webhook(self, url: str, events: Optional[list] = None, description: str = "") -> dict:
+        """Returns the signing `secret` once; store it to verify deliveries with `verify_webhook`."""
+        return self._req("POST", "/webhooks", json={"url": url, "events": events or ["*"], "description": description})
+    def list_webhooks(self) -> list: return self._req("GET", "/webhooks")
+    def update_webhook(self, wid: str, **fields) -> dict: return self._req("PATCH", f"/webhooks/{wid}", json=fields)
+    def delete_webhook(self, wid: str) -> Any: return self._req("DELETE", f"/webhooks/{wid}")
+    def rotate_webhook_secret(self, wid: str) -> dict: return self._req("POST", f"/webhooks/{wid}/rotate-secret")
+    def test_webhook(self, wid: str) -> dict: return self._req("POST", f"/webhooks/{wid}/test")
+    def webhook_deliveries(self, wid: str, limit: int = 50) -> list:
+        return self._req("GET", f"/webhooks/{wid}/deliveries", params={"limit": limit})
+    def retry_webhook_delivery(self, delivery_id: str) -> dict: return self._req("POST", f"/webhooks/deliveries/{delivery_id}/retry")
+
+    @staticmethod
+    def verify_webhook(secret: str, body: str, signature_header: str, tolerance_s: int = 300) -> bool:
+        """Verify a `Mirage-Signature` header (t=<unix>,v1=<hmac_sha256(secret, "t.body")>) against the raw body."""
+        import hashlib, hmac, time
+        try:
+            parts = dict(p.split("=", 1) for p in signature_header.split(","))
+            expected = hmac.new(secret.encode(), f"{int(parts['t'])}.{body}".encode(), hashlib.sha256).hexdigest()
+            return hmac.compare_digest(expected, parts["v1"]) and abs(time.time() - int(parts["t"])) <= tolerance_s
+        except Exception:
+            return False
+
+    # ---- voices / languages ----
+    def voices(self, language: Optional[str] = None) -> dict:
+        return self._req("GET", "/voices", params={"language": language} if language else None)
+    def languages(self) -> list: return self._req("GET", "/languages")
+
+    # ---- API keys ----
+    def create_key(self, name: str = "key") -> dict: return self._req("POST", "/keys", json={"name": name})
+    def list_keys(self) -> list: return self._req("GET", "/keys")
+    def revoke_key(self, key_id: str) -> dict: return self._req("DELETE", f"/keys/{key_id}")
+    def rotate_signup_key(self) -> dict:
+        out = self._req("POST", "/keys/legacy/rotate")
+        self.api_key = out["key"]
+        return out
+
+    # ---- analytics ----
+    def analytics(self, days: int = 30) -> dict: return self._req("GET", "/analytics", params={"days": days})
+
+    # ---- video features ----
+    def preview_template(self, script_template: str, variables: Optional[dict] = None) -> dict:
+        return self._req("POST", "/videos/template/preview", json={"script_template": script_template, "variables": variables or {}})
+    def create_bulk_videos(self, replica_id: str, script_template: str, rows: list, voice: str = "default",
+                           callback_url: Optional[str] = None) -> dict:
+        return self._req("POST", "/video-jobs/bulk", json={"replica_id": replica_id, "script_template": script_template,
+                         "rows": rows, "voice": voice, "callback_url": callback_url})
+    def translate_video(self, replica_id: str, script: str, languages: list, source_language: str = "en",
+                        include_original: bool = False, voices: Optional[dict] = None, callback_url: Optional[str] = None) -> dict:
+        return self._req("POST", "/video-jobs/translate", json={
+            "replica_id": replica_id, "script": script, "languages": languages, "source_language": source_language,
+            "include_original": include_original, "voices": voices or {}, "callback_url": callback_url}, timeout=300)
+    def list_video_batches(self) -> list: return self._req("GET", "/video-batches")
+    def get_video_batch(self, bid: str) -> dict: return self._req("GET", f"/video-batches/{bid}")
+
+    # ---- guest share links ----
+    def create_share_link(self, persona_id: str, **opts) -> dict:
+        """opts: label, max_seconds, max_total_seconds, max_sessions_per_hour, max_sessions_per_ip_hour, expires_in_hours"""
+        return self._req("POST", f"/personas/{persona_id}/share", json=opts)
+    def list_share_links(self, persona_id: str) -> list: return self._req("GET", f"/personas/{persona_id}/share")
+    def revoke_share_link(self, token: str) -> dict: return self._req("DELETE", f"/share/{token}")

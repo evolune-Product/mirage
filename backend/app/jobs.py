@@ -50,6 +50,14 @@ def _now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def _signed_hook_url(url):
+    """Webhook receivers cannot send x-api-key: give them a 24 h signed link (safety-infra)."""
+    if not url:
+        return url
+    from . import signing
+    return signing.sign_path(url, ttl=86400)
+
+
 def replica_dir(rid: str) -> Path:
     return DATA_DIR / "replicas" / rid
 
@@ -87,7 +95,10 @@ class KokoroPresetVoice:
 
         if self._k is None:
             self._k = Kokoro(str(MODELS / "kokoro-v1.0.onnx"), str(MODELS / "voices-v1.0.bin"))
-        samples, sr = self._k.create(text, voice="af_heart" if voice in ("default", "") else voice, speed=1.0, lang="en-us")
+        from .languages import lang_for_voice
+
+        v = "af_heart" if voice in ("default", "") else voice
+        samples, sr = self._k.create(text, voice=v, speed=1.0, lang=lang_for_voice(v))  # es/fr/hi/... voices use their espeak lang
         pcm = (np.clip(samples, -1, 1) * 32767).astype("<i2").tobytes()
         with wave.open(str(out_wav), "wb") as w:
             w.setnchannels(1); w.setsampwidth(2); w.setframerate(sr); w.writeframes(pcm)
@@ -233,6 +244,9 @@ def process_replica(rid: str, deps: Deps) -> bool:
         s.add(rep); s.commit()
         timings["total"] = round(time.time() - t0, 2)
         _finish(s, "replica", rid, err, {"timings": timings, "notes": notes})
+        from .events import on_replica_finished
+
+        on_replica_finished(rid)
         return err is None
 
 
@@ -274,10 +288,14 @@ def process_video(vid: str, deps: Deps) -> bool:
         s.add(v); s.commit()
         timings["total"] = round(time.time() - t0, 2)
         _finish(s, "video", vid, err, {"timings": timings})
+        from .events import on_video_finished
+
+        on_video_finished(vid, err)
         if meta and meta.callback_url:
             meta.webhook_status = deps.webhook(meta.callback_url, {
                 "event": "video.ready" if not err else "video.error", "video_id": vid,
-                "status": v.status, "output_url": v.output_url, "error": err})
+                "status": v.status, "error": err,
+                "output_url": _signed_hook_url(v.output_url)})
             s.add(meta); s.commit()
         return err is None
 

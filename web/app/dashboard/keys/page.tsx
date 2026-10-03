@@ -1,8 +1,8 @@
 "use client";
-import { useEffect, useState } from "react";
-import { Eye, EyeOff, Save } from "lucide-react";
-import { API_URL, getKey, setKey } from "@/lib/api";
-import { Shell, CopyButton, toast } from "@/components/ui";
+import { useCallback, useEffect, useState } from "react";
+import { Eye, EyeOff, Save, Plus, Trash2, KeyRound, RotateCw } from "lucide-react";
+import { API_URL, ApiKey, api, fmtDate, getKey, setKey } from "@/lib/api";
+import { Shell, CopyButton, ConfirmDialog, SecretOnce, Spinner, Empty, Badge, toast } from "@/components/ui";
 
 type Lang = "curl" | "python" | "js";
 type Snip = { title: string; curl: string; python: string; js: string };
@@ -34,6 +34,45 @@ function snippets(kk: string): Snip[] {
   ];
 }
 
+function KeyManager() {
+  const [keys, setKeys] = useState<ApiKey[] | null>(null); const [name, setName] = useState(""); const [busy, setBusy] = useState(false);
+  const [secret, setSecret] = useState<{ title: string; value: string; note: string } | null>(null); const [rev, setRev] = useState<ApiKey | null>(null); const [rot, setRot] = useState(false);
+  const load = useCallback(() => api<ApiKey[]>("/v1/keys").then(setKeys).catch((x) => { toast.error(x); setKeys((k) => k ?? []); }), []);
+  useEffect(() => { load(); }, [load]);
+  const mine = (k: ApiKey) => { const cur = getKey(); return !!cur && cur.startsWith(k.prefix) && !k.revoked_at; };
+  async function create(e: React.FormEvent) {
+    e.preventDefault(); setBusy(true);
+    try { const k = await api<{ key: string }>("/v1/keys", { body: { name } }); setSecret({ title: "Copy your new API key now", value: k.key, note: "Only a hash is stored, so this is the one time you can see it." }); setName(""); load(); }
+    catch (x) { toast.error(x); } finally { setBusy(false); }
+  }
+  const active = (keys ?? []).filter((k) => !k.revoked_at); const revoked = (keys ?? []).filter((k) => k.revoked_at);
+  return (
+    <div className="mb-10">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3"><h2 className="font-display text-2xl">Your keys</h2>
+        <form onSubmit={create} className="flex gap-2"><input className="input !w-44" required placeholder="Key name, e.g. prod" aria-label="New key name" value={name} onChange={(e) => setName(e.target.value)} />
+          <button className="btn-grad" disabled={busy}>{busy ? <Spinner /> : <Plus size={15} />}Create key</button></form></div>
+      {secret && <div className="mb-4"><SecretOnce title={secret.title} secret={secret.value} note={secret.note} onDone={() => setSecret(null)} /></div>}
+      {keys === null ? <div className="h-24 animate-pulse rounded-2xl bg-white/5" /> : active.length === 0 ? <Empty kind="key" title="No active keys" hint="Create a key to call the API from your own code." /> : (
+        <div className="overflow-x-auto rounded-2xl border border-white/10"><table className="w-full min-w-[34rem] text-left text-sm" data-testid="keys-table">
+          <thead className="bg-white/[0.03] text-[10px] uppercase tracking-wider text-gray-500"><tr><th className="px-4 py-2.5">Name</th><th className="px-4 py-2.5">Key</th><th className="px-4 py-2.5">Created</th><th className="px-4 py-2.5">Last used</th><th /></tr></thead>
+          <tbody>{active.map((k) => (
+            <tr key={k.id} className="border-t border-white/5 bg-ink-2/60">
+              <td className="px-4 py-3">{k.name}{mine(k) && <span className="ml-2 rounded-full bg-mirage-violet/15 px-2 py-0.5 text-[10px] text-mirage-violet">this browser</span>}</td>
+              <td className="px-4 py-3 font-mono text-xs text-gray-400">{k.prefix}...</td>
+              <td className="whitespace-nowrap px-4 py-3 text-xs text-gray-400">{fmtDate(k.created_at)}</td>
+              <td className="whitespace-nowrap px-4 py-3 text-xs text-gray-400">{k.last_used_at ? fmtDate(k.last_used_at) : "never"}</td>
+              <td className="px-4 py-3 text-right whitespace-nowrap">{k.legacy ? <button className="inline-flex items-center gap-1 text-xs text-mirage-cyan hover:underline" onClick={() => setRot(true)}><RotateCw size={12} />Rotate</button>
+                : <button aria-label={`Revoke ${k.name}`} className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-mirage-rose" onClick={() => setRev(k)}><Trash2 size={13} />Revoke</button>}</td>
+            </tr>))}</tbody></table></div>)}
+      {revoked.length > 0 && <p className="mt-3 flex flex-wrap items-center gap-2 text-xs text-gray-500">Revoked: {revoked.map((k) => <span key={k.id} className="inline-flex items-center gap-1.5">{k.name} <Badge s="revoked" /></span>)}</p>}
+      <ConfirmDialog open={!!rev} title="Revoke this key?" body={<>Requests using <b className="font-mono">{rev?.prefix}...</b> fail immediately, including open WebSocket sessions.{rev && mine(rev) && <b className="mt-2 block text-mirage-amber">This is the key this browser uses. You will be signed out of the dashboard.</b>}</>} confirmLabel="Revoke key" onClose={() => setRev(null)}
+        onConfirm={async () => { try { await api(`/v1/keys/${rev!.id}`, { method: "DELETE" }); toast.success("Key revoked."); setRev(null); load(); } catch (x) { toast.error(x); } }} />
+      <ConfirmDialog open={rot} danger={false} title="Rotate the signup key?" body="The original key stops working immediately and a new one replaces it. This browser is updated automatically; update anywhere else you use it." confirmLabel="Rotate key" onClose={() => setRot(false)}
+        onConfirm={async () => { try { const k = await api<{ key: string }>("/v1/keys/legacy/rotate", { method: "POST", body: {} }); setKey(k.key); setSecret({ title: "Your new signup key", value: k.key, note: "Saved in this browser. Copy it for any other place you use it." }); setRot(false); load(); } catch (x) { toast.error(x); } }} />
+    </div>
+  );
+}
+
 export default function Keys() {
   const [k, setK] = useState(""); const [show, setShow] = useState(false); const [lang, setLang] = useState<Lang>("curl");
   useEffect(() => setK(getKey()), []);
@@ -41,15 +80,16 @@ export default function Keys() {
   const tabs: [Lang, string][] = [["curl", "cURL"], ["python", "Python"], ["js", "JavaScript"]];
   return (
     <Shell title="API keys & docs" subtitle="Everything you do in this dashboard is available over a plain REST API.">
+      <KeyManager />
       <div className="card mb-8">
-        <label className="label">Your API key</label>
+        <label className="label">Key used by this dashboard</label>
         <div className="flex flex-wrap gap-2">
           <input className="input min-w-0 basis-full font-mono sm:basis-0 sm:flex-1" type={show ? "text" : "password"} value={k} onChange={(e) => setK(e.target.value)} aria-label="API key" />
           <button className="btn-ghost !px-3" aria-label={show ? "Hide key" : "Show key"} onClick={() => setShow(!show)}>{show ? <EyeOff size={16} /> : <Eye size={16} />}</button>
           <CopyButton text={k} className="!px-3.5" />
           <button className="btn" onClick={() => { setKey(k); toast.success("Key saved in this browser."); }}><Save size={15} />Save</button>
         </div>
-        <p className="mt-2 text-xs text-gray-500">Stored in this browser&apos;s localStorage. Multiple keys per account are not supported by the API yet.</p>
+        <p className="mt-2 text-xs text-gray-500">Stored in this browser&apos;s localStorage. Paste a key here if you sign in on another device; the snippets below use it.</p>
       </div>
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">

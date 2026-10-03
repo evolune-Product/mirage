@@ -8,3 +8,8 @@ workers/.venv/
 workers/**/animations/
 data/
 workers/Wav2Lip/
+.venv-tts/
+workers/.venv-face/
+workers/MuseTalk/
+*.whl
+web/.next-*/

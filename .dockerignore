@@ -1,0 +1,9 @@
+**/.venv
+**/node_modules
+**/.next*
+**/__pycache__
+**/*.pyc
+.git
+data
+backend/mirage.db
+*.db

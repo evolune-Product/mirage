@@ -1,9 +1,11 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Check, Cpu, Loader2, Plus, ScanFace, ShieldCheck } from "lucide-react";
+import { Check, Cpu, Loader2, Plus, ScanFace, ShieldCheck, Trash2 } from "lucide-react";
 import { API_URL, api, Replica } from "@/lib/api";
-import { Shell, Badge, Empty, Modal, SkeletonCards, CopyButton, toast } from "@/components/ui";
+import ConsentRecorder from "@/components/ConsentRecorder";
+import ReplicaDetail from "@/components/replica/ReplicaDetail";
+import { Shell, Badge, Empty, Modal, SkeletonCards, CopyButton, ConfirmDialog, toast } from "@/components/ui";
 
 const STEPS = [["awaiting_consent", "Consent"], ["training", "Training"], ["ready", "Ready"]] as const;
 
@@ -30,12 +32,16 @@ function Stepper({ status }: { status: string }) {
 }
 
 function Face({ r }: { r: Replica }) {
-  const [bad, setBad] = useState(false);
+  const [bad, setBad] = useState(false); const [src, setSrc] = useState("");
+  // Files are served through short-lived signed links (POST /v1/files/sign), not guessable public URLs.
+  useEffect(() => { if (r.status !== "ready") return; let live = true;
+    api<{ url: string }>("/v1/files/sign", { body: { path: `/v1/files/replicas/${r.id}/face.png` } }).then((j) => { if (live) setSrc(API_URL + j.url); }).catch(() => live && setBad(true));
+    return () => { live = false; }; }, [r.id, r.status]);
   return (
     <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl bg-ink-3 ring-1 ring-white/10">
-      {r.status === "ready" && !bad
+      {r.status === "ready" && src && !bad
         // eslint-disable-next-line @next/next/no-img-element
-        ? <img src={`${API_URL}/v1/files/replicas/${r.id}/face.png`} alt={r.name} className="h-full w-full object-cover" onError={() => setBad(true)} />
+        ? <img src={src} alt={r.name} className="h-full w-full object-cover" onError={() => setBad(true)} />
         : <div className="grid h-full w-full place-items-center bg-[radial-gradient(circle_at_30%_20%,rgba(124,92,255,.35),transparent_70%)] text-gray-500"><ScanFace size={26} /></div>}
     </div>
   );
@@ -44,6 +50,7 @@ function Face({ r }: { r: Replica }) {
 export default function Replicas() {
   const [list, setList] = useState<Replica[] | null>(null); const [name, setName] = useState(""); const [url, setUrl] = useState("");
   const [open, setOpen] = useState(false); const [busy, setBusy] = useState(false);
+  const [detail, setDetail] = useState<Replica | null>(null); const [del, setDel] = useState<Replica | null>(null);
   const load = useCallback(async () => { try {
     // The API keeps status=awaiting_consent until a worker picks the job up, so ask whether consent exists and show "training" (queued) in that case.
     const l = await api<Replica[]>("/v1/replicas");
@@ -56,14 +63,9 @@ export default function Replicas() {
     try { await api("/v1/replicas", { body: { name, train_video_url: url } }); setName(""); setUrl(""); setOpen(false); toast.success("Replica created. Next: give consent."); load(); }
     catch (x) { toast.error(x); } finally { setBusy(false); }
   }
-  const [cons, setCons] = useState<{ rid: string; cid: string; phrase: string } | null>(null); const [said, setSaid] = useState(""); const [who, setWho] = useState("");
+  const [cons, setCons] = useState<{ rid: string; cid: string; phrase: string } | null>(null)
   async function startConsent(rid: string) {
-    try { const c = await api<{ challenge_id: string; phrase: string }>(`/v1/replicas/${rid}/consent/challenge`, { method: "POST", body: {} }); setCons({ rid, cid: c.challenge_id, phrase: c.phrase }); setSaid(""); }
-    catch (x) { toast.error(x); }
-  }
-  async function submitConsent() {
-    if (!cons) return;
-    try { await api(`/v1/replicas/${cons.rid}/consent`, { body: { challenge_id: cons.cid, speaker_name: who, audio_url: "dashboard://typed-confirmation", transcript: said } }); setCons(null); toast.success("Consent recorded. Training is queued."); load(); }
+    try { const c = await api<{ challenge_id: string; phrase: string }>(`/v1/replicas/${rid}/consent/challenge`, { method: "POST", body: {} }); setCons({ rid, cid: c.challenge_id, phrase: c.phrase }); }
     catch (x) { toast.error(x); }
   }
   const newBtn = <button className="btn-grad" onClick={() => setOpen(true)}><Plus size={16} />New replica</button>;
@@ -79,7 +81,8 @@ export default function Replicas() {
               <motion.div layout key={r.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className={`card flex flex-col gap-4 ${cons?.rid === r.id ? "md:col-span-2 xl:col-span-3" : ""}`}>
                 <div className="flex items-start gap-4">
                   <Face r={r} />
-                  <div className="min-w-0 flex-1"><p className="truncate font-medium">{r.name}</p><p className="truncate font-mono text-xs text-gray-500">{r.id}</p><div className="mt-2"><Badge s={r.status} /></div></div>
+                  <div className="min-w-0 flex-1"><p className="truncate font-medium">{r.name}</p><p className="truncate font-mono text-xs text-gray-500">{r.id}</p><div className="mt-2 flex flex-wrap items-center gap-2"><Badge s={r.status} /><button className="text-xs text-mirage-cyan hover:underline" onClick={() => setDetail(r)}>Details</button></div></div>
+                  <button aria-label={`Delete ${r.name}`} onClick={() => setDel(r)} className="rounded-lg p-1.5 text-gray-600 transition hover:bg-mirage-rose/10 hover:text-mirage-rose"><Trash2 size={15} /></button>
                 </div>
                 <Stepper status={r.status} />
                 {r.status === "awaiting_consent" && cons?.rid !== r.id && (
@@ -94,22 +97,16 @@ export default function Replicas() {
                 )}
                 {r.status === "error" && <p className="rounded-xl bg-mirage-rose/10 p-3 text-xs text-mirage-rose">Training failed. Check the worker logs, then create the replica again.</p>}
                 {cons?.rid === r.id && (
-                  <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-                    <p className="label">Consent for {cons.rid}</p>
-                    <p className="mb-3 text-sm text-gray-300">The person in the training video must confirm. Read this phrase aloud, then type it exactly below:</p>
-                    <p className="mb-3 rounded-lg border border-mirage-amber/20 bg-mirage-amber/5 p-3 font-display text-xl leading-snug">{cons.phrase}</p>
-                    <div className="grid gap-3 md:grid-cols-[1fr_2fr]">
-                      <div><label className="label">Your name</label><input className="input" value={who} onChange={(e) => setWho(e.target.value)} /></div>
-                      <div><label className="label">Phrase you said</label><input className="input" value={said} onChange={(e) => setSaid(e.target.value)} /></div>
-                    </div>
-                    <div className="mt-4 flex gap-2"><button className="btn-grad" disabled={!who || !said} onClick={submitConsent}>Confirm consent</button><button className="btn-ghost" onClick={() => setCons(null)}>Cancel</button></div>
-                  </div>
+                  <ConsentRecorder rid={cons.rid} challengeId={cons.cid} phrase={cons.phrase} onCancel={() => setCons(null)} onDone={() => { setCons(null); load(); }} />
                 )}
               </motion.div>
             ))}
           </AnimatePresence>
         </div>
       )}
+      <ReplicaDetail replica={detail} onClose={() => setDetail(null)} onDeleted={() => { setDetail(null); load(); }} />
+      <ConfirmDialog open={!!del} title="Delete this replica?" body={<>This permanently deletes <b>{del?.name}</b>, its consent evidence and media. This cannot be undone.</>} confirmLabel="Delete replica" onClose={() => setDel(null)}
+        onConfirm={async () => { try { await api(`/v1/replicas/${del!.id}`, { method: "DELETE" }); setDel(null); toast.success("Replica deleted."); load(); } catch (x) { toast.error(x); } }} />
       <Modal open={open} onClose={() => setOpen(false)} title="New replica">
         <form onSubmit={create} className="space-y-4">
           <div><label className="label">Name</label><input className="input" required autoFocus placeholder="e.g. Founder" value={name} onChange={(e) => setName(e.target.value)} /></div>

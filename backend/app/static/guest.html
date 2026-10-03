@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Talk to an AI agent</title>
+<style>
+*{box-sizing:border-box}
+body{font:14px/1.5 Inter,system-ui,-apple-system,sans-serif;max-width:680px;margin:0 auto;padding:1.25rem 1rem 2rem;background:#0b0a10;background-image:radial-gradient(36rem 18rem at 85% -5%,#7c5cff22,transparent),radial-gradient(28rem 16rem at 0 0,#ff4d8d14,transparent);color:#ece9f2;min-height:100vh}
+h2{font:400 30px/1.1 "Instrument Serif",Georgia,serif;margin:.2rem 0 1rem;background:linear-gradient(120deg,#ff9e5e,#ff4d8d 45%,#7c5cff);-webkit-background-clip:text;background-clip:text;color:transparent;display:inline-block}
+input,button{font:inherit;padding:.6rem .85rem;border-radius:12px;border:1px solid #ffffff1a;background:#12111a;color:inherit;outline:none;transition:border-color .15s,box-shadow .15s,filter .15s}
+input:focus{border-color:#ff4d8db3;box-shadow:0 0 0 3px #ff4d8d33}
+input::placeholder{color:#6b6878}
+button{cursor:pointer;border:0;font-weight:600;color:#fff;background:linear-gradient(120deg,#ff9e5e,#ff4d8d 45%,#7c5cff);box-shadow:0 8px 24px -10px #ff4d8d99;border-radius:999px;padding:.6rem 1.3rem}
+button:hover:not(:disabled){filter:brightness(1.1)}
+button.sec{background:#ffffff0d;border:1px solid #ffffff1f;box-shadow:none;color:#d6d3df;font-weight:500}
+button.sec:hover:not(:disabled){background:#ffffff1a}
+button:disabled{opacity:.4;cursor:not-allowed}
+.row{display:flex;gap:.5rem;margin:.5rem 0;flex-wrap:wrap}.row input{flex:1;min-width:0}
+#log{height:300px;overflow:auto;background:#12111acc;border:1px solid #ffffff14;border-radius:16px;padding:.9rem 1rem;margin-top:.75rem;scrollbar-width:thin;scrollbar-color:#333 transparent}
+#log div{margin:.25rem 0}
+.u{color:#8fd8ff}.a{color:#ffd9b8}.s{color:#7d7a8a;font-size:12px;font-family:ui-monospace,monospace}
+#state{margin:.9rem 0 .2rem;color:#a9a5b8;font:12px ui-monospace,SFMono-Regular,monospace;text-transform:uppercase;letter-spacing:.14em;text-align:center}
+#state::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:#9cf0c4;margin-right:.55rem;vertical-align:1px;box-shadow:0 0 8px #9cf0c4}
+#face{display:none;width:200px;height:200px;object-fit:cover;border-radius:50%;margin:1rem auto .25rem;border:3px solid #ffffff1f;box-shadow:0 0 0 6px #ffffff08,0 20px 60px -20px #7c5cff88;transition:box-shadow .15s,border-color .3s}
+#vid{display:none;width:min(100%,640px);border-radius:16px;margin:1rem auto .25rem;box-shadow:0 20px 60px -20px #7c5cff88;background:#000}
+#face.talk{animation:talk .6s ease-in-out infinite alternate;border-color:#ff4d8d}
+@keyframes talk{from{box-shadow:0 0 0 6px #ff4d8d55,0 0 40px 4px #ff4d8d55,0 0 80px 10px #7c5cff33}to{box-shadow:0 0 0 16px #ff4d8d00,0 0 70px 14px #ff4d8d88,0 0 120px 24px #7c5cff55}}
+</style></head><body>
+<h2 id="title">Talk to an AI agent</h2>
+<div id="note" class="s"></div>
+<div class="row"><button id="go">Start conversation</button><button id="int" class="sec" disabled>Interrupt</button><button id="stop" class="sec" disabled>Stop</button></div>
+<img id="face" alt="agent"><canvas id="vid"></canvas>
+<div id="state">idle</div>
+<div id="log"></div>
+<script>
+const $=id=>document.getElementById(id), log=$('log');
+const q=new URLSearchParams(location.search);
+const TOKEN=decodeURIComponent(location.pathname.split('/').filter(Boolean).pop()||'');
+let cid='',deadline=0,timer=null;
+fetch('/v1/guest/'+encodeURIComponent(TOKEN)+'/info').then(r=>r.ok?r.json():Promise.reject(r.status)).then(i=>{
+  if(i.persona_name)$('title').textContent='Talk to '+i.persona_name;
+  $('note').textContent=i.available?('Up to '+i.max_seconds+' seconds per conversation. Uses your microphone.'):'This link has reached its usage limit.';
+  if(!i.available)$('go').disabled=true}).catch(c=>{$('note').textContent=c===410?'This link has expired.':'This link is not valid.';$('go').disabled=true});
+function tick(){const left=Math.max(0,Math.round((deadline-Date.now())/1000));$('note').textContent='Time left: '+left+'s';if(left<=0)clearInterval(timer)}
+function line(cls,t){const d=document.createElement('div');d.className=cls;d.textContent=t;log.appendChild(d);log.scrollTop=1e9}
+let ws,mic,inCtx,outCtx,stream,nextT=0,sources=[],cur=null;
+const workletSrc=`class P extends AudioWorkletProcessor{constructor(){super();this.b=new Int16Array(320);this.n=0}
+process(i){const c=i[0][0];if(!c)return true;for(let k=0;k<c.length;k++){this.b[this.n++]=Math.max(-1,Math.min(1,c[k]))*32767;
+if(this.n===320){const o=this.b.slice();this.port.postMessage(o.buffer,[o.buffer]);this.n=0}}return true}}
+registerProcessor('pcm16',P)`;
+
+// ---- live face: idle loop + lip-synced segments scheduled against the audio clock ----
+const LIVE=window.__live={segments:0,speakingFrames:0,idleFrames:0,decodeMs:0,tUser:0,tFirst:0};
+let idleImgs=[],idleFps=25,segs=[],pendingSeg=null,vctx=null;
+function decode(frames){const t=performance.now();return Promise.all(frames.map(b=>new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.onerror=()=>r(null);i.src='data:image/jpeg;base64,'+b}))).then(a=>{LIVE.decodeMs=Math.round(performance.now()-t);return a.filter(Boolean)})}
+function startVideo(){const c=$('vid');vctx=c.getContext('2d');c.width=idleImgs[0].naturalWidth;c.height=idleImgs[0].naturalHeight;c.style.display='block';$('face').style.display='none';requestAnimationFrame(drawLoop)}
+function drawLoop(){
+  const c=$('vid');let img=null;
+  const ct=outCtx?outCtx.currentTime:-1;
+  segs=segs.filter(sg=>ct<sg.t0+sg.imgs.length/sg.fps+0.5);
+  const sg=segs.find(x=>ct>=x.t0&&ct<x.t0+x.imgs.length/x.fps);
+  if(sg){img=sg.imgs[Math.min(sg.imgs.length-1,Math.floor((ct-sg.t0)*sg.fps))];if(!LIVE.tFirst&&LIVE.tUser)LIVE.tFirst=performance.now();LIVE.speakingFrames++}
+  else if(idleImgs.length){const n=idleImgs.length,k=Math.floor(performance.now()/1000*idleFps)%(2*n-2);img=idleImgs[k<n?k:2*n-2-k];LIVE.idleFrames++}
+  if(img)vctx.drawImage(img,0,0,c.width,c.height);
+  requestAnimationFrame(drawLoop)}
+function stopPlayback(){sources.forEach(s=>{try{s.onended=null;s.stop()}catch(e){}});sources=[];nextT=0;segs=[];pendingSeg=null}
+function play(buf){
+  const i16=new Int16Array(buf.byteLength>>1);
+  new Uint8Array(i16.buffer).set(new Uint8Array(buf,0,i16.length*2));
+  const f=new Float32Array(i16.length);for(let i=0;i<f.length;i++)f[i]=i16[i]/32768;
+  const ab=outCtx.createBuffer(1,f.length,24000);ab.copyToChannel(f,0);
+  const s=outCtx.createBufferSource();s.buffer=ab;s.connect(outCtx.destination);
+  nextT=Math.max(nextT,outCtx.currentTime+0.03);s.start(nextT);
+  if(pendingSeg){segs.push({t0:nextT,imgs:pendingSeg.imgs,fps:pendingSeg.fps});pendingSeg=null;LIVE.segments++}
+  nextT+=ab.duration;
+  sources.push(s);s.onended=()=>{sources=sources.filter(x=>x!==s)};
+}
+$('go').onclick=async()=>{
+  try{stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,channelCount:1}})}
+  catch(e){return line('s','mic denied: '+e.message)}
+  outCtx=new AudioContext({sampleRate:24000});
+  inCtx=new AudioContext({sampleRate:16000});
+  await inCtx.audioWorklet.addModule(URL.createObjectURL(new Blob([workletSrc],{type:'text/javascript'})));
+  const proto=location.protocol==='https:'?'wss':'ws';
+  const cr=await fetch('/v1/guest/'+encodeURIComponent(TOKEN)+'/conversations',{method:'POST'});
+  if(!cr.ok){const e=await cr.json().catch(()=>({}));line('s','cannot start: '+(e.detail||cr.status));cleanup();return}
+  const sess=await cr.json();cid=sess.conversation_id;deadline=Date.now()+sess.max_seconds*1000;timer=setInterval(tick,1000);tick();
+  ws=new WebSocket(`${proto}://${location.host}${sess.ws_path}`);
+  ws.binaryType='arraybuffer';
+  ws.onopen=()=>{$('state').textContent='connecting models...'};
+  ws.onclose=e=>{$('state').textContent=e.code===4408?'time limit reached - thanks for talking!':'conversation ended';clearInterval(timer);cleanup()};
+  let q=Promise.resolve();ws.onmessage=ev=>{q=q.then(()=>handle(ev)).catch(e=>console.error(e))};
+  async function handle(ev){
+    if(typeof ev.data!=='string')return play(ev.data);
+    const m=JSON.parse(ev.data);
+    if(m.type==='ready'){$('state').textContent='listening - speak';
+      if(m.face_url){const f=$('face');f.src=location.origin+m.face_url;f.style.display='block'}
+      const src=inCtx.createMediaStreamSource(stream);mic=new AudioWorkletNode(inCtx,'pcm16');
+      mic.port.onmessage=e=>{if(ws.readyState===1)ws.send(e.data)};src.connect(mic);
+      $('int').disabled=$('stop').disabled=false;$('go').disabled=true}
+    else if(m.type==='idle_loop'){const a=await decode(m.frames);idleImgs=a;idleFps=m.fps;if(a.length)startVideo()}
+    else if(m.type==='video_segment'){const a=await decode(m.frames);pendingSeg={imgs:a,fps:m.fps}}
+    else if(m.type==='speech_start'){$('state').textContent='hearing you...'}
+    else if(m.type==='transcript'){
+      if(m.role==='user'){LIVE.tUser=performance.now();LIVE.tFirst=0;line('u','You: '+m.text);$('state').textContent='thinking...'}
+      else{if(!cur){cur=document.createElement('div');cur.className='a';cur.textContent='Agent: ';log.appendChild(cur)}
+        cur.textContent+=m.text+' ';$('state').textContent='speaking';$('face').classList.add('talk')}}
+    else if(m.type==='agent_done'){cur=null;$('face').classList.remove('talk');$('state').textContent='listening - speak'}
+    else if(m.type==='interrupted'){$('face').classList.remove('talk');stopPlayback();cur=null;line('s','[interrupted]');$('state').textContent='listening - speak'}
+    else if(m.type==='error')line('s','error: '+m.message);
+  };
+};
+$('int').onclick=()=>{stopPlayback();ws&&ws.send(JSON.stringify({type:'interrupt'}))};
+$('stop').onclick=()=>ws&&ws.close();
+function cleanup(){try{mic&&mic.disconnect()}catch(e){}stream&&stream.getTracks().forEach(t=>t.stop());
+  inCtx&&inCtx.close();outCtx&&outCtx.close();$('go').disabled=false;$('int').disabled=$('stop').disabled=true}
+</script></body></html>

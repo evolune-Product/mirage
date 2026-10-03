@@ -1,0 +1,40 @@
+# Mirage lip-sync service on an NVIDIA box (RunPod / Lambda / Vast / any docker host with the NVIDIA runtime).
+# NOT TESTED: written on an Apple-silicon Mac without CUDA. Expect to adjust the torch/CUDA versions.
+#
+#   docker build -f workers/Dockerfile.gpu -t mirage-lipsync .          (context = repo root)
+#   docker run --gpus all -p 8100:8100 -v mirage-data:/data mirage-lipsync
+#   # backend: MIRAGE_LIPSYNC_URL=http://<gpu-host>:8100
+#   # The service reads replica videos from $MIRAGE_DATA/replicas/<id>/ (source.mp4, listening.mp4): mount the same
+#   # volume the backend writes to, or rsync it (a shared network volume works).
+#
+# Weights are NOT baked in (Wav2Lip's checkpoints are research-licensed): put wav2lip_gan.pth in
+# workers/Wav2Lip/checkpoints/ before building, or mount a volume at /app/workers/Wav2Lip/checkpoints.
+FROM nvidia/cuda:12.1.1-cudnn8-runtime-ubuntu22.04
+
+ENV DEBIAN_FRONTEND=noninteractive PYTHONUNBUFFERED=1 \
+    MIRAGE_DATA=/data MIRAGE_LIPSYNC_DEVICE=cuda MIRAGE_LIPSYNC_ENGINE=wav2lip \
+    MIRAGE_FACE_MODELS=/models
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      python3.11 python3.11-venv python3-pip ffmpeg libgl1 libglib2.0-0 curl ca-certificates git \
+    && rm -rf /var/lib/apt/lists/*
+RUN python3.11 -m venv /venv && /venv/bin/pip install --no-cache-dir -U pip
+ENV PATH=/venv/bin:$PATH
+
+WORKDIR /app/workers
+COPY workers/requirements-lipsync.txt .
+# CUDA 12.1 wheels of torch; the rest from PyPI
+RUN pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cu121 \
+ && pip install --no-cache-dir -r requirements-lipsync.txt --extra-index-url https://download.pytorch.org/whl/cu121
+
+COPY workers/*.py ./
+COPY workers/Wav2Lip ./Wav2Lip
+# (optional MuseTalk quality engine: COPY workers/MuseTalk + models, then MIRAGE_LIPSYNC_ENGINE stays wav2lip for live)
+
+# pre-fetch the small models so the first request is not slow (mediapipe landmarker 3.7 MB)
+RUN mkdir -p /models /data && python -c "import facelib; facelib.landmarker_path()"
+
+EXPOSE 8100
+HEALTHCHECK --interval=30s --timeout=5s CMD curl -fs http://localhost:8100/health || exit 1
+CMD ["uvicorn", "lipsync_server:app", "--host", "0.0.0.0", "--port", "8100", "--workers", "1"]
+# One worker on purpose: the model sits on one GPU and requests are serialised by a lock. Scale by running one container
+# per GPU behind a replica-id-sticky router (bases are cached per process).

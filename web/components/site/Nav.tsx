@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { ArrowRight, Menu, X } from "lucide-react";
 import Logo from "./Logo";
 
-const links = [["Product", "/#product"], ["How it works", "/#how"], ["Developers", "/#developers"], ["Pricing", "/pricing"], ["FAQ", "/#faq"]];
+const links = [["Product", "/#product"], ["Use cases", "/use-cases"], ["Docs", "/docs"], ["Security", "/security"], ["Pricing", "/pricing"]];
 
 export default function Nav() {
   const [open, setOpen] = useState(false);

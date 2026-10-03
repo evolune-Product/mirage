@@ -1,0 +1,72 @@
+# One-machine self-host. From the repo root:  cp .env.example .env  (edit!)  &&  docker compose -f infra/docker-compose.yml up -d --build
+# UNTESTED: written without Docker available. Read docs/DEPLOY.md first.
+name: mirage
+
+x-common-env: &common-env
+  MIRAGE_ENV: production
+  MIRAGE_DATA: /data
+  MIRAGE_SECRET_KEY: ${MIRAGE_SECRET_KEY:?set MIRAGE_SECRET_KEY in .env}
+  MIRAGE_CORS_ORIGINS: ${MIRAGE_CORS_ORIGINS:?set MIRAGE_CORS_ORIGINS in .env}
+  OLLAMA_URL: http://ollama:11434
+  MIRAGE_LIPSYNC_URL: http://lipsync:8100
+
+services:
+  backend:
+    build: { context: .., dockerfile: infra/Dockerfile.backend }
+    env_file: [../.env]
+    environment:
+      <<: *common-env
+      MIRAGE_DB_URL: sqlite:////data/mirage.db
+    volumes:
+      - mirage-data:/data
+      - ../models:/app/models:ro
+    depends_on: [ollama]
+    restart: unless-stopped
+    ports: ["127.0.0.1:8000:8000"]   # bind to loopback; expose through the reverse proxy only
+
+  web:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.web
+      args: { NEXT_PUBLIC_API_URL: "${PUBLIC_API_URL:-http://localhost:8000}" }
+    restart: unless-stopped
+    ports: ["127.0.0.1:3000:3000"]
+
+  worker:        # replica training + video rendering; needs the same /data volume and DB file as the API
+    build: { context: .., dockerfile: infra/Dockerfile.gpu }
+    command: ["python", "../workers/run_worker.py", "--poll", "3"]
+    working_dir: /app/backend
+    env_file: [../.env]
+    environment:
+      <<: *common-env
+      MIRAGE_DB_URL: sqlite:////data/mirage.db
+    volumes:
+      - mirage-data:/data
+      - ../models:/app/models:ro
+      - ../workers/LivePortrait/pretrained_weights:/app/workers/LivePortrait/pretrained_weights:ro
+    deploy: { resources: { reservations: { devices: [{ driver: nvidia, count: 1, capabilities: [gpu] }] } } }
+    restart: unless-stopped
+    depends_on: [backend]
+
+  lipsync:       # live lip-sync service used by conversations
+    build: { context: .., dockerfile: infra/Dockerfile.gpu }
+    environment:
+      MIRAGE_DATA: /data
+      MIRAGE_LIPSYNC_DEVICE: cuda
+    volumes:
+      - mirage-data:/data:ro
+      - ../workers/Wav2Lip/checkpoints:/app/workers/Wav2Lip/checkpoints:ro
+    deploy: { resources: { reservations: { devices: [{ driver: nvidia, count: 1, capabilities: [gpu] }] } } }
+    restart: unless-stopped
+    expose: ["8100"]
+
+  ollama:
+    image: ollama/ollama:latest
+    volumes: ["ollama:/root/.ollama"]
+    deploy: { resources: { reservations: { devices: [{ driver: nvidia, count: 1, capabilities: [gpu] }] } } }  # delete this block for CPU-only
+    restart: unless-stopped
+    expose: ["11434"]
+
+volumes:
+  mirage-data:
+  ollama:

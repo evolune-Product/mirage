@@ -1,0 +1,21 @@
+# GPU box image: lip-sync service (:8100) and the replica/video worker loop. UNTESTED (no Docker/CUDA here).
+#   lipsync: CMD uvicorn lipsync_server:app --host 0.0.0.0 --port 8100   (workdir /app/workers)
+#   worker : CMD python ../workers/run_worker.py --poll 3                (workdir /app/backend)
+# The same image holds backend deps + torch so run_worker.py's subprocess steps (face extraction, LivePortrait)
+# run in the system python (workers/.venv/bin/python is symlinked to it).
+# Mount model weights: workers/Wav2Lip/checkpoints/wav2lip.pth, workers/LivePortrait pretrained_weights, models/.
+FROM pytorch/pytorch:2.4.1-cuda12.1-cudnn9-runtime
+
+ENV PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1 MIRAGE_DATA=/data MIRAGE_LIPSYNC_DEVICE=cuda
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg libsndfile1 libgl1 libglib2.0-0 espeak-ng curl \
+    && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+COPY backend/requirements.txt /app/backend/requirements.txt
+COPY infra/requirements-gpu.txt /app/infra/requirements-gpu.txt
+RUN pip install -r /app/backend/requirements.txt -r /app/infra/requirements-gpu.txt
+COPY backend /app/backend
+COPY workers /app/workers
+RUN mkdir -p /app/workers/.venv/bin /data && ln -sf "$(which python)" /app/workers/.venv/bin/python
+WORKDIR /app/workers
+EXPOSE 8100
+CMD ["uvicorn", "lipsync_server:app", "--host", "0.0.0.0", "--port", "8100"]

@@ -118,7 +118,7 @@ def test_video_flow_with_webhook(env):
     assert v["status"] == "queued"
     assert jobs.run_once(make_deps(hooks=hooks)) == ("video", v["id"], True)
     out = env.get(f"/v1/videos/{v['id']}", headers=h).json()
-    assert out["status"] == "ready" and out["output_url"].endswith(f"{v['id']}.mp4")
+    assert out["status"] == "ready" and out["output_url"].split("?")[0].endswith(f"{v['id']}.mp4")
     assert hooks[0][0] == "http://x.test/hook" and hooks[0][1]["event"] == "video.ready"
     assert env.get(out["output_url"]).content == b"mp4"
     assert env.get(f"/v1/jobs/video/{v['id']}", headers=h).json()["webhook"] == "delivered"

@@ -11,10 +11,28 @@ from .routers import resources
 @asynccontextmanager
 async def lifespan(_):
     init_db()
-    yield
+    import asyncio
+    import os as _os
+
+    from . import webhooks as _wh
+
+    from . import convo_runtime as _cr
+
+    tasks = []
+    if _os.environ.get("MIRAGE_WEBHOOK_LOOP", "1") != "0":
+        tasks = [asyncio.create_task(_wh.run_loop()), asyncio.create_task(_cr.reaper_loop())]
+    try:
+        yield
+    finally:
+        for t in tasks:
+            t.cancel()
 
 
 app = FastAPI(title="Mirage API", version="0.1.0", lifespan=lifespan)
+
+from . import hardening as _hardening
+
+_hardening.install(app)  # rate limits / size limits / security headers / signed file URLs; keep BEFORE CORS (CORS must be outermost)
 
 import os
 
