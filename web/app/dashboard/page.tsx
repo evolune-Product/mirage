@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { ArrowRight, Check, Clapperboard, CreditCard, MessagesSquare, ScanFace, UserRound, BookOpen, ShieldCheck } from "lucide-react";
+import { Sparkles, ArrowRight, Check, Clapperboard, CreditCard, MessagesSquare, ScanFace, UserRound, BookOpen, ShieldCheck } from "lucide-react";
 import { api, Persona, Replica, Conversation, Video } from "@/lib/api";
 import { Shell, Skeleton, toast } from "@/components/ui";
 
@@ -31,6 +31,8 @@ export default function Overview() {
     { t: "Start a conversation", s: "Talk to your persona live, face to face, in the browser.", done: d.convs.length > 0, href: "/dashboard/conversations", cta: "Start talking", icon: MessagesSquare, n: `${d.convs.length} so far` },
     { t: "Generate a video", s: "Turn a script into a talking-head video with your replica.", done: d.vids.length > 0, href: "/dashboard/videos", cta: "Write a script", icon: Clapperboard, n: `${d.vids.length} so far` },
   ];
+  const [fresh, setFresh] = useState(false);
+  useEffect(() => { if (!d) return; let dismissed = false; try { dismissed = !!JSON.parse(localStorage.getItem("mirage_onboarding") || "{}").done; } catch {} setFresh(!dismissed && d.reps.length === 0 && d.pers.length === 0); }, [d]);
   const doneN = steps ? steps.filter((s) => s.done).length : 0;
   const next = steps ? steps.findIndex((s) => !s.done) : -1;
   const secs = d?.st?.credits_seconds ?? 0;
@@ -40,6 +42,12 @@ export default function Overview() {
   return (
     <Shell title="Overview" subtitle="Your path from zero to a talking AI face."
       action={d && next >= 0 ? <Link href={steps![next].href} className="btn-grad">{steps![next].cta}<ArrowRight size={15} /></Link> : <Link href="/dashboard/conversations" className="btn-grad">New conversation<ArrowRight size={15} /></Link>}>
+      {fresh && (
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} data-testid="onboarding-banner" className="mb-5 flex flex-wrap items-center gap-4 rounded-2xl border border-mirage-violet/30 bg-[radial-gradient(40rem_12rem_at_0%_0%,rgba(124,92,255,.18),transparent)] p-5">
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-mirage-gradient text-white"><Sparkles size={20} /></span>
+          <div className="min-w-0 flex-1 basis-60"><h2 className="font-display text-2xl">New here? Set up your first agent in 5 steps</h2><p className="text-sm text-gray-400">Pick a template, add a face, give consent, create the persona and say hello. About ten minutes, and you can skip anything.</p></div>
+          <Link href="/dashboard/onboarding" className="btn-grad">Start guided setup<ArrowRight size={15} /></Link>
+        </motion.div>)}
       <div className="grid gap-5 lg:grid-cols-3">
         <div className="card lg:col-span-2 !p-0 overflow-hidden">
           <div className="flex items-center gap-4 border-b border-white/10 p-5">

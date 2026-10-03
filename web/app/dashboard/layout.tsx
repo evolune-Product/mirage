@@ -3,10 +3,10 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { LayoutDashboard, ScanFace, UserRound, MessagesSquare, Clapperboard, CreditCard, KeyRound, LogOut, Menu, X, BarChart3, Webhook, Settings } from "lucide-react";
+import { LayoutDashboard, ScanFace, UserRound, MessagesSquare, Clapperboard, CreditCard, KeyRound, LogOut, Menu, X, BarChart3, Webhook, Settings, Users, Inbox } from "lucide-react";
 import Logo from "@/components/site/Logo";
 import { Toaster } from "@/components/ui";
-import { api, clearKey, getKey } from "@/lib/api";
+import { api, clearKey, getKey, getWorkspace, setWorkspace, Workspace } from "@/lib/api";
 
 const groups = [
   { title: "Studio", items: [
@@ -16,18 +16,32 @@ const groups = [
     { href: "/dashboard/conversations", label: "Conversations", icon: MessagesSquare },
     { href: "/dashboard/videos", label: "Videos", icon: Clapperboard },
   ] },
-  { title: "Insights", items: [{ href: "/dashboard/analytics", label: "Analytics", icon: BarChart3 }] },
+  { title: "Insights", items: [{ href: "/dashboard/analytics", label: "Analytics", icon: BarChart3 }, { href: "/dashboard/leads", label: "Leads", icon: Inbox }] },
   { title: "Developers", items: [
     { href: "/dashboard/webhooks", label: "Webhooks", icon: Webhook },
     { href: "/dashboard/keys", label: "API keys & docs", icon: KeyRound },
   ] },
   { title: "Account", items: [
     { href: "/dashboard/billing", label: "Billing", icon: CreditCard },
+    { href: "/dashboard/team", label: "Team", icon: Users },
     { href: "/dashboard/settings", label: "Settings", icon: Settings },
   ] },
 ];
 const nav = groups.flatMap((g) => g.items);
 type Status = { plan: { name: string; included_minutes: number }; credits_seconds: number };
+
+function WorkspaceChip({ onNav }: { onNav: () => void }) {
+  const [name, setName] = useState<string | null>(null); const [id, setId] = useState("");
+  useEffect(() => {
+    const f = () => { const w = getWorkspace(); setId(w); if (!w) { setName(null); return; } api<Workspace[]>("/v1/workspaces").then((l) => { const m = l.find((x) => x.id === w); if (m) setName(`${m.name} (${m.role})`); else { setWorkspace(""); setId(""); } }).catch(() => {}); };
+    f(); window.addEventListener("mirage:workspace", f); return () => window.removeEventListener("mirage:workspace", f);
+  }, []);
+  return (
+    <Link href="/dashboard/team" onClick={onNav} data-testid="ws-chip" className={`mx-3 mb-3 flex items-center gap-2 rounded-lg border px-3 py-2 text-xs transition ${id ? "border-mirage-mint/30 bg-mirage-mint/[0.06] text-mirage-mint" : "border-white/10 text-gray-400 hover:bg-white/5 hover:text-white"}`}>
+      <Users size={13} /><span className="min-w-0 flex-1 truncate">{id ? name ?? "Workspace" : "Personal account"}</span><span className="text-gray-500">switch</span>
+    </Link>
+  );
+}
 
 function Sidebar({ path, credits, onNav, signOut }: { path: string; credits: Status | null; onNav: () => void; signOut: () => void }) {
   const secs = credits?.credits_seconds ?? 0;
@@ -37,6 +51,7 @@ function Sidebar({ path, credits, onNav, signOut }: { path: string; credits: Sta
   return (
     <div className="flex h-full flex-col">
       <Link href="/" className="flex items-center px-5 py-5"><Logo /></Link>
+      <WorkspaceChip onNav={onNav} />
       <nav className="flex-1 space-y-4 overflow-y-auto px-3 pb-2">
         {groups.map((g) => (
           <div key={g.title}>

@@ -160,6 +160,11 @@ def animate(image: Path, out_mp4: Path, seconds: float = 4.0, head: float = 1.0,
 
 
 def main():
+    from engines import CommercialOnlyError, require_commercial_safe
+    try:
+        require_commercial_safe('liveportrait')
+    except CommercialOnlyError as e:
+        sys.exit(f'refused: {e}')
     ap = argparse.ArgumentParser()
     ap.add_argument("--image", required=True)
     ap.add_argument("--out", required=True)

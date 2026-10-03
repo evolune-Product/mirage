@@ -71,33 +71,54 @@ async def stream(ws: WebSocket, cid: str, api_key: str = "", db: DBSession = Dep
         await ws.close(code=4402, reason="conversation ended or out of credits")
         return
     await ws.accept()
+    from .. import admission, jobs as _jobs
+
+    wants_face = bool(persona.replica_id and (_jobs.replica_dir(persona.replica_id) / "source.mp4").exists())
+    admission.LAG.ensure()
+
+    async def _queued(pos: int, wait_s: float) -> None:
+        await ws.send_json({"type": "queued", "position": pos, "max_wait_s": wait_s})
+
+    dec = await admission.CONTROLLER.admit(cid, wants_face, on_queued=_queued)
+    if not dec.granted:  # graceful "server busy": a clear message + the standard 1013 (try again later) close code
+        snap = admission.CONTROLLER.snapshot()
+        try:
+            await ws.send_json({"type": "busy", "message": dec.reason, "retry_after_s": dec.retry_after_s,
+                                "current": snap["current"], "limit": snap["limit"]})
+            await ws.close(code=1013, reason=f"server busy, retry in {dec.retry_after_s} s")
+        except Exception:  # noqa: BLE001
+            pass
+        return "busy"
     link = Link()
     inbox: asyncio.Queue = asyncio.Queue()
     done_evt = asyncio.Event()
     prev = _ACTIVE.get(cid)
     _ACTIVE[cid] = (ws, done_evt)
-    if prev:  # a reconnect replaces a half-open predecessor; wait for its teardown so it cannot clobber our state
-        try:
-            await prev[0].close(code=4409, reason="replaced by a newer connection")
-        except Exception:  # noqa: BLE001
-            pass
-        try:
-            await asyncio.wait_for(prev[1].wait(), 4)
-        except Exception:  # noqa: BLE001
-            pass
-    pump_task = asyncio.create_task(_pump(ws, link, inbox))  # answers hello/ping at once, even while models load
-    dog = asyncio.create_task(_watchdog(ws, link))
-    try:
-        return await _run(ws, cid, acc, conv, persona, db, link, inbox, pump_task)
+    pump_task = dog = None
+    try:  # everything after admission is inside this try so the slot is always released, even if we are cancelled early
+        if prev:  # a reconnect replaces a half-open predecessor; wait for its teardown so it cannot clobber our state
+            try:
+                await prev[0].close(code=4409, reason="replaced by a newer connection")
+            except Exception:  # noqa: BLE001
+                pass
+            try:
+                await asyncio.wait_for(prev[1].wait(), 4)
+            except Exception:  # noqa: BLE001
+                pass
+        pump_task = asyncio.create_task(_pump(ws, link, inbox))  # answers hello/ping at once, even while models load
+        dog = asyncio.create_task(_watchdog(ws, link))
+        return await _run(ws, cid, acc, conv, persona, db, link, inbox, pump_task, allow_face=dec.face or not wants_face)
     finally:
-        pump_task.cancel()
-        dog.cancel()
+        admission.CONTROLLER.release(dec.ticket)
+        for t in (pump_task, dog):
+            if t is not None:
+                t.cancel()
         if _ACTIVE.get(cid, (None,))[0] is ws:
             _ACTIVE.pop(cid, None)
         done_evt.set()
 
 
-async def _run(ws, cid, acc, conv, persona, db, link, inbox, pump_task):
+async def _run(ws, cid, acc, conv, persona, db, link, inbox, pump_task, allow_face=True):
     """Returns 'ended' when the client said goodbye (or hit a limit), 'dropped' when a hello-capable client's socket
     just went away (it may reconnect and resume), None for legacy clients."""
     try:
@@ -120,7 +141,7 @@ async def _run(ws, cid, acc, conv, persona, db, link, inbox, pump_task):
     from .. import jobs
 
     lipsync = None
-    if persona.replica_id and (jobs.replica_dir(persona.replica_id) / "source.mp4").exists():
+    if allow_face and persona.replica_id and (jobs.replica_dir(persona.replica_id) / "source.mp4").exists():
         from ..pipeline.lipsync import LipsyncClient
 
         if await LipsyncClient.available():
@@ -271,10 +292,16 @@ async def _run(ws, cid, acc, conv, persona, db, link, inbox, pump_task):
             idle_task.cancel()
         if getattr(sess, "perception", None) is not None:
             sess.perception.close()  # drops every frame/description held in RAM
-        await sess.close()
-        if rt:
-            await rt.stop()
-        meter()
+        # Cancel everything that can outlive the call *before* the first await: if this handler is itself cancelled
+        # (abrupt disconnect) the awaits below may never finish, and the runtime's time-limit watchdog used to leak per call.
+        for t in list(getattr(rt, "_tasks", ())) + list(getattr(sess, "_jobs", ())):
+            t.cancel()
+        try:
+            await sess.close()
+            if rt:
+                await rt.stop()
+        finally:
+            meter()
     return result
 
 

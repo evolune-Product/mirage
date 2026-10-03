@@ -2,8 +2,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
-import { Loader2, MessagesSquare, Play, Square, Clock, ChevronDown, Link2, ExternalLink } from "lucide-react";
-import { API_URL, api, Conversation, Persona, ShareLink, getKey, saveId, fmtDate, fmtDur } from "@/lib/api";
+import { Eye, Headphones, Loader2, MessagesSquare, Play, Square, Clock, ChevronDown, Link2, ExternalLink } from "lucide-react";
+import { API_URL, api, Perception, Conversation, Persona, ShareLink, getKey, saveId, fmtDate, fmtDur } from "@/lib/api";
 import ConversationDetail from "@/components/conversation/ConversationDetail";
 import { Shell, Badge, Empty, Skeleton, CopyButton, refreshCredits, toast } from "@/components/ui";
 
@@ -12,6 +12,9 @@ export default function Conversations() {
   const [past, setPast] = useState<Conversation[] | null>(null); const [busy, setBusy] = useState(false);
   const [detail, setDetail] = useState<Conversation | null>(null); const [opts, setOpts] = useState(false);
   const [o, setO] = useState({ participant_id: "", max_seconds: "", context: "", variables: "" }); const [shares, setShares] = useState<ShareLink[] | null>(null);
+  const [perc, setPerc] = useState<Perception | null>(null);
+  useEffect(() => { setPerc(null); if (pid) api<Perception>(`/v1/personas/${pid}/perception`).then(setPerc).catch(() => {}); }, [pid]);
+  const percOn = !!perc && perc.enabled && perc.consent_acknowledged;
   const loadPast = () => api<Conversation[]>("/v1/conversations").then((l) => setPast([...l].reverse())).catch((x) => { toast.error(x); setPast([]); });
   useEffect(() => {
     api<Persona[]>("/v1/personas").then(async (l) => {
@@ -57,6 +60,13 @@ export default function Conversations() {
             </div>)}
         </div>
       )}
+      {ps && ps.length > 0 && (
+        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-gray-400" data-testid="conv-hints">
+          <span className="inline-flex items-center gap-1.5"><Headphones size={13} className="text-mirage-cyan" />Wear headphones: the agent&apos;s voice from speakers can be picked up by your mic and make it interrupt itself.</span>
+          {perc && (percOn
+            ? <span className="inline-flex items-center gap-1.5 rounded-full bg-mirage-cyan/10 px-2.5 py-1 text-mirage-cyan" data-testid="perception-on"><Eye size={12} />Perception on: {[perc.camera && "camera", perc.screen && "screen share"].filter(Boolean).join(" and ") || "off"}. Press the camera or screen button in the window to opt in; frames are analysed live and not kept{perc.store_frames ? " (storing is enabled for this persona)" : ""}.</span>
+            : <span className="inline-flex items-center gap-1.5 text-gray-500"><Eye size={12} />Perception off for this persona (enable it under Personas, Perception).</span>)}
+        </div>)}
       <AnimatePresence>
         {cur && (
           <motion.div key={cur.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-6 overflow-hidden rounded-2xl border border-white/10 bg-ink-2 shadow-[0_30px_80px_-30px_rgba(124,92,255,.35)]">
@@ -65,7 +75,7 @@ export default function Conversations() {
                 <span className="truncate font-mono text-xs text-gray-400">{cur.id}</span><Badge s={cur.status} />{cur.status === "ended" && <span className="text-xs text-gray-500">{cur.seconds_used}s used</span>}</div>
               {cur.status !== "ended" && <button className="btn-ghost !px-3 !py-1.5 text-xs" onClick={end}><Square size={12} />End</button>}
             </div>
-            <iframe src={src} className="h-[620px] w-full bg-ink" allow="camera; microphone; autoplay" title="Playground" />
+            <iframe src={src} className="h-[620px] w-full bg-ink" allow="camera; microphone; autoplay; display-capture; clipboard-write; fullscreen" title="Playground" />
           </motion.div>
         )}
       </AnimatePresence>

@@ -50,7 +50,7 @@ class Persona(SQLModel, table=True):
     name: str
     system_prompt: str
     replica_id: Optional[str] = None
-    llm: str = "ollama/llama3.2:1b"
+    llm: str = "ollama/llama3.2:3b"
     tts_voice: str = "default"
     knowledge: str = ""
     created_at: datetime = Field(default_factory=now)

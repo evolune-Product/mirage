@@ -3,7 +3,10 @@ Silicon (first audio of a short phrase ~0.13 s vs ~0.45-0.85 s on CPU/ONNX). Opt
 dies, `FallbackTTS` transparently uses the ONNX engine.
 
 Setup:  ./backend/scripts_setup_tts_mlx.sh     (creates <repo>/.venv-tts with Python 3.11 + mlx-audio)
-Env:    MIRAGE_TTS=auto|mlx|onnx (default auto), MIRAGE_TTS_PYTHON=<python with mlx-audio>
+Env:    MIRAGE_TTS=auto|mlx|onnx (default auto), MIRAGE_TTS_PYTHON=<python with mlx-audio>,
+        MIRAGE_TTS_WORKERS=<n sidecar processes, default 2>: one sidecar synthesises one request at a time, so concurrent
+        conversations queue behind each other; a request goes to the least busy sidecar (capacity work, see
+        docs/overnight/capacity.md for the measured effect and the memory cost of each extra process).
 """
 import asyncio
 import json
@@ -20,7 +23,8 @@ def sidecar_python() -> str | None:
     return p if Path(p).exists() else None
 
 
-class MlxKokoroTTS:
+class _Sidecar:
+    """One sidecar process (one request synthesised at a time)."""
     sample_rate = 24000
 
     def __init__(self, python: str | None = None):
@@ -33,6 +37,7 @@ class MlxKokoroTTS:
         self._reader: asyncio.Task | None = None
         self._start_lock: asyncio.Lock | None = None
         self._loop: asyncio.AbstractEventLoop | None = None
+        self.inflight = 0
 
     async def start(self, timeout: float = 90.0) -> None:
         loop = asyncio.get_running_loop()
@@ -82,6 +87,8 @@ class MlxKokoroTTS:
         self._next += 1
         q: asyncio.Queue = asyncio.Queue()
         self._queues[rid] = q
+        finished = False
+        self.inflight += 1
         try:
             self.proc.stdin.write((json.dumps({"id": rid, "text": text, "voice": voice}) + "\n").encode())
             await self.proc.stdin.drain()
@@ -90,11 +97,20 @@ class MlxKokoroTTS:
                 if kind == 0:
                     yield payload
                 elif kind == 1:
+                    finished = True
                     return
                 else:
+                    finished = True
                     raise RuntimeError(payload.decode(errors="replace"))
         finally:
+            self.inflight -= 1
             self._queues.pop(rid, None)
+            if not finished:  # barge-in / cancelled consumer: tell the sidecar to stop working on it
+                try:
+                    if self.proc and self.proc.returncode is None:
+                        self.proc.stdin.write((json.dumps({"cancel": rid}) + "\n").encode())
+                except Exception:  # noqa: BLE001
+                    pass
 
     def warmup(self) -> None:  # the sidecar warms itself up before it reports ready
         pass
@@ -109,6 +125,42 @@ class MlxKokoroTTS:
                 p.kill()
         if self._reader:
             self._reader.cancel()
+
+
+class MlxKokoroTTS:
+    """Pool of sidecars with the old single-sidecar API (`start`, `synthesize`, `close`)."""
+    sample_rate = 24000
+
+    def __init__(self, python: str | None = None, workers: int | None = None):
+        n = workers if workers is not None else int(os.environ.get("MIRAGE_TTS_WORKERS", "2"))
+        self.workers = [_Sidecar(python) for _ in range(max(1, n))]
+        self._rr = 0
+
+    @property
+    def proc(self):  # back-compat: the first sidecar's process
+        return self.workers[0].proc
+
+    async def start(self, timeout: float = 90.0) -> None:
+        await asyncio.gather(*[w.start(timeout) for w in self.workers])
+
+    def _pick(self) -> _Sidecar:
+        """Least busy sidecar that is alive (round-robin among equals)."""
+        live = [w for w in self.workers if w.proc is None or w.proc.returncode is None] or self.workers
+        low = min(w.inflight for w in live)
+        cands = [w for w in live if w.inflight == low]
+        self._rr += 1
+        return cands[self._rr % len(cands)]
+
+    async def synthesize(self, text: str, voice: str = "af_heart"):
+        w = self._pick()
+        async for c in w.synthesize(text, voice):
+            yield c
+
+    def warmup(self) -> None:
+        pass
+
+    async def close(self) -> None:
+        await asyncio.gather(*[w.close() for w in self.workers], return_exceptions=True)
 
 
 class FallbackTTS:

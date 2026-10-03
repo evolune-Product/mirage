@@ -124,4 +124,7 @@ def max_upload_bytes() -> int:
 def redact(s: str) -> str:
     """Mask api keys / secrets in anything that may be logged."""
     import re
-    return re.sub(r"(mk_|sk_|whsec_|rzp_)[A-Za-z0-9_\-]{6,}", lambda m: m.group(1) + "***", s or "")
+    s = re.sub(r"(mk_|sk_|whsec_|rzp_)[A-Za-z0-9_\-]{6,}", lambda m: m.group(1) + "***", s or "")
+    # key-like query/header values whatever their prefix: ?api_key=..., ?token=..., ?sig=... (signed URL), Bearer ...
+    s = re.sub(r"(?i)\b(api_key|apikey|x-api-key|token|sig|secret|password)([=:]\s*)[^\s&\"',;}]+", lambda m: m.group(1) + m.group(2) + "***", s)
+    return re.sub(r"(?i)\bBearer\s+[A-Za-z0-9._~+/=\-]{8,}", "Bearer ***", s)

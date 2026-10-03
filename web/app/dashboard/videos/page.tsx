@@ -2,11 +2,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Clapperboard, Cpu, ExternalLink, Languages, Layers, Sparkles, Wand2, ChevronDown } from "lucide-react";
-import { api, Replica, Video, Lang, fileUrl, saveId, fmtDate } from "@/lib/api";
-import { Shell, Badge, Empty, Skeleton, CopyButton, Tabs, Field, Spinner, refreshCredits, toast } from "@/components/ui";
+import { Languages, Layers, Sparkles, Wand2, ChevronDown, SlidersHorizontal } from "lucide-react";
+import { api, Replica, Video, Lang, Voice, VoiceClone, fileUrl, saveId, fmtDate, signedUrl } from "@/lib/api";
+import { Shell, Badge, Empty, Skeleton, Tabs, Field, Spinner, refreshCredits, toast } from "@/components/ui";
+import CreativePanel, { DEFAULT_OPTS, Opts, creativeDirty, optsBody } from "@/components/creative/CreativePanel";
+import ScriptEditor, { useSceneSplit } from "@/components/video/ScenesEditor";
+import VideoCard from "@/components/video/VideoCard";
 
-const MAX = 1000;
 type Mode = "single" | "bulk" | "translate";
 type BatchItem = { video_id: string; row_index: number; language: string; status: string; output_url: string | null; variables: Record<string, string>; script: string };
 type Batch = { id: string; kind: string; replica_id: string; total: number; created_at: string; counts: Record<string, number>; completed: boolean; items?: BatchItem[] };
@@ -38,6 +40,7 @@ export default function Videos() {
   const [csv, setCsv] = useState(""); const [langs, setLangs] = useState<Lang[]>([]); const [pick, setPick] = useState<string[]>([]); const [orig, setOrig] = useState(true);
   const [batches, setBatches] = useState<Batch[]>([]); const [open, setOpen] = useState<string | null>(null); const [info, setInfo] = useState<Record<string, BatchItem>>({});
   const [preview, setPreview] = useState<string | null>(null);
+  const [o, setO] = useState<Opts>(DEFAULT_OPTS); const [studio, setStudio] = useState(false); const [voiceList, setVoiceList] = useState<Voice[]>([]); const [clone, setClone] = useState<VoiceClone | null>(null); const [face, setFace] = useState("");
 
   const load = useCallback(async () => { try { setVids([...(await api<Video[]>("/v1/videos"))].reverse()); } catch { setVids((v) => v ?? []); } }, []);
   const loadBatches = useCallback(async () => {
@@ -50,10 +53,23 @@ export default function Videos() {
   }, []);
   useEffect(() => {
     api<Replica[]>("/v1/replicas").then((l) => { const ok = l.filter((r) => r.status === "ready"); setReps(ok); if (ok[0]) setRid(ok[0].id); }).catch((x) => { toast.error(x); setReps([]); });
+    api<{ voices: Voice[] }>("/v1/voices").then((r) => setVoiceList(r.voices)).catch(() => {});
     api<Lang[]>("/v1/languages").then((l) => setLangs(l.filter((x) => x.tts))).catch(() => {});
     load(); loadBatches(); const t = setInterval(() => { load(); loadBatches(); }, 5000); return () => clearInterval(t);
   }, [load, loadBatches]);
 
+  useEffect(() => { // the selected replica's cloned voice (if any) and face, for the voice menu and the look preview
+    setClone(null); setFace(""); if (!rid) return; let live = true;
+    api<VoiceClone>(`/v1/replicas/${rid}/voice`).then((c) => live && setClone(c)).catch(() => {});
+    signedUrl(`/v1/files/replicas/${rid}/face.png`).then((u) => live && setFace(u)).catch(() => {});
+    setO((x) => (x.voice === "clone" ? { ...x, voice: "default" } : x)); return () => { live = false; };
+  }, [rid]);
+  const voices = useMemo(() => [{ value: "default", label: "Default voice" },
+    ...(clone?.status === "ready" ? [{ value: "clone", label: `Cloned voice of ${reps?.find((r) => r.id === rid)?.name ?? "this replica"} (synthetic)` }] : []),
+    ...voiceList.filter((v) => !v.cloned).map((v) => ({ value: v.id, label: `${v.id} - ${v.language}, ${v.gender}` }))], [clone, voiceList, reps, rid]);
+  const { info: sceneInfo, err: sceneErr } = useSceneSplit(script, mode === "single" || mode === "bulk");
+  const nScenes = sceneInfo?.length ?? (script.trim() ? 1 : 0);
+  const studioOn = creativeDirty(o) || (o.voice !== "default") || (o.scenes === "paragraphs" && nScenes > 1);
   const vars = useMemo(() => varsOf(script), [script]);
   const parsed = useMemo(() => parseRows(csv), [csv]);
   const bulkVars = vars;
@@ -72,13 +88,14 @@ export default function Videos() {
       if (mode === "single") {
         const text = vars.length ? preview : script;
         if (!text) throw new Error("Fill in every variable first.");
-        const v = await api<Video>("/v1/videos", { body: { replica_id: rid, script: text } }); saveId("videos", v.id); toast.success("Video queued.");
+        const v = studioOn ? await api<Video>("/v1/video-jobs/render", { body: { replica_id: rid, script: text, voice: o.voice, ...optsBody(o) } }) : await api<Video>("/v1/videos", { body: { replica_id: rid, script: text } });
+        saveId("videos", v.id); toast.success(studioOn ? `Video queued${nScenes > 1 && o.scenes === "paragraphs" ? ` (${nScenes} scenes)` : ""}.` : "Video queued.");
       } else if (mode === "bulk") {
         if (parsed.error) throw new Error(parsed.error); if (!parsed.rows.length) throw new Error("Paste at least one row."); if (parsed.rows.length > 200) throw new Error("Bulk is limited to 200 rows per batch.");
-        const b = await api<Batch>("/v1/video-jobs/bulk", { body: { replica_id: rid, script_template: script, rows: parsed.rows } }); toast.success(`Batch queued: ${b.total} videos.`); setCsv(""); setOpen(b.id);
+        const b = await api<Batch>("/v1/video-jobs/bulk", { body: { replica_id: rid, script_template: script, rows: parsed.rows, voice: o.voice, options: creativeDirty(o) ? optsBody(o) : undefined } }); toast.success(`Batch queued: ${b.total} videos.`); setCsv(""); setOpen(b.id);
       } else {
         if (!pick.length) throw new Error("Pick at least one language.");
-        const b = await api<Batch>("/v1/video-jobs/translate", { body: { replica_id: rid, script, languages: pick, include_original: orig } }); toast.success(`Queued ${b.total} variants.`); setOpen(b.id);
+        const b = await api<Batch>("/v1/video-jobs/translate", { body: { replica_id: rid, script, languages: pick, include_original: orig, options: creativeDirty(o) ? optsBody(o) : undefined } }); toast.success(`Queued ${b.total} variants.`); setOpen(b.id);
       }
       if (mode !== "bulk") setScript(""); setSample({}); load(); loadBatches(); refreshCredits();
     } catch (x) { toast.error(x); } finally { setBusy(false); }
@@ -106,11 +123,16 @@ export default function Videos() {
                 </div>)}
             </div>
             <div>
-              <div className="mb-1.5 flex items-center justify-between gap-2"><label className="label !mb-0">{mode === "bulk" ? "Script template" : "Script"}</label><span className="font-mono text-xs text-gray-500">{script.length} chars - about {Math.max(0, Math.round(script.length / 15))}s of speech</span></div>
-              <textarea className="input h-32" required aria-label="Script" placeholder={mode === "bulk" ? "Hi {{first_name}}, thanks for signing up to {{company}}..." : "Hi, I'm... Today I want to show you... (use {{first_name}} for personalisation)"} value={script} onChange={(e) => setScript(e.target.value)} />
-              <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-white/10"><div className="h-full bg-mirage-gradient transition-all" style={{ width: Math.min(100, (script.length / MAX) * 100) + "%" }} /></div>
+              <ScriptEditor script={script} setScript={setScript} info={sceneInfo} err={sceneErr} placeholder={mode === "bulk" ? "Hi {{first_name}}, thanks for signing up to {{company}}..." : "Hi, I'm... Today I want to show you... (use {{first_name}} for personalisation; leave a blank line to start a new scene)"} />
               {vars.length > 0 && <p className="mt-2 flex flex-wrap items-center gap-1.5 text-xs text-gray-400"><Wand2 size={12} className="text-mirage-amber" />Variables:{vars.map((v) => <code key={v} className="rounded bg-mirage-amber/10 px-1.5 py-0.5 font-mono text-mirage-amber">{`{{${v}}}`}</code>)}</p>}
             </div>
+          </div>
+          <div className="mt-4">
+            <button type="button" aria-expanded={studio} onClick={() => setStudio(!studio)} className="flex w-full items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-left text-sm hover:bg-white/[0.06]" data-testid="studio-toggle">
+              <SlidersHorizontal size={15} className="text-mirage-amber" /><span className="font-medium">Studio options</span>
+              <span className="min-w-0 flex-1 truncate text-xs text-gray-500">{studioOn ? `${o.format}, ${o.resolution}p${o.captions !== "off" ? `, ${o.captions} captions` : ""}${o.bg.type !== "none" ? `, ${o.bg.type} background` : ""}${o.logo ? ", logo" : ""}${o.voice !== "default" ? `, voice ${o.voice === "clone" ? "clone" : o.voice}` : ""}${nScenes > 1 && o.scenes === "paragraphs" ? `, ${nScenes} scenes` : ""}` : "Captions, aspect ratio, background, logo, voice, scenes"}</span>
+              <ChevronDown size={15} className={`text-gray-500 transition ${studio ? "rotate-180" : ""}`} /></button>
+            {studio && <CreativePanel o={o} set={setO} faceSrc={face || undefined} voices={voices} sceneCount={Math.max(1, nScenes)} />}
           </div>
 
           {mode === "single" && vars.length > 0 && (
@@ -135,7 +157,8 @@ export default function Videos() {
                 </>)}
               </div>
             </div>)}
-          <button className="btn-grad mt-5" disabled={!can}>{busy ? <Spinner /> : mode === "translate" ? <Languages size={15} /> : mode === "bulk" ? <Layers size={15} /> : <Sparkles size={15} />}{label}</button>
+          {mode === "single" && studioOn && <p className="mt-4 text-xs text-gray-500" data-testid="engine-note">This video uses the studio renderer (lip-sync with your options). It takes a little longer than a plain render.</p>}
+          <button className="btn-grad mt-3" disabled={!can}>{busy ? <Spinner /> : mode === "translate" ? <Languages size={15} /> : mode === "bulk" ? <Layers size={15} /> : <Sparkles size={15} />}{label}</button>
         </form>
       )}
 
@@ -166,19 +189,8 @@ export default function Videos() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           {vids.map((v, i) => { const it = info[v.id];
-            return (
-              <motion.div key={v.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: Math.min(i, 8) * 0.04 }} className="card flex flex-col gap-3 !p-4">
-                {v.output_url ? <video className="aspect-video w-full rounded-xl bg-black" controls preload="metadata" src={fileUrl(v.output_url)} />
-                  : <div className="grid aspect-video w-full place-items-center rounded-xl border border-white/10 bg-[radial-gradient(circle_at_50%_40%,rgba(124,92,255,.2),transparent_70%)] text-gray-500"><Clapperboard size={32} /></div>}
-                <div className="flex items-center justify-between gap-2"><p className="truncate font-mono text-xs text-gray-500">{v.id} - {rname(v.replica_id)}</p><Badge s={v.status} /></div>
-                {it && <div className="flex flex-wrap gap-1.5 text-[11px]"><span className="rounded-full bg-white/5 px-2 py-0.5 text-gray-300">{it.language ? `language: ${it.language}` : `batch row ${it.row_index + 1}`}</span>
-                  {Object.entries(it.variables).slice(0, 3).map(([k, val]) => <span key={k} className="rounded-full bg-mirage-amber/10 px-2 py-0.5 font-mono text-mirage-amber">{k}={val}</span>)}</div>}
-                <p className="line-clamp-2 text-sm text-gray-300">{v.script}</p>
-                {v.status === "queued" && <p className="flex items-start gap-2 rounded-xl border border-mirage-violet/25 bg-mirage-violet/10 p-3 text-xs leading-relaxed text-gray-300"><Cpu size={14} className="mt-0.5 shrink-0 text-mirage-violet" /><span>Queued: rendering needs a worker, a separate background process. Run this in the backend folder:<code className="mt-1.5 block rounded bg-black/40 px-2 py-1.5 font-mono text-[11px] text-gray-200">python workers/run_worker.py</code></span></p>}
-                {v.status === "rendering" && <p className="text-xs text-mirage-cyan">Rendering now. This page refreshes automatically.</p>}
-                {v.status === "error" && <p className="rounded-xl bg-mirage-rose/10 p-3 text-xs text-mirage-rose">Rendering failed. Check the worker logs and try again.</p>}
-                {v.output_url && <div className="flex gap-2"><a className="btn-ghost !px-3 !py-1.5 text-xs" href={fileUrl(v.output_url)} target="_blank" rel="noreferrer"><ExternalLink size={13} />Open in new tab</a><CopyButton text={fileUrl(v.output_url)} label="Copy link" /></div>}
-              </motion.div>);
+            return <VideoCard key={v.id} v={v} i={i} rname={rname(v.replica_id)} extra={it ? <div className="flex flex-wrap gap-1.5 text-[11px]"><span className="rounded-full bg-white/5 px-2 py-0.5 text-gray-300">{it.language ? `language: ${it.language}` : `batch row ${it.row_index + 1}`}</span>
+              {Object.entries(it.variables).slice(0, 3).map(([k, val]) => <span key={k} className="rounded-full bg-mirage-amber/10 px-2 py-0.5 font-mono text-mirage-amber">{k}={val}</span>)}</div> : null} />;
           })}
         </div>
       )}

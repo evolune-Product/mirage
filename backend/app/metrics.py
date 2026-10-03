@@ -190,6 +190,12 @@ def render_metrics() -> str:
     lines: list[str] = []
     for m in (HTTP_REQUESTS, HTTP_LATENCY, WS_ACTIVE, FIRST_AUDIO, WEBHOOK_FAIL):
         lines += m.render()
+    try:  # admission slots (current/limit per kind), event-loop lag, fds, tasks, RSS (admission.py)
+        from . import admission
+
+        lines += admission.prometheus_lines()
+    except Exception as e:  # noqa: BLE001
+        lines.append(f"# admission metrics failed: {type(e).__name__}")
     try:
         snap = db_snapshot()
     except Exception as e:  # noqa: BLE001
@@ -256,6 +262,12 @@ def deep_health() -> tuple[dict, bool]:
     age = worker_heartbeat_age()
     checks["worker"] = {"status": "ok" if age is not None and age < 30 else ("stale" if age is not None else "never_seen"),
                         "heartbeat_age_s": None if age is None else round(age, 1)}
+    try:  # live conversations vs the admission limit + process saturation/leak indicators (admission.py)
+        from . import admission
+
+        checks["capacity"] = {"status": "ok", **admission.capacity_report()}
+    except Exception as e:  # noqa: BLE001
+        checks["capacity"] = {"status": "unknown", "error": type(e).__name__}
     from . import storage
 
     try:
@@ -428,6 +440,14 @@ def install(app) -> None:
     def health_deep():
         rep, ok = deep_health()
         return JSONResponse(rep, status_code=200 if ok else 503, headers={"Cache-Control": "no-store"})
+
+    @r.get("/health/capacity", include_in_schema=False)
+    def health_capacity():
+        """Readiness for a load balancer: 200 while this process accepts new conversations, 503 when every slot is taken."""
+        from . import admission
+
+        rep = admission.capacity_report()
+        return JSONResponse(rep, status_code=200 if rep["accepting"] else 503, headers={"Cache-Control": "no-store"})
 
     app.include_router(r)
     app.add_middleware(Observability)  # added last = outermost

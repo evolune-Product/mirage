@@ -30,7 +30,7 @@ from .models_features import WebhookDelivery, WebhookEndpoint
 EVENTS = [
     "conversation.started", "conversation.ended", "transcript.ready", "objective.completed",
     "tool.called", "guardrail.triggered", "replica.ready", "replica.error", "video.ready", "video.error",
-    "video_batch.completed",
+    "video_batch.completed", "lead.captured", "lead.updated",
 ]
 BACKOFF_S = [10, 60, 300, 1800, 7200]  # delay before attempt 2..6
 MAX_ATTEMPTS = len(BACKOFF_S) + 1
@@ -72,19 +72,9 @@ def verify(secret: str, body: str, header: str, tolerance_s: int = 300) -> bool:
 def validate_url(url: str) -> None:
     if not url.startswith(("http://", "https://")):
         raise ValueError("url must be http(s)")
-    if os.environ.get("MIRAGE_BLOCK_PRIVATE_URLS") == "1":  # production hardening against SSRF
-        import ipaddress
-        import socket
-        from urllib.parse import urlparse
+    from . import netguard  # one guard for every server-side fetch (default ON in production)
 
-        host = urlparse(url).hostname or ""
-        try:
-            for info in socket.getaddrinfo(host, None):
-                ip = ipaddress.ip_address(info[4][0])
-                if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved:
-                    raise ValueError("url resolves to a private address")
-        except socket.gaierror:
-            raise ValueError("url host does not resolve")
+    netguard.check_url(url)
 
 
 def emit(account_id: str, event: str, data: dict, session: Optional[Session] = None) -> int:
@@ -119,7 +109,9 @@ Sender = Callable[[str, dict, str], "tuple[int, str]"]
 
 
 def http_send(url: str, headers: dict, body: str) -> tuple[int, str]:
-    r = httpx.post(url, content=body, headers=headers, timeout=10, follow_redirects=False)
+    from . import netguard  # SSRF guard: private/metadata targets refused, connection pinned to the validated IP
+
+    r = netguard.post(url, content=body, headers=headers, timeout=10)
     return r.status_code, r.text[:300]
 
 

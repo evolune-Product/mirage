@@ -1,13 +1,15 @@
 "use client";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { BrainCircuit, FileText, Link2, Loader2, Plus, Save, Target, Trash2, Wrench, ShieldAlert, Cpu, Send, Brain, ExternalLink, Play } from "lucide-react";
-import { api, Persona, Replica, PersonaConfig, Objective, Guardrail, Tool, ShareLink, Voice, Lang, fmtDate, fmtDur } from "@/lib/api";
+import { Eye, BrainCircuit, FileText, Link2, Loader2, Plus, Save, Target, Trash2, Wrench, ShieldAlert, Cpu, Send, Brain, ExternalLink, Play } from "lucide-react";
+import { api, errText, Perception, Persona, Replica, PersonaConfig, Objective, Guardrail, Tool, ShareLink, Voice, Lang, fmtDate, fmtDur } from "@/lib/api";
+import EmbedTab from "@/components/persona/EmbedTab";
+import { Callout } from "@/components/kit";
 import { Modal, Tabs, Section, Toggle, Field, Badge, CopyButton, ConfirmDialog, Spinner, toast } from "@/components/ui";
 
 type PForm = { name: string; system_prompt: string; knowledge: string; replica_id: string; tts_voice: string; llm: string };
-const EMPTY: PForm = { name: "", system_prompt: "", knowledge: "", replica_id: "", tts_voice: "default", llm: "ollama/llama3.2:1b" };
+const EMPTY: PForm = { name: "", system_prompt: "", knowledge: "", replica_id: "", tts_voice: "default", llm: "ollama/llama3.2:3b" };
 const EMPTY_CFG: Omit<PersonaConfig, "persona_id"> = { language: "en", greeting: "", objectives: [], guardrails: [], guardrail_fallback: "Sorry, I can't help with that.", memory_enabled: true, custom_llm: { base_url: "", model: "", has_api_key: false }, stt_model: "" };
-type Tab = "general" | "voice" | "behavior" | "model" | "tools" | "share" | "memory";
+type Tab = "general" | "voice" | "embed" | "perception" | "behavior" | "model" | "tools" | "share" | "memory";
 type Doc = { id: string; title: string; source: string; n_chunks: number; created_at: string };
 const csv = (s: string) => s.split(",").map((x) => x.trim()).filter(Boolean);
 
@@ -208,6 +210,53 @@ function Memories({ pid }: { pid: string }) {
   );
 }
 
+/* ---------------- perception ---------------- */
+type VlmInfo = { model: string; licence: string; commercial: boolean; note: string };
+function PerceptionTab({ pid }: { pid: string }) {
+  const [c, setC] = useState<Perception | null>(null); const [models, setModels] = useState<VlmInfo[]>([]); const [busy, setBusy] = useState(false); const [err, setErr] = useState("");
+  useEffect(() => { setC(null); api<Perception>(`/v1/personas/${pid}/perception`).then(setC).catch((x) => { toast.error(x); }); api<{ models: VlmInfo[] }>("/v1/perception/models").then((r) => setModels(r.models)).catch(() => {}); }, [pid]);
+  if (!c) return <div className="h-24 animate-pulse rounded-xl bg-white/5" />;
+  const upd = (p: Partial<Perception>) => setC({ ...c, ...p });
+  async function save() {
+    setBusy(true); setErr("");
+    try {
+      if (c!.enabled && !c!.consent_acknowledged) throw new Error("Tick the confirmation that your users are told before turning perception on.");
+      const { persona_id: _p, ...body } = c!; void _p; setC(await api<Perception>(`/v1/personas/${pid}/perception`, { method: "PUT", body })); toast.success("Perception settings saved.");
+    } catch (x) { setErr(errText(x)); } finally { setBusy(false); }
+  }
+  const cur = models.find((m) => m.model === c.vlm_model);
+  return (
+    <div className="space-y-5">
+      <Section title="Let the agent see" icon={<Eye size={16} className="text-mirage-cyan" />} hint="With perception on, the person can share their camera or screen and the agent describes what it sees (&quot;what am I holding?&quot;, &quot;read this error&quot;). Analysis runs on a local vision model.">
+        <div className="space-y-3 rounded-xl border border-white/10 bg-white/[0.03] p-4">
+          <Toggle checked={c.enabled} onChange={(v) => upd({ enabled: v })} label="Enable perception for this persona" />
+          <label className={`flex cursor-pointer items-start gap-2.5 rounded-lg border p-3 text-sm ${c.consent_acknowledged ? "border-mirage-mint/30 bg-mirage-mint/[0.05]" : "border-mirage-amber/30 bg-mirage-amber/[0.05]"}`}>
+            <input type="checkbox" className="mt-1" checked={c.consent_acknowledged} onChange={(e) => upd({ consent_acknowledged: e.target.checked })} aria-label="I confirm users are told" />
+            <span><span className="font-medium text-gray-100">I confirm the people talking to this persona are told that their camera or screen is analysed.</span>
+              <span className="mt-1 block text-xs text-gray-400">Required. You are responsible for telling users (for example in your page text) and for any consent your local law requires.</span></span>
+          </label>
+          <Toggle checked={c.require_user_consent} onChange={(v) => upd({ require_user_consent: v })} label="Also ask each user to opt in during the call" hint="Recommended: nothing is analysed until the user presses the share button." />
+          <div className="grid gap-3 sm:grid-cols-2"><Toggle checked={c.camera} onChange={(v) => upd({ camera: v })} label="Allow camera" /><Toggle checked={c.screen} onChange={(v) => upd({ screen: v })} label="Allow screen share" /></div>
+        </div>
+      </Section>
+      <Callout tone="info" title="What happens to the images">
+        Frames are analysed in memory and thrown away; opting out or ending the call forgets everything. Mirage never identifies who someone is, but it can read text visible on screen (such as a name tag). {c.store_frames ? "Frame storage is ON below, which keeps up to 100 images per conversation." : "Nothing is stored."}
+      </Callout>
+      <Section title="Advanced">
+        <div className="space-y-3">
+          <Field label="Vision model" hint={cur ? `${cur.note}. Licence: ${cur.licence}${cur.commercial ? "" : " (not for commercial use)"}.` : undefined}>
+            <select className="input" aria-label="Vision model" value={c.vlm_model} onChange={(e) => upd({ vlm_model: e.target.value })}>{models.map((m) => <option key={m.model} value={m.model}>{m.model}{m.commercial ? "" : " (non-commercial)"}</option>)}{!models.some((m) => m.model === c.vlm_model) && <option value={c.vlm_model}>{c.vlm_model}</option>}</select></Field>
+          <Field label={`Look every ${c.interval_s} s`} hint="Shorter is more current but uses more GPU. 1-30 s."><input type="range" min={1} max={30} step={1} value={c.interval_s} onChange={(e) => upd({ interval_s: Number(e.target.value) })} className="w-full" aria-label="Frame interval" /></Field>
+          <Toggle checked={c.store_frames} onChange={(v) => upd({ store_frames: v })} label="Keep frames for debugging" hint="Off by default. Stored frames are not yet removed by the delete-my-data tool." />
+        </div>
+      </Section>
+      {err && <Callout tone="bad">{err}</Callout>}
+      <button type="button" className="btn-grad w-full" disabled={busy} onClick={save}>{busy ? <Spinner /> : <Save size={15} />}Save perception</button>
+      <p className="text-xs text-gray-500">Needs a microphone-and-camera capable browser; the conversation page asks for camera permission only when the user opts in.</p>
+    </div>
+  );
+}
+
 /* ---------------- drawer ---------------- */
 export default function PersonaDrawer({ open, onClose, persona, reps, onSaved }: { open: boolean; onClose: () => void; persona: Persona | null; reps: Replica[]; onSaved: () => void }) {
   const [pid, setPid] = useState<string | null>(null); const [f, setF] = useState<PForm>(EMPTY); const [tab, setTab] = useState<Tab>("general");
@@ -232,7 +281,8 @@ export default function PersonaDrawer({ open, onClose, persona, reps, onSaved }:
 
   const set = (k: keyof PForm) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => setF({ ...f, [k]: e.target.value });
   const lang = langs.find((l) => l.code === cfg.language);
-  const shownVoices = voices.filter((v) => cfg.language === "auto" || v.language === cfg.language);
+  const shownVoices = voices.filter((v) => !v.cloned && (cfg.language === "auto" || v.language === cfg.language));
+  const clones = voices.filter((v) => v.cloned);
   const ttsOk = cfg.language === "auto" || lang?.tts !== false;
 
   async function savePersona() {
@@ -277,7 +327,7 @@ export default function PersonaDrawer({ open, onClose, persona, reps, onSaved }:
 
   const tabs: { id: Tab; label: string; badge?: number }[] = [
     { id: "general", label: "General" }, { id: "voice", label: "Voice & language" }, { id: "behavior", label: "Behavior", badge: cfg.objectives.length + cfg.guardrails.length },
-    { id: "model", label: "Model" }, { id: "tools", label: "Tools" }, { id: "share", label: "Share" }, { id: "memory", label: "Memories" },
+    { id: "perception", label: "Perception" }, { id: "model", label: "Model" }, { id: "tools", label: "Tools" }, { id: "embed", label: "Embed & leads" }, { id: "share", label: "Share" }, { id: "memory", label: "Memories" },
   ];
   const locked = !pid;
   const updObj = (i: number, patch: Partial<Objective>) => setCfg({ ...cfg, objectives: cfg.objectives.map((o, j) => (j === i ? { ...o, ...patch } : o)) });
@@ -290,8 +340,10 @@ export default function PersonaDrawer({ open, onClose, persona, reps, onSaved }:
         <form onSubmit={submitGeneral} className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-2">
             <div><label className="label">Name</label><input className="input" required value={f.name} onChange={set("name")} /></div>
-            <div><label className="label">Replica</label><select className="input" value={f.replica_id} onChange={set("replica_id")}><option value="">None</option>{reps.map((r) => <option key={r.id} value={r.id}>{r.name} ({r.status})</option>)}</select></div>
-            <div className="sm:col-span-2"><label className="label">LLM</label><input className="input" value={f.llm} onChange={set("llm")} /></div>
+            <div><label className="label">Replica</label><select className="input" aria-label="Replica" value={f.replica_id} onChange={set("replica_id")}><option value="">None</option>{reps.map((r) => <option key={r.id} value={r.id}>{r.name} ({r.status})</option>)}</select><p className="mt-1 text-xs text-gray-500">Backgrounds are set per replica (Replicas, Details), not per persona.</p></div>
+            <div className="sm:col-span-2"><label className="label">LLM</label><input className="input" aria-label="LLM" value={f.llm} onChange={set("llm")} />
+              <div className="mt-2 flex flex-wrap gap-1.5" aria-label="Model recommendations">{[["ollama/llama3.2:1b", "fastest, demos"], ["ollama/llama3.2:3b", "recommended with knowledge"], ["ollama/qwen3:8b", "recommended with tools"]].map(([m, h]) => <button type="button" key={m} onClick={() => setF({ ...f, llm: m })} className={`rounded-full border px-2.5 py-1 text-[11px] ${f.llm === m ? "border-mirage-violet/60 bg-mirage-violet/15 text-white" : "border-white/10 text-gray-400 hover:text-white"}`}>{m.replace("ollama/", "")} <span className="text-gray-500">- {h}</span></button>)}</div>
+              <p className="mt-1.5 text-xs text-gray-500">Measured on our evals: llama3.2:3b answered 100% of document questions (1b: 88%) for about 0.3 s more; only qwen3:8b called tools reliably (100% vs 29-71%). Models above ~8b are too slow for live voice.</p></div>
           </div>
           <div><label className="label">System prompt</label><textarea className="input h-28" required placeholder="You are a friendly sales rep who..." value={f.system_prompt} onChange={set("system_prompt")} /></div>
           <div><label className="label">Quick notes (always in context)</label><textarea className="input h-20" value={f.knowledge} onChange={set("knowledge")} /></div>
@@ -312,10 +364,13 @@ export default function PersonaDrawer({ open, onClose, persona, reps, onSaved }:
             {voicesErr ? <input className="input" value={f.tts_voice} onChange={set("tts_voice")} /> : (
               <select className="input" aria-label="Voice" disabled={!ttsOk} value={f.tts_voice} onChange={set("tts_voice")}>
                 <option value="default">Language default{lang?.default_voice ? ` (${lang.default_voice})` : ""}</option>
-                {shownVoices.map((v) => <option key={v.id} value={v.id}>{v.id} - {v.gender}, {v.accent}{v.default_for_language ? " (default)" : ""}</option>)}
+                {clones.length > 0 && <optgroup label="Cloned voices (synthetic)">{clones.map((v) => <option key={v.id} value={v.id}>{v.name || v.id} - cloned</option>)}</optgroup>}
+                <optgroup label="Preset voices">{shownVoices.map((v) => <option key={v.id} value={v.id}>{v.id} - {v.gender}, {v.accent}{v.default_for_language ? " (default)" : ""}</option>)}</optgroup>
                 {f.tts_voice !== "default" && !shownVoices.some((v) => v.id === f.tts_voice) && <option value={f.tts_voice}>{f.tts_voice} (current)</option>}
               </select>)}
           </Field>
+          {f.tts_voice.startsWith("clone:") && <Callout tone="warn" title="Cloned voice in live calls">A cloned voice adds roughly 4-5 seconds before the agent starts speaking. It is great for videos; for snappy live conversations pick a preset voice. Any failure falls back to a preset automatically.</Callout>}
+          {clones.length === 0 && <p className="text-xs text-gray-500">No cloned voices yet. Clone one from a replica&apos;s details page (needs voice-verified consent).</p>}
           <Field label="Speech-recognition model (optional)" hint="Leave empty for the automatic choice (larger model for Hindi, CJK, Arabic, etc.)."><input className="input font-mono" placeholder="e.g. small" value={cfg.stt_model} onChange={(e) => setCfg({ ...cfg, stt_model: e.target.value })} /></Field>
           <Toggle checked={cfg.memory_enabled} onChange={(v) => setCfg({ ...cfg, memory_enabled: v })} label="Remember past conversations" hint="Recall summaries from earlier conversations with the same participant." />
         </div>)}
@@ -375,6 +430,8 @@ export default function PersonaDrawer({ open, onClose, persona, reps, onSaved }:
         <SaveBtn label="Model" section="model" />
       </>)}
 
+      {tab === "perception" && pid && <PerceptionTab pid={pid} />}
+      {tab === "embed" && pid && <EmbedTab pid={pid} />}
       {tab === "tools" && pid && <Tools pid={pid} />}
       {tab === "share" && pid && <Share pid={pid} />}
       {tab === "memory" && pid && <Memories pid={pid} />}

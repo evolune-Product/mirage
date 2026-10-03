@@ -1,9 +1,11 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Mic, Pencil, Plus, UserRound } from "lucide-react";
+import { LayoutTemplate, Mic, Pencil, Plus, UserRound } from "lucide-react";
 import { api, Persona, Replica } from "@/lib/api";
-import { Shell, Empty, SkeletonCards, Badge, toast } from "@/components/ui";
+import { Shell, Empty, SkeletonCards, Badge, Modal, toast } from "@/components/ui";
+import TemplatePicker, { CreatedSummary } from "@/components/templates/TemplatePicker";
+import { Instantiated } from "@/lib/api";
 import PersonaDrawer from "@/components/persona/PersonaDrawer";
 
 export default function Personas() {
@@ -14,7 +16,8 @@ export default function Personas() {
   const openNew = () => { setSel(null); setOpen(true); };
   const openEdit = (p: Persona) => { setSel(p); setOpen(true); };
   const repName = (id: string | null) => { const r = reps.find((x) => x.id === id); return r ? r.name : null; };
-  const newBtn = <button className="btn-grad" onClick={openNew}><Plus size={16} />New persona</button>;
+  const [tpl, setTpl] = useState(false); const [made, setMade] = useState<Instantiated | null>(null);
+  const newBtn = <><button className="btn" onClick={() => { setMade(null); setTpl(true); }}><LayoutTemplate size={16} />From template</button><button className="btn-grad" onClick={openNew}><Plus size={16} />New persona</button></>;
 
   return (
     <Shell title="Personas" subtitle="A persona is the mind behind the face: personality, voice, model and the knowledge it answers from." action={newBtn}>
@@ -40,6 +43,10 @@ export default function Personas() {
           ))}
         </div>
       )}
+      <Modal side wide open={tpl} onClose={() => setTpl(false)} title="Start from a template">
+        {made ? (<div className="space-y-4"><CreatedSummary r={made} /><div className="flex gap-2"><button className="btn-grad" onClick={() => { setTpl(false); const p = list?.find((x) => x.id === made.persona_id); if (p) openEdit(p); }}>Open persona</button><button className="btn-ghost" onClick={() => setTpl(false)}>Close</button></div></div>)
+          : <TemplatePicker replicas={reps} compact onCreated={async (r) => { setMade(r); await load(); }} />}
+      </Modal>
       <PersonaDrawer open={open} onClose={() => setOpen(false)} persona={sel} reps={reps} onSaved={load} />
     </Shell>
   );

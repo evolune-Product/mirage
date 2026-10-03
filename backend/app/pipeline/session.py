@@ -129,7 +129,13 @@ FIRST_PIECE_S = float(os.environ.get("MIRAGE_LIPSYNC_FIRST_PIECE_S", "0.35"))
 SECOND_PIECE_S = float(os.environ.get("MIRAGE_LIPSYNC_SECOND_PIECE_S", "0.6"))
 MIN_PIECE_S = 0.25  # a remainder shorter than this is merged into the previous piece
 MIN_RENDER_S = 0.3  # shorter audio is zero-padded for rendering (server errors below ~0.2 s)
-LIPSYNC_MAX_FAILS = 3  # consecutive render failures before the face is switched off for the call
+LIPSYNC_MAX_FAILS = 3  # consecutive render failures before the face is switched off
+LIPSYNC_RETRY_S = float(os.environ.get("MIRAGE_LIPSYNC_RETRY_S", "8"))  # then the service is re-probed this often; when it answers the face comes back
+LLM_FIRST_TOKEN_S = float(os.environ.get("MIRAGE_LLM_FIRST_TOKEN_TIMEOUT", "25"))  # a hung/overloaded Ollama must not hang the turn
+LLM_STALL_S = float(os.environ.get("MIRAGE_LLM_STALL_TIMEOUT", "15"))
+FALLBACK_LLM = os.environ.get("MIRAGE_FALLBACK_TEXT", "Sorry, I'm having trouble answering right now. Please try again in a moment.")
+FALLBACK_STT = "Sorry, I didn't catch that. Could you say it again?"
+MAX_UTTERANCE_S = float(os.environ.get("MIRAGE_MAX_UTTERANCE_S", "60"))  # bounds the per-session audio buffer (memory)
 
 
 async def warmup_providers(p, system: str = "", voice: str = "") -> None:
@@ -151,6 +157,10 @@ async def warmup_providers(p, system: str = "", voice: str = "") -> None:
             await w(voice)
 
     await asyncio.gather(llm(), tts(), clone(), return_exceptions=True)
+
+
+class LLMTimeout(Exception):
+    pass
 
 
 class Session:
@@ -178,6 +188,7 @@ class Session:
         self._piece_i = 0
         self._t0 = time.monotonic()
         self._lip_fail, self._lip_ok = 0, False
+        self._lip_backup, self._lip_retry_at = None, 0.0  # face switched off by failures: re-probed later (circuit breaker)
         self._idle_phase: tuple[int, float, float] | None = None
         self.history: list[dict] = []
         self._rem = b""
@@ -245,6 +256,8 @@ class Session:
             else:
                 self._drop_spec()  # user resumed after a pause: the speculative transcript is stale
             self._utt.append(f)
+            if len(self._utt) * FRAME_MS > MAX_UTTERANCE_S * 1000:  # a never-ending monologue must not grow RAM without bound
+                del self._utt[:len(self._utt) // 2]
             self._speech_run += 1
             need = BARGE_IN_FRAMES_ECHO if self._echo_flag and self.barge_frames < BARGE_IN_FRAMES_ECHO else self.barge_frames
             if talking and self._speech_run >= need:
@@ -365,7 +378,7 @@ class Session:
                 try:
                     need = int(MIN_RENDER_S * 24000) * 2  # the lip-sync model needs >= ~0.2 s of mel frames: pad, then trim
                     kw = self._first_piece_kwargs() if self._piece_i == 1 else {}
-                    seg = await self.lipsync.render(piece + bytes(max(0, need - len(piece))), **kw)
+                    seg = await self._render(piece + bytes(max(0, need - len(piece))), piece=self._piece_i - 1, **kw)
                     frames = seg.get("frames") or []
                     if len(piece) < need:
                         frames = frames[:max(1, round(len(piece) / 48000 * seg.get("fps", 25)))]
@@ -375,14 +388,49 @@ class Session:
                             msg["end_phase"] = seg["end_phase"]
                         await self.send_json(msg)
                     self._lip_fail, self._lip_ok = 0, True
-                except Exception:  # face is optional: never break the voice turn
+                except Exception as e:  # face is optional: never break the voice turn
                     # A service that never worked is switched off at once; one that worked gets a few retries so a
-                    # transient render error costs one piece of video, not the face for the rest of the call.
+                    # transient render error costs one piece of video, not the face for the rest of the call. A timeout
+                    # (hung or saturated service) switches it off at once: every further piece would stall the audio too.
                     self._lip_fail += 1
+                    if isinstance(e, TimeoutError) or "Timeout" in type(e).__name__:
+                        self._lip_fail = LIPSYNC_MAX_FAILS
                     if not self._lip_ok or self._lip_fail >= LIPSYNC_MAX_FAILS:
-                        self.lipsync = None
+                        self._lip_off()
             await self.send_bytes(piece)
             self.metrics.setdefault("ttfa_s", time.monotonic() - self._t0)  # first audio byte on the wire
+
+    def _lip_off(self) -> None:
+        """Face unavailable: continue voice-only, remember the client so `_lip_recover` can bring the face back."""
+        if self.lipsync is not None:
+            self._lip_backup = self.lipsync
+        self.lipsync = None
+        self._lip_retry_at = time.monotonic() + LIPSYNC_RETRY_S
+
+    async def _lip_recover(self) -> None:
+        """Called at the start of each reply: if the face was switched off by failures and the service answers its health
+        check again, switch it back on (the browser keeps its idle loop and simply receives video segments again)."""
+        b = self._lip_backup
+        if self.lipsync is not None or b is None or time.monotonic() < self._lip_retry_at:
+            return
+        try:
+            await asyncio.wait_for(b.health(), 2.0)
+        except Exception:  # noqa: BLE001 - still down (or a double without health()): try again later
+            self._lip_retry_at = time.monotonic() + LIPSYNC_RETRY_S
+            return
+        self.lipsync, self._lip_fail = b, 0
+        log.info("lip-sync service is back: face re-enabled")
+
+    async def _render(self, pcm: bytes, piece: int, **kw) -> dict:
+        """lipsync.render with the piece index (the service schedules a reply's first piece first). Clients without the
+        `piece` keyword (test doubles, older services) are called exactly as before."""
+        import inspect
+
+        try:
+            ok = "piece" in inspect.signature(self.lipsync.render).parameters
+        except (TypeError, ValueError):
+            ok = False
+        return await (self.lipsync.render(pcm, piece=piece, **kw) if ok else self.lipsync.render(pcm, **kw))
 
     def set_idle_phase(self, phase: int, fps: float = 25.0) -> None:
         """Client reports its idle-loop ping-pong index so the first rendered piece continues from it (no head pop)."""
@@ -406,7 +454,10 @@ class Session:
         spoken: list[str] = []
         user_text = ""
         self._piece_i = 0
+        agent_started = False
+        fallback = FALLBACK_STT
         try:
+            await self._lip_recover()
             if spec is not None:
                 try:
                     user_text = (await asyncio.shield(spec)).strip()
@@ -422,8 +473,10 @@ class Session:
             self.metrics["stt_s"] = time.monotonic() - t0
             if not user_text:
                 return
+            fallback = FALLBACK_LLM
             await self.send_json({"type": "transcript", "role": "user", "text": user_text})
             await self.send_json({"type": "agent_start"})
+            agent_started = True
             system = self.system
             if self.retriever:
                 try:
@@ -438,9 +491,26 @@ class Session:
             first = True
 
             async def tokens():
-                async for tok in self.p.llm.stream(system, self.history[-MAX_HISTORY:], user_text):
-                    self.metrics.setdefault("llm_ft_s", time.monotonic() - t0)
-                    yield tok
+                it = self.p.llm.stream(system, self.history[-MAX_HISTORY:], user_text).__aiter__()
+                n = 0
+                try:
+                    while True:
+                        try:  # first token may legitimately take a while (queue behind other sessions); stalls must not hang
+                            tok = await asyncio.wait_for(it.__anext__(), LLM_FIRST_TOKEN_S if n == 0 else LLM_STALL_S)
+                        except StopAsyncIteration:
+                            return
+                        except asyncio.TimeoutError:
+                            raise LLMTimeout(f"language model gave no {'first token' if n == 0 else 'further token'} in time") from None
+                        n += 1
+                        self.metrics.setdefault("llm_ft_s", time.monotonic() - t0)
+                        yield tok
+                finally:
+                    aclose = getattr(it, "aclose", None)
+                    if aclose:
+                        try:
+                            await aclose()
+                        except BaseException:  # noqa: BLE001 - never mask the real error
+                            pass
 
             async def synth_stage():
                 try:
@@ -476,14 +546,33 @@ class Session:
             await self.send_json({"type": "agent_done"})
         except asyncio.CancelledError:
             raise
-        except Exception as e:  # e.g. LLM model missing: tell the client instead of failing silently
+        except Exception as e:  # e.g. LLM model missing: tell the client, and say something so the user is not left hanging
             await self.send_json({"type": "error", "message": f"{type(e).__name__}: {e}"[:300]})
+            await self._speak_fallback(fallback, agent_started)
         finally:
             # Called on completion and on cancel: history keeps only what was actually voiced.
             if user_text:
                 self.history.append({"role": "user", "content": user_text})
                 if spoken:
                     self.history.append({"role": "assistant", "content": " ".join(spoken)})
+
+    async def _speak_fallback(self, text: str, agent_started: bool) -> None:
+        """Best-effort spoken apology after a failed turn (LLM down/slow, STT error): voice only, never raises, always ends
+        the turn with agent_done so the client leaves its 'thinking' state."""
+        try:
+            if not agent_started:
+                await self.send_json({"type": "agent_start"})
+            async for chunk in self.p.tts.synthesize(text, self.voice):
+                await self.send_bytes(chunk)
+            await self.send_json({"type": "transcript", "role": "agent", "text": text})
+        except asyncio.CancelledError:
+            raise
+        except Exception:  # noqa: BLE001 - TTS may be what failed
+            pass
+        try:
+            await self.send_json({"type": "agent_done"})
+        except Exception:  # noqa: BLE001
+            pass
 
     async def say(self, text: str) -> None:
         """Agent speaks `text` first (persona greeting) with no LLM turn; interruptible like any reply."""
@@ -505,7 +594,7 @@ class Session:
                                 if seg.get("frames"):
                                     await self.send_json({"type": "video_segment", "fps": seg["fps"], "frames": seg["frames"]})
                             except Exception:  # face is optional
-                                self.lipsync = None
+                                self._lip_off()
                         await self.send_bytes(piece)
                 else:
                     await self.send_bytes(chunk)

@@ -7,6 +7,7 @@ from sqlmodel import Session, select
 from .. import convo_runtime as cr
 from ..auth import current_account
 from ..db import Account, Conversation, Persona, Replica, Video, get_session
+from ..leads import analytics_block as leads_analytics
 from ..models_features import ConversationMetric, VideoBatch
 
 router = APIRouter()
@@ -74,4 +75,5 @@ def analytics(days: int = 30, acc: Account = Depends(current_account), s: Sessio
                    "per_day": [{"date": k, "videos": v} for k, v in sorted(vday.items())]},
         "replicas": {"total": len(replicas), "ready": sum(1 for r in replicas if r.status == "ready")},
         "credits_seconds": acc.credits_seconds,
+        **leads_analytics(s, acc.id, convs, personas, since),  # leads + objective completion rates (templates-leads module)
     }

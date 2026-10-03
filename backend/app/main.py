@@ -11,6 +11,9 @@ from .routers import resources
 @asynccontextmanager
 async def lifespan(_):
     init_db()
+    from . import resilience as _res
+
+    _res.recover_orphans()  # conversations left active by a killed process get an end time + billing (resilience.py)
     import asyncio
     import os as _os
 
@@ -30,7 +33,7 @@ async def lifespan(_):
             try:
                 from .pipeline.session import get_providers, warmup_providers
 
-                p = await asyncio.to_thread(get_providers, "")
+                p = await asyncio.to_thread(get_providers, _os.environ.get("MIRAGE_PRELOAD_LLM", "ollama/llama3.2:3b"))
                 await warmup_providers(p, "")
             except Exception:  # noqa: BLE001 - an optimisation, never fatal
                 pass
@@ -39,6 +42,10 @@ async def lifespan(_):
     try:
         yield
     finally:
+        try:
+            await _res.graceful_shutdown()  # close live sockets, wait for teardown (final metering, runtime stop)
+        except Exception:  # noqa: BLE001
+            pass
         for t in tasks:
             t.cancel()
 

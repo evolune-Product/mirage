@@ -187,7 +187,7 @@ class Hardening:
     def _security_headers(path: str):
         h = [(b"x-content-type-options", b"nosniff"), (b"referrer-policy", b"no-referrer"),
              (b"cross-origin-opener-policy", b"same-origin")]
-        if not path.startswith("/v1/playground"):  # the embed widget iframes the playground
+        if not path.startswith(("/v1/playground", "/widget/frame/")):  # the embed widgets iframe these (widget_api sets frame-ancestors)
             h.append((b"x-frame-options", b"DENY"))
         if path.startswith("/v1/") and not path.startswith(NO_CSP):
             h.append((b"content-security-policy", b"default-src 'none'; frame-ancestors 'none'"))
@@ -198,7 +198,38 @@ class Hardening:
         return h
 
 
+_SCRUB_HINTS = ("mk_", "sk_", "whsec_", "rzp_", "api_key", "apikey", "api-key", "token", "sig=", "secret", "password", "Bearer", "bearer")
+_factory_wrapped = False
+
+
+def install_log_scrubbing() -> None:
+    """Every log record (any module, uvicorn's access log included, text or JSON mode) is scrubbed of API keys,
+    signatures, tokens and Bearer values at creation time. Exceptions are scrubbed too. Idempotent."""
+    global _factory_wrapped
+    if _factory_wrapped:
+        return
+    _factory_wrapped = True
+    import logging
+
+    orig = logging.getLogRecordFactory()
+
+    def factory(*a, **kw):
+        rec = orig(*a, **kw)
+        try:
+            text = rec.getMessage()  # format first: scrubbing the template alone would eat the %s placeholders
+            if any(h in text for h in _SCRUB_HINTS):
+                rec.msg, rec.args = settings.redact(text), None
+        except Exception:  # noqa: BLE001  (logging must never break the app)
+            pass
+        return rec
+
+    logging.setLogRecordFactory(factory)
+    fe = logging.Formatter.formatException
+    logging.Formatter.formatException = lambda self, ei: settings.redact(fe(self, ei))  # type: ignore[method-assign]
+
+
 def install(app) -> None:
+    install_log_scrubbing()
     errs = settings.validate_production()
     if errs:
         raise RuntimeError("unsafe production configuration: " + "; ".join(errs))

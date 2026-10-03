@@ -44,6 +44,8 @@ def test_client_passes_phase_and_fade(monkeypatch):
         return a, b, await c.prepare(), await c.health()
 
     a, b, p, h = asyncio.run(go())
-    assert seen[0] == ("r_1", {}, 200)  # old call signature unchanged: no query params
-    assert seen[1][1] == {"phase": "12", "fade_in": "1"}
+    extra = {"sid", "deadline_s"}  # additive scheduling hints (capacity work): session id + queue deadline
+    assert seen[0][0] == "r_1" and seen[0][2] == 200 and set(seen[0][1]) == extra
+    assert {k: v for k, v in seen[1][1].items() if k not in extra} == {"phase": "12", "fade_in": "1"}
+    assert seen[0][1]["sid"] == seen[1][1]["sid"]  # one session id per client
     assert a["loop_len"] == 75 and p["ok"] and h["device"] == "cpu"

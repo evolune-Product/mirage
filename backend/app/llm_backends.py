@@ -80,7 +80,9 @@ class OpenAIBackend:
         if self.api_key:
             headers["authorization"] = f"Bearer {self.api_key}"
         acc: dict[int, dict] = {}
-        async with httpx.AsyncClient(timeout=None) as c:
+        from . import netguard  # custom base_url is user-supplied: SSRF guard (no-op for localhost in dev)
+
+        async with netguard.async_client(timeout=None) as c:
             async with c.stream("POST", f"{self.base_url}/chat/completions", json=body, headers=headers) as r:
                 if r.status_code >= 400:
                     raise RuntimeError(f"custom llm HTTP {r.status_code}: {(await r.aread())[:200]!r}")
@@ -145,7 +147,9 @@ ToolPost = Callable[[str, str, dict, float], "tuple[int, str]"]  # (url, body, h
 
 
 def _http_post(url: str, body: str, headers: dict, timeout: float) -> tuple[int, str]:
-    r = httpx.post(url, content=body, headers=headers, timeout=timeout)
+    from . import netguard  # tool webhooks are user-supplied URLs
+
+    r = netguard.post(url, content=body, headers=headers, timeout=timeout)
     return r.status_code, r.text
 
 
@@ -162,6 +166,10 @@ def execute_tool(tool: ToolSpec, args: dict, ctx: dict) -> tuple[bool, str]:
     Returns (ok, result_text). Result text is whatever the webhook returned (JSON preferred), truncated."""
     from .webhooks import sign
 
+    if tool.webhook_url.startswith("mirage-internal://"):  # built-in tools (leads.py), no HTTP
+        from . import leads
+
+        return leads.run_internal(tool.name, args, ctx)
     body = json.dumps({"tool": tool.name, "arguments": args, **ctx}, separators=(",", ":"))
     headers = {"content-type": "application/json", "user-agent": "Mirage-Tools/1"}
     if tool.secret:

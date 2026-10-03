@@ -1,17 +1,13 @@
 """Server-side verification of a spoken consent recording: ASR + speaker match against the training video."""
 import hashlib
-import ipaddress
 import os
 import shutil
-import socket
 import threading
 from pathlib import Path
-from urllib.parse import urlparse
 
-import httpx
 import numpy as np
 
-from . import settings, voiceprint
+from . import netguard, settings, voiceprint
 
 MAX_TRAIN_BYTES = int(os.getenv("MIRAGE_MAX_TRAIN_VIDEO_BYTES", str(300 * 1024 * 1024)))
 _whisper = None
@@ -42,39 +38,14 @@ def sha256_file(p: Path) -> str:
     return h.hexdigest()
 
 
-def _check_url_safe(url: str) -> None:
-    """SSRF guard for server-side fetches (production only: dev needs localhost video servers)."""
-    if not settings.is_production() or os.getenv("MIRAGE_ALLOW_PRIVATE_URLS") == "1":
-        return
-    host = urlparse(url).hostname or ""
-    try:
-        infos = socket.getaddrinfo(host, None)
-    except OSError:
-        raise ValueError("training video host does not resolve")
-    for i in infos:
-        ip = ipaddress.ip_address(i[4][0])
-        if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved or ip.is_multicast:
-            raise ValueError("training video URL points at a private address")
-
-
 def fetch_train_video(url: str, dest: Path) -> None:
+    """http(s): SSRF-guarded streaming download (netguard: resolve-and-pin, every redirect hop checked, size capped).
+    Local paths: dev only."""
     if url.startswith(("http://", "https://")):
-        got = 0
-        for _hop in range(4):  # follow redirects manually so every hop passes the SSRF check
-            _check_url_safe(url)
-            with httpx.stream("GET", url, follow_redirects=False, timeout=120) as r:
-                if r.is_redirect:
-                    url = str(r.url.join(r.headers.get("location", "")))
-                    continue
-                r.raise_for_status()
-                with open(dest, "wb") as f:
-                    for chunk in r.iter_bytes():
-                        got += len(chunk)
-                        if got > MAX_TRAIN_BYTES:
-                            raise ValueError("training video too large")
-                        f.write(chunk)
-                return
-        raise ValueError("too many redirects")
+        try:
+            netguard.download(url, dest, MAX_TRAIN_BYTES, timeout=120)
+        except netguard.UnsafeURL as e:
+            raise ValueError(f"training video URL refused: {e}") from e
     elif not settings.is_production():  # local paths only for dev (jobs.fetch_video accepts them too)
         src = Path(url[7:] if url.startswith("file://") else url).expanduser()
         if not src.is_file():

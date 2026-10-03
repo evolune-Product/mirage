@@ -79,7 +79,7 @@ class Mirage:
 
     # personas
     def create_persona(self, name: str, system_prompt: str, replica_id: Optional[str] = None,
-                       llm: str = "ollama/llama3.2:1b", tts_voice: str = "default", knowledge: str = "") -> dict:
+                       llm: str = "ollama/llama3.2:3b", tts_voice: str = "default", knowledge: str = "") -> dict:
         return self._req("POST", "/personas", json={"name": name, "system_prompt": system_prompt,
                          "replica_id": replica_id, "llm": llm, "tts_voice": tts_voice, "knowledge": knowledge})
     def list_personas(self) -> list: return self._req("GET", "/personas")
@@ -223,3 +223,42 @@ class Mirage:
         return self._req("POST", f"/personas/{persona_id}/share", json=opts)
     def list_share_links(self, persona_id: str) -> list: return self._req("GET", f"/personas/{persona_id}/share")
     def revoke_share_link(self, token: str) -> dict: return self._req("DELETE", f"/share/{token}")
+
+    # templates, leads, widget, integrations
+    def list_templates(self, niche: Optional[str] = None) -> dict:
+        return self._req("GET", "/templates", params={"niche": niche} if niche else None)
+    def get_template(self, template_id: str) -> dict: return self._req("GET", f"/templates/{template_id}")
+    def instantiate_template(self, template_id: str, **opts) -> dict:
+        """opts: name, variables, language, llm, tts_voice, replica_id, include_sample_knowledge, enable_lead_capture,
+        booking_webhook_url, booking_secret, notify_webhook_url, notify_secret"""
+        return self._req("POST", f"/templates/{template_id}/instantiate", json=opts)
+    def list_leads(self, **filters) -> dict:
+        """filters: persona_id, conversation_id, since, until, q, consent, limit, offset"""
+        return self._req("GET", "/leads", params={k: v for k, v in filters.items() if v is not None})
+    def get_lead(self, lead_id: str) -> dict: return self._req("GET", f"/leads/{lead_id}")
+    def delete_lead(self, lead_id: str) -> dict: return self._req("DELETE", f"/leads/{lead_id}")
+    def create_lead(self, persona_id: str, **fields) -> dict:
+        return self._req("POST", "/leads", json={"persona_id": persona_id, **fields})
+    def export_leads_csv(self, **filters) -> str:
+        r = self._http.get("/v1/leads/export.csv", headers={"x-api-key": self.api_key or ""},
+                           params={k: v for k, v in filters.items() if v is not None})
+        if r.status_code >= 400:
+            raise MirageError(r.status_code, r.text)
+        return r.text
+    def get_lead_capture(self, persona_id: str) -> dict: return self._req("GET", f"/personas/{persona_id}/lead-capture")
+    def set_lead_capture(self, persona_id: str, **cfg) -> dict:
+        """cfg: enabled, required_fields, require_consent, disclosure"""
+        return self._req("PUT", f"/personas/{persona_id}/lead-capture", json=cfg)
+    def create_widget(self, persona_id: str, **opts) -> dict:
+        """opts: allowed_domains, label, color, position, greeting, language, max_seconds, ... -> includes the copy-paste `snippet`"""
+        return self._req("POST", f"/personas/{persona_id}/widget", json=opts)
+    def list_widgets(self, persona_id: Optional[str] = None) -> list:
+        return self._req("GET", "/widgets", params={"persona_id": persona_id} if persona_id else None)
+    def update_widget(self, token: str, **fields) -> dict: return self._req("PUT", f"/widgets/{token}", json=fields)
+    def delete_widget(self, token: str) -> dict: return self._req("DELETE", f"/widgets/{token}")
+    def get_integrations(self, persona_id: str) -> dict: return self._req("GET", f"/personas/{persona_id}/integrations")
+    def set_integrations(self, persona_id: str, **cfg) -> dict:
+        """cfg: booking_webhook_url, booking_secret, notify_webhook_url, notify_secret"""
+        return self._req("PUT", f"/personas/{persona_id}/integrations", json=cfg)
+    def test_integration(self, persona_id: str, which: str = "booking") -> dict:
+        return self._req("POST", f"/personas/{persona_id}/integrations/test", json={"which": which})

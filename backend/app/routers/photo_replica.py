@@ -87,6 +87,13 @@ def create_photo_replica(body: PhotoReplicaIn, acc: Account = Depends(current_ac
     _tables()
     if not body.photo_url.startswith(("http://", "https://")) and settings.is_production():
         raise HTTPException(422, "photo_url must be http(s)")
+    if body.photo_url.startswith(("http://", "https://")):
+        from .. import netguard  # SSRF: refuse private/metadata targets up front (the fetch re-checks, pinned)
+
+        try:
+            netguard.check_url(body.photo_url)
+        except ValueError as e:
+            raise HTTPException(422, f"photo_url refused: {e}")
     r = Replica(account_id=acc.id, name=body.name, train_video_url=body.photo_url, status="awaiting_consent")
     s.add(r); s.flush()
     s.add(PhotoReplica(replica_id=r.id, photo_url=body.photo_url, idle_seconds=body.idle_seconds, head_motion=body.head_motion))

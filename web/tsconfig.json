@@ -39,7 +39,9 @@
     ".next-dash/types/**/*.ts",
     ".next-dash-build/types/**/*.ts",
     ".next-final/types/**/*.ts",
-    ".next-e2e/types/**/*.ts"
+    ".next-e2e/types/**/*.ts",
+    ".next-ui2/types/**/*.ts",
+    ".next-sec/types/**/*.ts"
   ],
   "exclude": [
     "node_modules"

@@ -9,7 +9,8 @@ Protocol (binary, little endian):
   request  (stdin):   one JSON line per call: {"id": int, "text": str, "voice": str}
   response (stdout):  frames `<III>` = (id, kind, nbytes) + payload.   kind 0 = int16 24 kHz PCM chunk, 1 = end of request,
                       2 = error (utf-8 message), 3 = ready (sent once after warm-up).
-A request that is still being synthesised when a *newer* request arrives is abandoned (barge-in)."""
+Cancel: a JSON line {"cancel": id} abandons that request (queued or in flight) - barge-in. Requests never abandon each other:
+the sidecar is shared by several conversations (a newer request used to cut the older one off, truncating its audio)."""
 import json
 import os
 import queue
@@ -54,23 +55,31 @@ def main() -> None:
         list(synth(t, DEFAULT_VOICE))
 
     reqs: queue.Queue = queue.Queue()
+    cancelled: set = set()
 
     def reader() -> None:
         for line in sys.stdin:
             line = line.strip()
-            if line:
-                reqs.put(json.loads(line))
+            if not line:
+                continue
+            m = json.loads(line)
+            if "cancel" in m:
+                cancelled.add(m["cancel"])
+            else:
+                reqs.put(m)
         reqs.put(None)
 
     threading.Thread(target=reader, daemon=True).start()
     send(0, 3)
-    pending = None
     while True:
-        req = pending or reqs.get()
-        pending = None
+        req = reqs.get()
         if req is None:
             return
         rid = req["id"]
+        if rid in cancelled:  # cancelled while still queued
+            cancelled.discard(rid)
+            send(rid, 1)
+            continue
         voice = req.get("voice") or DEFAULT_VOICE
         try:
             try:
@@ -82,20 +91,17 @@ def main() -> None:
                 gen = synth(req["text"], DEFAULT_VOICE)  # unknown voice: fall back rather than fail the turn
                 first = next(gen, None)
             chunks = ([first] if first is not None else [])
-            abandoned = False
             while True:
                 for a in chunks:
                     a = trim(a)
                     send(rid, 0, (np.clip(a * GAIN, -1, 1) * 32767).astype(np.int16).tobytes())
-                if not reqs.empty():  # a newer request exists: drop the rest of this one
-                    abandoned = True
+                if rid in cancelled:  # the client barged in / went away: drop the rest of this request
                     break
                 nxt = next(gen, None)
                 if nxt is None:
                     break
                 chunks = [nxt]
-            if abandoned:
-                pending = reqs.get()
+            cancelled.discard(rid)
         except Exception as e:  # noqa: BLE001
             send(rid, 2, f"{type(e).__name__}: {e}".encode()[:500])
         send(rid, 1)

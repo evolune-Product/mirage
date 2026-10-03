@@ -23,6 +23,11 @@ import audio_driver  # noqa: E402
 
 
 def main():
+    from engines import CommercialOnlyError, require_commercial_safe
+    try:
+        require_commercial_safe('liveportrait')
+    except CommercialOnlyError as e:
+        sys.exit(f'refused: {e}')
     ap = argparse.ArgumentParser()
     ap.add_argument("--image", required=True)
     ap.add_argument("--audio", required=True)

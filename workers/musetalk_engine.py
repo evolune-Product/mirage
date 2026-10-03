@@ -27,7 +27,7 @@ def musetalk_available() -> bool:
 
 
 class MuseTalkEngine:
-    def __init__(self, device: str, half: bool | None = None):
+    def __init__(self, device: str, half: bool | None = None, res: int = 256):
         from diffusers import AutoencoderKL, UNet2DConditionModel
         from transformers import AutoFeatureExtractor, WhisperModel
         import json
@@ -47,8 +47,9 @@ class MuseTalkEngine:
         self.fe = AutoFeatureExtractor.from_pretrained(str(m / "whisper"))
         self.whisper = WhisperModel.from_pretrained(str(m / "whisper")).to(self.device, self.dtype).eval()
         self.t0 = torch.tensor([0], device=self.device)
-        self._mask = torch.zeros(256, 256)
-        self._mask[:128] = 1
+        self.res = res  # model input/output size; 256 = trained size, 192/128 = faster but off-distribution (softer)
+        self._mask = torch.zeros(res, res)
+        self._mask[:res // 2] = 1
 
     # ---------- audio ----------
     @torch.no_grad()

@@ -115,11 +115,11 @@ def fetch_video(url: str, dest: Path) -> None:
     """http(s) download, file:// URL, or local path copy."""
     dest.parent.mkdir(parents=True, exist_ok=True)
     if url.startswith(("http://", "https://")):
-        with httpx.stream("GET", url, follow_redirects=True, timeout=120) as r:
-            r.raise_for_status()
-            with open(dest, "wb") as f:
-                for chunk in r.iter_bytes():
-                    f.write(chunk)
+        from . import consent_verify, netguard  # SSRF guard: resolve+pin, redirects re-checked, size cap
+
+        netguard.download(url, dest, consent_verify.MAX_TRAIN_BYTES, timeout=120)
+    elif os.environ.get("MIRAGE_ENV", "dev").strip().lower() in ("prod", "production"):
+        raise ValueError("only http(s) URLs are accepted in production")
     else:
         src = Path(url[7:] if url.startswith("file://") else url).expanduser()
         if not src.is_file():
@@ -152,7 +152,9 @@ def default_renderer(image: Path, wav: Path, out_mp4: Path, fps: float) -> dict:
 
 def default_webhook(url: str, payload: dict) -> str:
     try:
-        r = httpx.post(url, json=payload, timeout=15)
+        from . import netguard
+
+        r = netguard.post(url, json=payload, timeout=15)
         return "delivered" if r.status_code < 300 else f"failed: HTTP {r.status_code}"
     except Exception as e:
         return f"failed: {e}"

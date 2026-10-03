@@ -172,6 +172,30 @@ export class Mirage {
   createShareLink(persona_id: string, o: { label?: string; max_seconds?: number; max_total_seconds?: number; max_sessions_per_hour?: number; max_sessions_per_ip_hour?: number; expires_in_hours?: number } = {}) { return this.req<{ token: string; url: string }>("POST", `/personas/${persona_id}/share`, o); }
   listShareLinks(persona_id: string) { return this.req<any[]>("GET", `/personas/${persona_id}/share`); }
   revokeShareLink(token: string) { return this.req("DELETE", `/share/${token}`); }
+
+  // ---- templates, leads, widget, integrations ----
+  listTemplates(niche?: string) { return this.req<{ templates: any[]; niches: string[] }>("GET", "/templates", undefined, true, niche ? { niche } : undefined); }
+  getTemplate(id: string) { return this.req<any>("GET", `/templates/${id}`); }
+  instantiateTemplate(id: string, o: { name?: string; variables?: Record<string, string>; language?: string; llm?: string; tts_voice?: string; replica_id?: string; include_sample_knowledge?: boolean; enable_lead_capture?: boolean; booking_webhook_url?: string; booking_secret?: string; notify_webhook_url?: string; notify_secret?: string } = {}) { return this.req<{ persona_id: string; tools: string[]; warnings: string[]; knowledge_docs: any[] }>("POST", `/templates/${id}/instantiate`, o); }
+  listLeads(q: { persona_id?: string; conversation_id?: string; since?: string; until?: string; q?: string; consent?: boolean; limit?: number; offset?: number } = {}) { return this.req<{ items: any[]; total: number; limit: number; offset: number }>("GET", "/leads", undefined, true, Object.fromEntries(Object.entries(q).filter(([, v]) => v !== undefined)) as Record<string, string | number>); }
+  getLead(id: string) { return this.req<any>("GET", `/leads/${id}`); }
+  deleteLead(id: string) { return this.req("DELETE", `/leads/${id}`); }
+  createLead(persona_id: string, f: { name?: string; email?: string; phone?: string; company?: string; interest?: string; notes?: string; consent?: boolean; conversation_id?: string }) { return this.req<any>("POST", "/leads", { persona_id, ...f }); }
+  async exportLeadsCsv(q: { persona_id?: string; since?: string; until?: string; q?: string } = {}) {
+    const qs = new URLSearchParams(Object.entries(q).filter(([, v]) => v !== undefined) as [string, string][]).toString();
+    const r = await this.f(`${this.base}/v1/leads/export.csv${qs ? "?" + qs : ""}`, { headers: { "x-api-key": this.apiKey ?? "" } });
+    if (!r.ok) throw new MirageError(r.status, await r.text());
+    return r.text();
+  }
+  getLeadCapture(persona_id: string) { return this.req<any>("GET", `/personas/${persona_id}/lead-capture`); }
+  setLeadCapture(persona_id: string, c: { enabled?: boolean; required_fields?: string[]; require_consent?: boolean; disclosure?: string }) { return this.req<any>("PUT", `/personas/${persona_id}/lead-capture`, c); }
+  createWidget(persona_id: string, o: { allowed_domains?: string[]; label?: string; color?: string; position?: "bottom-right" | "bottom-left"; greeting?: string; language?: string; max_seconds?: number; max_total_seconds?: number; expires_in_hours?: number } = {}) { return this.req<{ token: string; snippet: string; frame_url: string; script_url: string }>("POST", `/personas/${persona_id}/widget`, o); }
+  listWidgets(persona_id?: string) { return this.req<any[]>("GET", "/widgets", undefined, true, persona_id ? { persona_id } : undefined); }
+  updateWidget(token: string, patch: { allowed_domains?: string[]; label?: string; color?: string; position?: string; greeting?: string; language?: string }) { return this.req<any>("PUT", `/widgets/${token}`, patch); }
+  deleteWidget(token: string) { return this.req("DELETE", `/widgets/${token}`); }
+  getIntegrations(persona_id: string) { return this.req<any>("GET", `/personas/${persona_id}/integrations`); }
+  setIntegrations(persona_id: string, c: { booking_webhook_url?: string; booking_secret?: string; notify_webhook_url?: string; notify_secret?: string }) { return this.req<any>("PUT", `/personas/${persona_id}/integrations`, c); }
+  testIntegration(persona_id: string, which: "booking" | "notify" = "booking") { return this.req<{ ok: boolean; response: string }>("POST", `/personas/${persona_id}/integrations/test`, { which }); }
 }
 
 export interface ReplicaVoice {

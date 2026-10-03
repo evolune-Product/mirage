@@ -4,6 +4,8 @@ import { motion } from "framer-motion";
 import { Check, Loader2, Plus } from "lucide-react";
 import { api } from "@/lib/api";
 import { Shell, Empty, Skeleton, toast } from "@/components/ui";
+import UsagePanel from "@/components/billing/UsagePanel";
+import { Callout } from "@/components/kit";
 
 type Plan = { id: string; name: string; price_cents: number; included_minutes: number; overage_cents_per_min: number };
 type Topup = { sku: string; minutes: number; price_cents: number };
@@ -15,6 +17,7 @@ export default function Billing() {
   const [plans, setPlans] = useState<Plan[] | null>(null); const [topups, setTopups] = useState<Topup[]>([]);
   const [status, setStatus] = useState<{ plan: Plan; credits_seconds: number } | null>(null);
   const [ledger, setLedger] = useState<Entry[] | null>(null);
+  const [forbidden, setForbidden] = useState(false);
   const [provider, setProvider] = useState("stripe"); const [busy, setBusy] = useState("");
   useEffect(() => {
     api<{ plans: Plan[]; topups: Topup[] }>("/v1/billing/plans").then((r) => { setPlans(r.plans); setTopups(r.topups); }).catch((x) => { toast.error(x); setPlans([]); });
@@ -34,12 +37,8 @@ export default function Billing() {
   return (
     <Shell title="Billing" subtitle="Plans include minutes; top-ups never expire. Every second used is logged below."
       action={<div className="flex items-center gap-2"><span className="label !mb-0">Pay with</span><select className="input !w-32" value={provider} onChange={(e) => setProvider(e.target.value)}><option value="stripe">Stripe</option><option value="razorpay">Razorpay</option></select></div>}>
-      {status ? (
-        <div className="card mb-10 flex flex-wrap items-center justify-between gap-4 bg-[radial-gradient(30rem_12rem_at_0%_0%,rgba(255,77,141,.12),transparent)]">
-          <div><p className="label">Current plan</p><p className="font-display text-4xl">{status.plan.name}</p></div>
-          <div className="text-right"><p className="font-display text-4xl">{Math.floor(status.credits_seconds / 60)}<span className="text-xl text-gray-400"> min</span></p><p className="text-sm text-gray-400">of credit remaining</p></div>
-        </div>
-      ) : <Skeleton className="mb-10 h-28" />}
+      {forbidden && <div className="mb-8"><Callout tone="warn" title="Billing is owner-only in a team workspace">You are acting inside a shared workspace as a member or admin. Switch back to your personal account (sidebar) to manage plans, overage and spending.</Callout></div>}
+      {!forbidden && <UsagePanel onForbidden={() => setForbidden(true)} />}
 
       <h2 className="mb-3 font-medium">Plans</h2>
       <div className="mb-10 grid gap-4 md:grid-cols-3">
@@ -68,7 +67,7 @@ export default function Billing() {
         ))}
       </div>
 
-      <h2 className="mb-3 font-medium">Usage ledger</h2>
+      <h2 className="mb-3 font-medium">Ledger</h2>
       {ledger === null ? <Skeleton className="h-40" /> : ledger.length === 0 ? <Empty kind="ledger" title="Nothing here yet" hint="Credits granted, purchased and spent will be listed here." /> : (
         <div className="overflow-x-auto rounded-2xl border border-white/10">
           <table className="w-full min-w-[520px] text-sm">

@@ -47,7 +47,7 @@ class PersonaIn(BaseModel):
     name: str
     system_prompt: str
     replica_id: str | None = None
-    llm: str = "ollama/llama3.2:1b"
+    llm: str = "ollama/llama3.2:3b"
     tts_voice: str = "default"
     knowledge: str = ""
 

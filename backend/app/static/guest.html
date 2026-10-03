@@ -20,7 +20,7 @@ const client=new MirageClient({
   wsUrl:()=>`${proto}://${location.host}${sess.ws_path}`,
   prepare:async()=>{
     if(sess&&client.reusable)return;            // reconnects reuse the same conversation (handled by the client)
-    const cr=await fetch('/v1/guest/'+encodeURIComponent(TOKEN)+'/conversations',{method:'POST'});
+    const L=(window.__MW||{}).lang;const cr=await fetch('/v1/guest/'+encodeURIComponent(TOKEN)+'/conversations',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(L?{language:L}:{})});
     if(!cr.ok){const e=await cr.json().catch(()=>({}));const x=new Error(e.detail||cr.status);x.userMessage=FRIENDLY[cr.status]||('Cannot start: '+(e.detail||cr.status));throw x}
     sess=await cr.json();deadline=Date.now()+sess.max_seconds*1000;clearInterval(timer);timer=setInterval(tick,1000);tick();
   }

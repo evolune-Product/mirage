@@ -8,6 +8,7 @@ from sqlmodel import Session, SQLModel
 
 from . import jobs, settings, storage
 from .db import Account, Persona, Replica, Video
+from . import models_sec  # noqa: F401  (registers FaceBinding / ApiKeyScope so they are purged)
 from .models_safety import DataDeletion
 
 # Kept on purpose: financial records and the audit trail (document in SECURITY.md).
@@ -34,13 +35,38 @@ def _rm(p: Path) -> int:
     return 0
 
 
+def _rm_video_files(vid: str) -> int:
+    """The mp4 AND everything rendered next to it (thumbnail .jpg, captions .srt, temp .wav, scene work files)."""
+    n = 0
+    vdir = settings.data_dir() / "videos"
+    for p in list(vdir.glob(f"{vid}.*")) + list(vdir.glob(f"creative_{vid}_*")):
+        n += _rm(p)
+        storage.remove(p)
+    return n
+
+
+def _rm_perception(cids: list[str]) -> int:
+    """Frames stored when a persona's perception `store_frames` flag was on: data/perception/<conversation_id>/."""
+    n = 0
+    for cid in cids:
+        p = settings.data_dir() / "perception" / cid
+        n += _rm(p)
+        storage.remove(p)
+    return n
+
+
 def delete_replica(s: Session, acc: Account, rid: str) -> int:
     """Remove replica, its videos, consent evidence, job rows, files. Personas keep existing but lose the link."""
     vids = [r[0] for r in s.execute(select(Video.id).where(Video.replica_id == rid, Video.account_id == acc.id))]
     files = 0
     for vid in vids:
-        files += _rm(jobs.video_path(vid))
-        storage.remove(jobs.video_path(vid))
+        files += _rm_video_files(vid)
+    pids = [r[0] for r in s.execute(select(Persona.id).where(Persona.replica_id == rid, Persona.account_id == acc.id))]
+    cids = []
+    if pids and "conversation" in SQLModel.metadata.tables:
+        ct = SQLModel.metadata.tables["conversation"]
+        cids = [r[0] for r in s.execute(select(ct.c.id).where(ct.c.persona_id.in_(pids), ct.c.account_id == acc.id))]
+    files += _rm_perception(cids)
     files += _rm(jobs.replica_dir(rid))
     storage.remove(jobs.replica_dir(rid)); storage.remove(settings.data_dir() / "consent" / rid)
     files += _rm(settings.data_dir() / "consent" / rid)
@@ -61,8 +87,7 @@ def delete_account(s: Session, acc: Account) -> int:
     pids = [r[0] for r in s.execute(select(Persona.id).where(Persona.account_id == aid))]
     files = 0
     for vid in vids:
-        files += _rm(jobs.video_path(vid))
-        storage.remove(jobs.video_path(vid))
+        files += _rm_video_files(vid)
     for rid in rids:
         files += _rm(jobs.replica_dir(rid)) + _rm(settings.data_dir() / "consent" / rid)
         storage.remove(jobs.replica_dir(rid)); storage.remove(settings.data_dir() / "consent" / rid)
@@ -74,9 +99,31 @@ def delete_account(s: Session, acc: Account) -> int:
     if "knowledgedoc" in SQLModel.metadata.tables:
         t = SQLModel.metadata.tables["knowledgedoc"]
         docs = [r[0] for r in s.execute(select(t.c.id).where(t.c.account_id == aid))] if "account_id" in t.c else []
-    cols = {"replica_id": rids, "video_id": vids, "persona_id": pids, "conversation_id": cids, "doc_id": docs,
+    files += _rm_perception(cids)
+    kids, wids, batches, assets = [], [], [], []
+    T = SQLModel.metadata.tables
+    if "apikey" in T:
+        kids = [r[0] for r in s.execute(select(T["apikey"].c.id).where(T["apikey"].c.account_id == aid))]
+    if "workspace" in T:  # workspaces this account OWNS go with it (members/invites too)
+        wids = [r[0] for r in s.execute(select(T["workspace"].c.id).where(T["workspace"].c.owner_account_id == aid))]
+    if "videobatch" in T:
+        batches = [r[0] for r in s.execute(select(T["videobatch"].c.id).where(T["videobatch"].c.account_id == aid))]
+    if "creativeasset" in T:  # uploaded backgrounds / logos live in data/creative_assets/<id>.<ext>
+        assets = [(r[0], r[1]) for r in s.execute(select(T["creativeasset"].c.id, T["creativeasset"].c.ext).where(
+            T["creativeasset"].c.account_id == aid))]
+    adir = settings.data_dir() / "creative_assets"
+    for aid_, ext in assets:
+        files += _rm(adir / f"{aid_}.{ext}")
+        for extra in adir.glob(f"{aid_}.*"):
+            files += _rm(extra)
+        storage.remove(adir / f"{aid_}.{ext}")
+    cols = {"key_id": kids, "workspace_id": wids, "batch_id": batches, "replica_id": rids, "video_id": vids, "persona_id": pids, "conversation_id": cids, "doc_id": docs,
             "ref_id": rids + vids}
     _purge_cols(s, cols, skip={"account", "replica", "video", "persona", "conversation", "knowledgedoc"})
+    if wids:
+        s.exec(delete(T["workspace"]).where(T["workspace"].c.id.in_(wids)))
+    if "knowledgedoc" in T and pids:  # knowledgedoc has persona_id but no account_id: it was skipped by the generic passes
+        s.exec(delete(T["knowledgedoc"]).where(T["knowledgedoc"].c.persona_id.in_(pids)))
     for name, t in SQLModel.metadata.tables.items():  # everything keyed by account_id (incl. core tables)
         if name in KEEP or name == "account":
             continue

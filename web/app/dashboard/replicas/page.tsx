@@ -2,14 +2,18 @@
 import { useCallback, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Check, Cpu, Loader2, Plus, ScanFace, ShieldCheck, Trash2 } from "lucide-react";
-import { API_URL, api, Replica } from "@/lib/api";
+import { API_URL, api, Replica, isPhotoReplica } from "@/lib/api";
+import CreateReplica from "@/components/replica/CreateReplica";
+import { PhotoProgress, usePhoto } from "@/components/replica/PhotoStatus";
 import ConsentRecorder from "@/components/ConsentRecorder";
 import ReplicaDetail from "@/components/replica/ReplicaDetail";
-import { Shell, Badge, Empty, Modal, SkeletonCards, CopyButton, ConfirmDialog, toast } from "@/components/ui";
+import { Shell, Badge, Empty, SkeletonCards, CopyButton, ConfirmDialog, toast } from "@/components/ui";
 
-const STEPS = [["awaiting_consent", "Consent"], ["training", "Training"], ["ready", "Ready"]] as const;
+const STEPS_V = [["awaiting_consent", "Consent"], ["training", "Training"], ["ready", "Ready"]] as const;
+const PHOTO_STEPS = [["awaiting_consent", "Consent"], ["training", "Animating"], ["ready", "Ready"]] as const;
 
-function Stepper({ status }: { status: string }) {
+function Stepper({ status, photo }: { status: string; photo?: boolean }) {
+  const STEPS = photo ? PHOTO_STEPS : STEPS_V;
   const idx = status === "error" ? 1 : Math.max(0, STEPS.findIndex(([k]) => k === status));
   return (
     <div className="flex items-center">
@@ -39,7 +43,10 @@ function Face({ r }: { r: Replica }) {
     return () => { live = false; }; }, [r.id, r.status]);
   return (
     <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl bg-ink-3 ring-1 ring-white/10">
-      {r.status === "ready" && src && !bad
+      {r.status !== "ready" && isPhotoReplica(r)
+        // eslint-disable-next-line @next/next/no-img-element
+        ? <img src={r.train_video_url} alt={r.name} className="h-full w-full object-cover" />
+        : r.status === "ready" && src && !bad
         // eslint-disable-next-line @next/next/no-img-element
         ? <img src={src} alt={r.name} className="h-full w-full object-cover" onError={() => setBad(true)} />
         : <div className="grid h-full w-full place-items-center bg-[radial-gradient(circle_at_30%_20%,rgba(124,92,255,.35),transparent_70%)] text-gray-500"><ScanFace size={26} /></div>}
@@ -47,9 +54,15 @@ function Face({ r }: { r: Replica }) {
   );
 }
 
+function PhotoCard({ r }: { r: Replica }) {
+  const { p } = usePhoto(r.id, true);
+  if (!p) return null;
+  return <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3"><PhotoProgress p={p} replicaStatus={r.status} /></div>;
+}
+
 export default function Replicas() {
-  const [list, setList] = useState<Replica[] | null>(null); const [name, setName] = useState(""); const [url, setUrl] = useState("");
-  const [open, setOpen] = useState(false); const [busy, setBusy] = useState(false);
+  const [list, setList] = useState<Replica[] | null>(null);
+  const [open, setOpen] = useState(false);
   const [detail, setDetail] = useState<Replica | null>(null); const [del, setDel] = useState<Replica | null>(null);
   const load = useCallback(async () => { try {
     // The API keeps status=awaiting_consent until a worker picks the job up, so ask whether consent exists and show "training" (queued) in that case.
@@ -58,11 +71,6 @@ export default function Replicas() {
   } catch (x) { toast.error(x); setList((l) => l ?? []); } }, []);
   useEffect(() => { load(); const t = setInterval(load, 5000); return () => clearInterval(t); }, [load]);
 
-  async function create(e: React.FormEvent) {
-    e.preventDefault(); setBusy(true);
-    try { await api("/v1/replicas", { body: { name, train_video_url: url } }); setName(""); setUrl(""); setOpen(false); toast.success("Replica created. Next: give consent."); load(); }
-    catch (x) { toast.error(x); } finally { setBusy(false); }
-  }
   const [cons, setCons] = useState<{ rid: string; cid: string; phrase: string } | null>(null)
   async function startConsent(rid: string) {
     try { const c = await api<{ challenge_id: string; phrase: string }>(`/v1/replicas/${rid}/consent/challenge`, { method: "POST", body: {} }); setCons({ rid, cid: c.challenge_id, phrase: c.phrase }); }
@@ -73,7 +81,7 @@ export default function Replicas() {
   return (
     <Shell title="Replicas" subtitle="A replica is the face and look of your agent, learned from a short video of a consenting person." action={newBtn}>
       {list === null ? <SkeletonCards /> : list.length === 0 ? (
-        <Empty kind="replica" title="No replicas yet" hint="Add a short, front-facing training video. We will ask the person on camera to confirm consent before anything is trained." action={newBtn} />
+        <Empty kind="replica" title="No replicas yet" hint="Add a short front-facing video, or a single portrait photo. We ask the person to confirm consent before anything is trained or animated." action={newBtn} />
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           <AnimatePresence initial={false}>
@@ -84,11 +92,12 @@ export default function Replicas() {
                   <div className="min-w-0 flex-1"><p className="truncate font-medium">{r.name}</p><p className="truncate font-mono text-xs text-gray-500">{r.id}</p><div className="mt-2 flex flex-wrap items-center gap-2"><Badge s={r.status} /><button className="text-xs text-mirage-cyan hover:underline" onClick={() => setDetail(r)}>Details</button></div></div>
                   <button aria-label={`Delete ${r.name}`} onClick={() => setDel(r)} className="rounded-lg p-1.5 text-gray-600 transition hover:bg-mirage-rose/10 hover:text-mirage-rose"><Trash2 size={15} /></button>
                 </div>
-                <Stepper status={r.status} />
+                <Stepper status={r.status} photo={isPhotoReplica(r)} />
                 {r.status === "awaiting_consent" && cons?.rid !== r.id && (
                   <button className="btn" onClick={() => startConsent(r.id)}><ShieldCheck size={15} />Give consent</button>
                 )}
-                {r.status === "training" && (
+                {isPhotoReplica(r) && r.status !== "awaiting_consent" && <PhotoCard r={r} />}
+                {r.status === "training" && !isPhotoReplica(r) && (
                   <div className="rounded-xl border border-mirage-cyan/20 bg-mirage-cyan/5 p-3 text-xs leading-relaxed text-gray-300">
                     <p className="mb-1 flex items-center gap-1.5 font-medium text-mirage-cyan"><Cpu size={13} />Waiting for a worker</p>
                     Consent is recorded. Training runs in a separate background process, so this replica stays queued until a worker picks it up. Start one from the backend folder:
@@ -97,7 +106,7 @@ export default function Replicas() {
                 )}
                 {r.status === "error" && <p className="rounded-xl bg-mirage-rose/10 p-3 text-xs text-mirage-rose">Training failed. Check the worker logs, then create the replica again.</p>}
                 {cons?.rid === r.id && (
-                  <ConsentRecorder rid={cons.rid} challengeId={cons.cid} phrase={cons.phrase} onCancel={() => setCons(null)} onDone={() => { setCons(null); load(); }} />
+                  <ConsentRecorder photo={isPhotoReplica(r)} rid={cons.rid} challengeId={cons.cid} phrase={cons.phrase} onCancel={() => setCons(null)} onDone={() => { setCons(null); load(); }} />
                 )}
               </motion.div>
             ))}
@@ -107,14 +116,7 @@ export default function Replicas() {
       <ReplicaDetail replica={detail} onClose={() => setDetail(null)} onDeleted={() => { setDetail(null); load(); }} />
       <ConfirmDialog open={!!del} title="Delete this replica?" body={<>This permanently deletes <b>{del?.name}</b>, its consent evidence and media. This cannot be undone.</>} confirmLabel="Delete replica" onClose={() => setDel(null)}
         onConfirm={async () => { try { await api(`/v1/replicas/${del!.id}`, { method: "DELETE" }); setDel(null); toast.success("Replica deleted."); load(); } catch (x) { toast.error(x); } }} />
-      <Modal open={open} onClose={() => setOpen(false)} title="New replica">
-        <form onSubmit={create} className="space-y-4">
-          <div><label className="label">Name</label><input className="input" required autoFocus placeholder="e.g. Founder" value={name} onChange={(e) => setName(e.target.value)} /></div>
-          <div><label className="label">Training video URL</label><input className="input" type="url" required placeholder="https://..." value={url} onChange={(e) => setUrl(e.target.value)} />
-            <p className="mt-1.5 text-xs text-gray-500">A public link to a 1-2 minute video, one face, good light.</p></div>
-          <button className="btn-grad w-full" disabled={busy}>{busy ? <Loader2 size={15} className="animate-spin" /> : null}Create replica</button>
-        </form>
-      </Modal>
+      <CreateReplica open={open} onClose={() => setOpen(false)} onCreated={() => { setOpen(false); load(); }} />
     </Shell>
   );
 }

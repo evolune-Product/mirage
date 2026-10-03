@@ -105,9 +105,24 @@ def info(token: str, s: Session = Depends(get_session)):
             "available": remaining >= 10}
 
 
+class GuestStartIn(BaseModel):
+    language: str | None = None  # widget data-language (validated like the conversation option)
+
+
 @router.post("/guest/{token}/conversations")
-def start(token: str, request: Request, s: Session = Depends(get_session)):
+def start(token: str, request: Request, body: GuestStartIn | None = None, s: Session = Depends(get_session)):
     l = _link(s, token)
+    from .. import widgets
+
+    widgets.enforce(s, token, request.headers)  # allowed embedding domains (widget settings), no-op when none are set
+    lang = None
+    if body and body.language:
+        try:
+            from .. import languages
+
+            lang = languages.normalize_language(body.language)
+        except ValueError as e:
+            raise HTTPException(422, str(e))
     acc = s.get(Account, l.account_id)
     p = s.get(Persona, l.persona_id)
     if not acc or not p:
@@ -132,7 +147,7 @@ def start(token: str, request: Request, s: Session = Depends(get_session)):
     c = Conversation(account_id=acc.id, persona_id=p.id)
     c.room_url = f"/rooms/{c.id}"
     s.add(c); s.flush()
-    s.add(ConversationMeta(conversation_id=c.id, account_id=acc.id, persona_id=p.id, share_token=token, max_seconds=allowed))
+    s.add(ConversationMeta(conversation_id=c.id, account_id=acc.id, persona_id=p.id, share_token=token, max_seconds=allowed, language=lang))
     s.add(ShareSession(conversation_id=c.id, token=token, ip=ip, allowed_seconds=allowed))
     l.sessions_started += 1
     s.add(l); s.commit()
@@ -150,6 +165,13 @@ async def guest_stream(ws: WebSocket, token: str, cid: str = "", s: Session = De
     except HTTPException:
         await ws.close(code=4404, reason="link not found or expired")
         return
+    try:
+        from .. import widgets
+
+        widgets.enforce(s, token, ws.headers)
+    except HTTPException:
+        await ws.close(code=4403, reason="not allowed from this website")
+        return
     ss = s.get(ShareSession, cid) if cid else None
     acc = s.get(Account, l.account_id)
     if not ss or ss.token != token or not acc:
@@ -159,7 +181,7 @@ async def guest_stream(ws: WebSocket, token: str, cid: str = "", s: Session = De
     try:
         result = await stream(ws, cid, acc.api_key, s)  # the owner's key is only used server-side; the guest never sees it
     finally:
-        if result == "dropped":  # connection lost without a goodbye: keep the session open so the page can reconnect and
+        if result in ("dropped", "busy"):  # connection lost without a goodbye: keep the session open so the page can reconnect and
             return  # resume; the reaper ends it (and counts the usage) once the grace period passes without a reconnect
         try:
             s.expire_all()

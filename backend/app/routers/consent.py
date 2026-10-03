@@ -14,8 +14,9 @@ from sqlmodel import Session, select
 from ..auth import current_account
 from ..db import Account, Replica, get_session
 from ..models_billing import AuditLog, ConsentChallenge, ConsentRecord
-from .. import consent_verify, settings, storage, voiceprint
+from .. import consent_verify, facematch, settings, storage, voiceprint
 from ..models_safety import ConsentVerification
+from ..models_sec import FaceBinding
 from ..safety import (CODE_WORDS, audit, code_words_present, enforce_rate_limit, has_consent, moderate,
                       phrase_score)
 
@@ -126,6 +127,25 @@ async def record_consent_audio(rid: str, challenge_id: str = Form(...), speaker_
         log.warning("consent audio failure: %s", settings.redact(str(e)))
         raise HTTPException(422, "could not process the recording") from e
     transcript, pscore, voice_score, voice_status = res
+    try:  # face-to-consent binding on the SAME recording (selfie video while reading the phrase)
+        fres = await asyncio.to_thread(_face, rep, path)
+    except HTTPException:
+        path.unlink(missing_ok=True)
+        audit(s, acc.id, "consent.rejected", rid, "face verification failed")
+        raise
+    except Exception as e:  # noqa: BLE001
+        path.unlink(missing_ok=True)
+        log.warning("consent face failure: %s", settings.redact(str(e)))
+        raise HTTPException(422, "could not process the video in the recording") from e
+    rec_sha = consent_verify.sha256_file(path)  # hash of the recording as received
+    if facematch.has_video(path):  # the face video is NOT kept: evidence = audio-only copy + scores + hash
+        try:
+            apath = facematch.strip_video(path, path.parent)
+        except Exception:  # noqa: BLE001
+            path.unlink(missing_ok=True)
+            raise HTTPException(422, "could not process the recording")
+        path.unlink(missing_ok=True)
+        path = apath
     sha = consent_verify.sha256_file(path)
     storage.publish(path)  # durable copy of the evidence (no-op on local storage)
     ch.used = True
@@ -134,12 +154,20 @@ async def record_consent_audio(rid: str, challenge_id: str = Form(...), speaker_
     rec.verified_by = "asr-phrase+voice-match" if voice_status == "match" else f"asr-phrase (voice:{voice_status})"
     s.add_all([ch, rec, ConsentVerification(
         consent_id=rec.id, replica_id=rid, audio_path=str(path), audio_sha256=sha, transcript=transcript,
-        phrase_score=round(pscore, 3), code_words_ok=True, voice_score=voice_score, voice_status=voice_status)])
+        phrase_score=round(pscore, 3), code_words_ok=True, voice_score=voice_score, voice_status=voice_status),
+        FaceBinding(consent_id=rec.id, replica_id=rid, recording_sha256=rec_sha, ref_kind=fres.ref_kind,
+                    face_status=fres.face_status, face_score=fres.face_score,
+                    threshold=facematch.threshold(), frames_used=fres.frames_used, live_status=fres.live_status,
+                    live_nonrigid=fres.live.get("nonrigid"), live_mouth=fres.live.get("mouth_motion"),
+                    live_texture=fres.live.get("texture_motion"), live_residual=fres.live.get("mouth_residual"), live_reasons="; ".join(fres.live_reasons))])
     s.commit(); s.refresh(rec)
-    audit(s, acc.id, "consent.recorded", rid, f"{rec.id} voice={voice_status} score={voice_score}")
+    audit(s, acc.id, "consent.recorded", rid,
+          f"{rec.id} voice={voice_status} score={voice_score} face={fres.face_status} score={fres.face_score} live={fres.live_status}")
     s.refresh(rec)
     out = rec.model_dump(mode="json")
-    out.update(phrase_score=round(pscore, 3), voice_score=voice_score, voice_status=voice_status)
+    out.update(phrase_score=round(pscore, 3), voice_score=voice_score, voice_status=voice_status,
+               face_status=fres.face_status, face_score=fres.face_score, liveness=fres.live_status,
+               liveness_reasons=fres.live_reasons)
     return out
 
 
@@ -186,6 +214,37 @@ def _verify(rep: Replica, ch: ConsentChallenge, path: Path):
     return transcript, pscore, score, status
 
 
+def _face(rep: Replica, path: Path) -> "facematch.FaceResult":
+    """Blocking: bind the face in the recording to the replica's source face + passive liveness. Raises HTTPException
+    in enforce mode when the binding fails; in warn mode the statuses are only recorded."""
+    from .. import creative_jobs
+
+    fmode, lmode = facematch.mode(), facematch.liveness_mode()
+    photo = creative_jobs.is_photo_replica(rep.id)
+    kind = "photo" if photo else "training video"
+    if fmode == "off" and lmode == "off":
+        return facematch.FaceResult(ref_kind="photo" if photo else "video")
+    try:
+        r = facematch.verify(rep.id, rep.train_video_url, photo, path)
+    except facematch.FaceUnavailable:
+        r = facematch.FaceResult(face_status="unavailable", ref_kind="photo" if photo else "video")
+    except ValueError:  # the clip's video could not be decoded
+        r = facematch.FaceResult(face_status="no_face", ref_kind="photo" if photo else "video")
+    if fmode == "enforce" and r.face_status != "match":
+        msg = {"no_video": "the consent recording must be a video that shows your face while you read the phrase",
+               "no_face": "we could not see one clear face for long enough; face the camera in good light, alone in frame",
+               "mismatch": f"the face in the recording does not match the face in the {kind}",
+               "no_reference": f"no clear face was found in the {kind}",
+               "unavailable": "face verification is unavailable right now; try again later",
+               "skipped": "face verification did not run"}[r.face_status]
+        raise HTTPException(503 if r.face_status == "unavailable" else 422,
+                            {"error": f"face_{r.face_status}", "message": msg, "face_score": r.face_score})
+    if lmode == "enforce" and r.live_status == "fail":
+        raise HTTPException(422, {"error": "liveness_failed", "reasons": r.live_reasons,
+                                  "message": "we could not confirm a live person: " + "; ".join(r.live_reasons)})
+    return r
+
+
 @router.get("/replicas/{rid}/consent/{consent_id}/audio")
 def consent_audio_file(rid: str, consent_id: str, acc: Account = Depends(current_account),
                        s: Session = Depends(get_session)):
@@ -206,7 +265,8 @@ def consent_verification(rid: str, consent_id: str, acc: Account = Depends(curre
                                                  ConsentVerification.replica_id == rid)).first()
     if not v:
         raise HTTPException(404, "not found")
-    return v
+    fb = s.exec(select(FaceBinding).where(FaceBinding.consent_id == consent_id, FaceBinding.replica_id == rid)).first()
+    return {**v.model_dump(mode="json"), "face": fb.model_dump(mode="json") if fb else None}
 
 
 @router.get("/replicas/{rid}/consent")
@@ -223,6 +283,8 @@ def revoke_consent(rid: str, acc: Account = Depends(current_account), s: Session
     for rec in s.exec(select(ConsentRecord).where(ConsentRecord.replica_id == rid)).all():
         rec.revoked = True; s.add(rec); n += 1
     s.commit()
+    for f in consent_verify.consent_dir(rid).glob("ref_face_*"):  # biometric reference templates go with the consent
+        f.unlink(missing_ok=True)
     audit(s, acc.id, "consent.revoked", rid, f"{n} records")
     from ..voice_clone.service import delete_voice
 

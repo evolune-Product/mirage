@@ -34,7 +34,7 @@ def main():
     ap.add_argument("--listening")
     ap.add_argument("--audio", required=True)
     ap.add_argument("--out", required=True)
-    ap.add_argument("--engine", default="wav2lip", choices=["wav2lip", "musetalk"])
+    ap.add_argument("--engine", default="wav2lip", choices=["wav2lip", "musetalk", "viseme"])
     ap.add_argument("--restore", default="none")
     ap.add_argument("--seconds", type=float)
     ap.add_argument("--workdir", default="/tmp/mirage_offline")
@@ -43,6 +43,11 @@ def main():
     ap.add_argument("--seamless", action="store_true")
     ap.add_argument("--frames-dir")
     a = ap.parse_args()
+    from engines import CommercialOnlyError, check_allowed
+    try:
+        check_allowed(a.engine)
+    except CommercialOnlyError as e:
+        raise SystemExit(f'refused: {e}')
 
     rdir = Path(a.workdir) / Path(a.source).stem
     rdir.mkdir(parents=True, exist_ok=True)
@@ -60,7 +65,12 @@ def main():
     n = int(len(a16) / 16000 * fr.FPS)
     seq = fr.pingpong_seq(base, n)
     t0 = time.time()
-    if a.engine == "wav2lip":
+    if a.engine == "viseme":
+        import engines
+        eng = engines.create("viseme", device)
+        outs = eng.generate(base, seq, eng.mel_chunks(a16))
+        a.sharpen = 0.0
+    elif a.engine == "wav2lip":
         eng = fr.Wav2LipEngine(device)
         outs = eng.generate(base, seq, eng.mel_chunks(a16))
     else:

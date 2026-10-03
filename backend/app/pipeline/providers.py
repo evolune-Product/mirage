@@ -22,10 +22,11 @@ class Renderer(Protocol):
 class OllamaLLM:
     """Free local LLM via Ollama's streaming chat API."""
 
-    def __init__(self, model: str = "llama3.2", host: str = "http://localhost:11434"):
+    def __init__(self, model: str = "llama3.2", host: str | None = None):
         import os
 
-        self.model, self.host = model, host
+        host = host or os.environ.get("OLLAMA_URL") or "http://localhost:11434"  # same variable as /health/deep and llm_backends
+        self.model, self.host = model, host.rstrip("/")
         self.options: dict = {"num_predict": 90}
         if os.environ.get("MIRAGE_OLLAMA_NUM_CTX"):
             self.options["num_ctx"] = int(os.environ["MIRAGE_OLLAMA_NUM_CTX"])

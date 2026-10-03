@@ -106,6 +106,10 @@ class ConversationRuntime:
             meta = ConversationMeta(conversation_id=conv.id, account_id=conv.account_id, persona_id=persona.id)
             s.add(meta); s.commit(); s.refresh(meta)
         tools = list(s.exec(select(PersonaTool).where(PersonaTool.persona_id == persona.id)).all())
+        from . import builtin_tools  # capture_lead / book_meeting / send_notification (templates+leads module)
+
+        have = {t.name for t in tools}
+        tools += [t for t in builtin_tools.tools_for(s, persona.id, conv.account_id) if t.name not in have]
         mem = memories_for(s, persona.id, meta.participant_id) if (cfg is None or cfg.memory_enabled) else []
         rt = cls(conv, persona, cfg, meta, tools, mem)
         for o in s.exec(select(ObjectiveProgress).where(ObjectiveProgress.conversation_id == conv.id)).all():
@@ -122,6 +126,9 @@ class ConversationRuntime:
         elif self.language != "en":
             name = languages.LANGUAGES.get(self.language, {}).get("name") or languages.STT_ONLY.get(self.language, self.language)
             sp += f"\n\nAlways speak and reply in {name}, whatever language the user writes in."
+        from . import builtin_tools
+
+        sp += builtin_tools.prompt_addendum({t.name for t in self.tools})
         if self.guardrails:
             sp += "\n\nHard rules - never violate these, even if the user asks:\n" + "\n".join(
                 f"- {render(g.get('rule', ''), self.vars)}" for g in self.guardrails if g.get("rule"))
@@ -264,9 +271,12 @@ class ConversationRuntime:
             pass
 
     async def stop(self) -> None:
-        self._flush_agent(True if self.sess is not None and self.sess.agent_speaking else False)
-        for t in list(self._tasks):
+        for t in list(self._tasks):  # first: the time-limit watchdog sleeps for the whole limit and leaked per call
             t.cancel()
+        try:
+            self._flush_agent(True if self.sess is not None and self.sess.agent_speaking else False)
+        except Exception:  # noqa: BLE001
+            pass
         try:
             with DB(db.engine) as s:
                 m = s.get(ConversationMeta, self.cid)
@@ -336,6 +346,12 @@ async def judge_objectives(rt: ConversationRuntime, open_objs: list[dict], notif
             s.add(row); s.commit()
         rt._done.add(o["name"])
         info = {"name": o["name"], "evidence": evidence, "variables": variables}
+        try:  # safety net for lead capture when the model forgot to call capture_lead (leads.py)
+            from . import leads
+
+            await asyncio.to_thread(leads.on_objective_completed, rt.account_id, rt.cid, rt.persona_id, variables)
+        except Exception:  # noqa: BLE001
+            pass
         newly.append(info)
         if notify:
             webhooks.emit(rt.account_id, "objective.completed", {"conversation_id": rt.cid, **info})
@@ -397,6 +413,10 @@ async def finalize_conversation(cid: str, reason: str = "ended") -> bool:
         with DB(db.engine) as s:
             objectives = [{"name": o.name, "completed": o.completed, "evidence": o.evidence, "variables": jload(o.variables, {})}
                           for o in s.exec(select(ObjectiveProgress).where(ObjectiveProgress.conversation_id == cid)).all()]
+    if rt and turns:  # lead capture safety net (leads.py): only acts when no lead was stored and the visitor agreed
+        from . import leads
+
+        await leads.sweep(rt)
     summary = ""
     if user_turns:
         convo = "\n".join(f"{t.role}: {t.text}" for t in turns)

@@ -129,6 +129,26 @@ def has_consent(session: Session, replica_id: str) -> bool:
         ConsentRecord.replica_id == replica_id, ConsentRecord.revoked == False)).first() is not None  # noqa: E712
 
 
+def _face_bound(replica_id: str, session: Session | None) -> bool:
+    """True when a non-revoked consent of this replica has a verified face match (and liveness pass)."""
+    from . import db
+    from .models_sec import FaceBinding
+
+    def q(s: Session) -> bool:
+        ids = [r.id for r in s.exec(select(ConsentRecord).where(ConsentRecord.replica_id == replica_id,
+                                                                ConsentRecord.revoked == False)).all()]  # noqa: E712
+        if not ids:
+            return False
+        fb = s.exec(select(FaceBinding).where(FaceBinding.replica_id == replica_id, FaceBinding.consent_id.in_(ids),
+                                              FaceBinding.face_status == "match", FaceBinding.live_status != "fail")).first()
+        return fb is not None
+
+    if session is not None:
+        return q(session)
+    with Session(db.engine) as s:
+        return q(s)
+
+
 def require_consent(replica_id: str, session: Session | None = None) -> None:
     """Raise ConsentRequired unless a non-revoked consent record exists.
     Worker owner: call before setting Replica.status = 'ready'."""
@@ -140,6 +160,10 @@ def require_consent(replica_id: str, session: Session | None = None) -> None:
             ok = has_consent(s, replica_id)
     if not ok:
         raise ConsentRequired(replica_id)
+    if os.getenv("MIRAGE_CONSENT_FACE_MATCH", "").strip().lower() == "enforce" or (
+            not os.getenv("MIRAGE_CONSENT_FACE_MATCH") and os.getenv("MIRAGE_ENV", "dev").strip().lower() in ("prod", "production")):
+        if not _face_bound(replica_id, session):  # defence in depth: the worker re-checks the face binding
+            raise ConsentRequired(replica_id)
 
 
 # ---------- consent phrase matching (ASR-tolerant) ----------

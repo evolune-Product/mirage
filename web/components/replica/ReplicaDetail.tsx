@@ -1,7 +1,10 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import { ShieldCheck, Film, Trash2, Mic, Upload, AlertCircle } from "lucide-react";
-import { api, Replica, fetchBlobUrl, fmtDate, fmtDur } from "@/lib/api";
+import { api, Replica, fetchBlobUrl, fmtDate, fmtDur, isPhotoReplica } from "@/lib/api";
+import PhotoSection from "@/components/replica/PhotoStatus";
+import VoicePanel from "@/components/replica/VoicePanel";
+import BackgroundSection from "@/components/replica/BackgroundSection";
 import { Modal, Badge, Section, Field, Spinner, ConfirmDialog, toast } from "@/components/ui";
 
 type Rec = { id: string; speaker_name: string; phrase: string; transcript: string; verified_by: string; revoked: boolean; created_at: string };
@@ -63,18 +66,36 @@ function ListeningClip({ rid }: { rid: string }) {
   );
 }
 
-export default function ReplicaDetail({ replica, onClose, onDeleted }: { replica: Replica | null; onClose: () => void; onDeleted: () => void }) {
-  const [recs, setRecs] = useState<Rec[] | null>(null); const [del, setDel] = useState(false);
-  useEffect(() => { if (!replica) return; setRecs(null); api<{ records: Rec[] }>(`/v1/replicas/${replica.id}/consent`).then((r) => setRecs(r.records)).catch(() => setRecs([])); }, [replica]);
+export default function ReplicaDetail({ replica: base, onClose, onDeleted }: { replica: Replica | null; onClose: () => void; onDeleted: () => void }) {
+  const [recs, setRecs] = useState<Rec[] | null>(null); const [del, setDel] = useState(false); const [fresh, setFresh] = useState<Replica | null>(null);
+  const replica = fresh && base && fresh.id === base.id ? fresh : base;
+  // Keep the drawer alive: refresh the replica itself (status) and its consent every 5 s while it is open and not finished.
+  useEffect(() => { setFresh(null); }, [base?.id]);
+  useEffect(() => {
+    if (!base) return; let live = true;
+    const tick = async () => {
+      try {
+        const [r, c] = await Promise.all([api<Replica>(`/v1/replicas/${base.id}`), api<{ records: Rec[] }>(`/v1/replicas/${base.id}/consent`)]);
+        if (!live) return; setRecs(c.records); setFresh(r.status === "awaiting_consent" && c.records.some((x) => !x.revoked) ? { ...r, status: "training" } : r);
+      } catch { if (live) setRecs((x) => x ?? []); }
+    };
+    setRecs(null); tick(); const t = setInterval(tick, 5000); return () => { live = false; clearInterval(t); };
+  }, [base?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  const active = (recs ?? []).filter((r) => !r.revoked);
+  const consentKind = recs === null ? undefined : active.some((r) => /voice-match/.test(r.verified_by)) ? "verified" : active.length ? "typed" : "none";
+  const photo = replica ? isPhotoReplica(replica) : false;
   return (
     <Modal side open={!!replica} onClose={onClose} title={replica?.name ?? "Replica"}>
       {replica && (<>
         <div className="mb-6 flex flex-wrap items-center gap-2"><Badge s={replica.status} /><span className="font-mono text-xs text-gray-500">{replica.id}</span><span className="text-xs text-gray-500">created {fmtDate(replica.created_at)}</span></div>
+        {photo && <PhotoSection rid={replica.id} status={replica.status} trainUrl={replica.train_video_url} />}
         <Section title="Consent evidence" icon={<Mic size={16} className="text-mirage-mint" />} hint="The recording, transcript match and voice comparison with the training video for each consent given.">
           {recs === null ? <div className="h-20 animate-pulse rounded-xl bg-white/5" /> : recs.length === 0 ? <p className="rounded-xl border border-dashed border-white/15 p-3.5 text-sm text-gray-500">No consent recorded yet.</p>
             : <ul className="space-y-2.5">{recs.map((r) => <Evidence key={r.id} rid={replica.id} rec={r} />)}</ul>}
         </Section>
-        <ListeningClip rid={replica.id} />
+        {!photo && <VoicePanel rid={replica.id} replicaReady={replica.status === "ready"} consent={consentKind} />}
+        <BackgroundSection rid={replica.id} ready={replica.status === "ready"} />
+        {!photo && <ListeningClip rid={replica.id} />}
         <div className="mt-8 border-t border-white/10 pt-5"><p className="text-sm font-medium text-mirage-rose">Danger zone</p>
           <p className="mb-3 mt-1 text-xs text-gray-400">Deleting removes the replica, its consent records and media. Personas using it fall back to voice only.</p>
           <button className="btn-ghost !border-mirage-rose/40 !text-mirage-rose hover:!bg-mirage-rose/10" onClick={() => setDel(true)}><Trash2 size={14} />Delete replica</button></div>
