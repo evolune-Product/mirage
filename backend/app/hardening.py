@@ -36,6 +36,27 @@ ROUTES = [
     ("POST", re.compile(r"^/v1/realtime/ticket$"), "TICKET", "key"),
     ("POST", re.compile(r"^/v1/billing/webhooks/"), "WEBHOOK", "ip"),
 ]
+# HTML pages we serve (mic/camera pages): CSP + framing policy. Inline <script> blocks exist in these pages, so script-src keeps
+# 'unsafe-inline' (documented residual); everything else is closed: no external scripts/styles/images/fonts, no <object>,
+# no <base>, no form posts, and connect-src limited to this host (+ its ws/wss), so an injected script cannot phone home.
+HTML_PAGE_PREFIXES = ("/static/", "/v1/playground", "/guest/")
+FRAMEABLE_PAGES = ("/static/playground.html", "/v1/playground")  # the dashboard embeds the playground; guest/widget pages have their own rule
+
+
+def page_csp(host: str, ancestors: str | None = "'none'") -> str:
+    h = re.sub(r"[^A-Za-z0-9.:\[\]-]", "", host or "")
+    conn = "'self'" + (f" ws://{h} wss://{h}" if h else " ws: wss:")
+    return ("default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; "
+            f"media-src 'self' blob: data:; connect-src {conn}; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; "
+            f"form-action 'none'" + (f"; frame-ancestors {ancestors}" if ancestors else ""))
+
+
+def dashboard_origins() -> str:
+    """Origins allowed to embed the playground (the dashboard): 'self' + MIRAGE_CORS_ORIGINS (explicit, never '*')."""
+    o = [x.strip() for x in os.getenv("MIRAGE_CORS_ORIGINS", "http://localhost:3000").split(",") if x.strip() and x.strip() != "*"]
+    return " ".join(["'self'"] + [x for x in o if re.fullmatch(r"https?://[A-Za-z0-9.\-:\[\]]+", x)])
+
+
 NO_CSP = ("/docs", "/redoc", "/openapi.json", "/v1/playground", "/static")
 
 
@@ -122,7 +143,7 @@ class Hardening:
 
         sign_json = path.startswith("/v1/") and not path.startswith("/v1/files/")
         state = {"buf": [], "start": None, "rewrite": False, "started": False}
-        sec = self._security_headers(path)
+        sec = self._security_headers(path, _hdr(scope, b"host"))
 
         async def wrapped_send(msg):
             if msg["type"] == "http.response.start":
@@ -130,6 +151,10 @@ class Hardening:
                 hdrs = [(k, v) for k, v in msg["headers"] if k.lower() not in {h for h, _ in sec} or k.lower() == b"cache-control"]
                 names = {k.lower() for k, _ in hdrs}
                 hdrs += [(k, v) for k, v in sec if k not in names]
+                extra = [v for k, v in hdrs if k == b"x-hardening-csp"]
+                if extra:  # widget frame: keep its own frame-ancestors policy and add the page restrictions to the same header
+                    own = [v for k, v in msg["headers"] if k.lower() == b"content-security-policy"]
+                    hdrs = [(k, v) for k, v in hdrs if k not in (b"x-hardening-csp", b"content-security-policy")] + [(b"content-security-policy", b"; ".join(own + extra))]
                 msg = {**msg, "headers": hdrs}
                 is_json = any(k.lower() == b"content-type" and v.startswith(b"application/json") for k, v in hdrs)
                 if sign_json and is_json and msg["status"] == 200:
@@ -186,11 +211,16 @@ class Hardening:
         return None
 
     @staticmethod
-    def _security_headers(path: str):
+    def _security_headers(path: str, host: str = ""):
         h = [(b"x-content-type-options", b"nosniff"), (b"referrer-policy", b"no-referrer"),
              (b"cross-origin-opener-policy", b"same-origin")]
-        if not path.startswith(("/v1/playground", "/widget/frame/")):  # the embed widgets iframe these (widget_api sets frame-ancestors)
+        frameable = path in FRAMEABLE_PAGES
+        if not path.startswith("/widget/frame/") and not frameable:  # widget frames set their own frame-ancestors
             h.append((b"x-frame-options", b"DENY"))
+        if path.startswith("/widget/frame/"):  # its own frame-ancestors CSP header is kept; this second policy adds the page restrictions
+            h.append((b"x-hardening-csp", page_csp(host, None).encode()))
+        if path.startswith(HTML_PAGE_PREFIXES) and not path.endswith((".js", ".css")):
+            h.append((b"content-security-policy", page_csp(host, dashboard_origins() if frameable else "'none'").encode()))
         if path.startswith("/v1/") and not path.startswith(NO_CSP):
             h.append((b"content-security-policy", b"default-src 'none'; frame-ancestors 'none'"))
             if not path.startswith("/v1/files/"):

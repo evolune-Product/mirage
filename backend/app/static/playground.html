@@ -12,7 +12,6 @@
 <script src="/static/mirage-ui.js?v=2"></script>
 <script>
 const $=id=>document.getElementById(id);
-const q=new URLSearchParams(location.search);
 let stored='';try{stored=localStorage.mk||''}catch(e){}
 // The key is never put in a WebSocket URL: every (re)connect trades it (sent in a header) for a single-use ticket.
 // A dashboard that embeds this page hands the key over with postMessage instead of a ?api_key= URL (which would sit in history/logs).

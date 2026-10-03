@@ -85,7 +85,7 @@ def test_script_and_frame_are_public_and_frameable(client):
 
 def test_open_widget_allows_any_site(client):
     _, _, w = mk(client)
-    assert client.get(f"/widget/frame/{w['token']}").headers["content-security-policy"] == "frame-ancestors *"
+    assert client.get(f"/widget/frame/{w['token']}").headers["content-security-policy"].startswith("frame-ancestors *")
     r = client.post(f"/v1/guest/{w['token']}/conversations", headers={"origin": "https://anything.example"})
     assert r.status_code == 200
 

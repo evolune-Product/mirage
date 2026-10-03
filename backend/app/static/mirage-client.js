@@ -35,7 +35,7 @@ const TERMINAL = new Set([4401, 4402, 4404, 4408, 4409, 4429, 1009]);
 const BACKOFF = [0.4, 1, 2, 4, 6, 8, 8];  // seconds; about 30 s in total, which is the server's resume grace period
 
 /* ---- audio capture helpers (browser-side resampling when the context cannot run at 16 kHz) ---------------------- */
-const RESAMPLER_SRC = `
+// A real function (no eval, so the page CSP needs no 'unsafe-eval'); its source text is also embedded in the AudioWorklet below.
 function makeResampler(inRate, outRate) {
   const step = inRate / outRate; let buf = new Float32Array(0), pos = 0;
   return function (x) {
@@ -50,7 +50,8 @@ function makeResampler(inRate, outRate) {
     const drop = Math.floor(pos); buf = buf.slice(drop); pos -= drop;
     return Float32Array.from(out);
   };
-}`;
+}
+const RESAMPLER_SRC = makeResampler.toString();
 const WORKLET_SRC = RESAMPLER_SRC + `
 class P extends AudioWorkletProcessor {
   constructor() { super(); this.rs = makeResampler(sampleRate, 16000); this.b = new Int16Array(320); this.n = 0; this.ss = 0; this.sn = 0; }
@@ -67,8 +68,6 @@ class P extends AudioWorkletProcessor {
   }
 }
 registerProcessor('pcm16', P);`;
-// eslint-disable-next-line no-new-func
-const makeResampler = new Function(RESAMPLER_SRC + '; return makeResampler;')();
 
 const rms16 = (i16) => { let s = 0; for (let i = 0; i < i16.length; i++) s += i16[i] * i16[i]; return Math.sqrt(s / Math.max(1, i16.length)) / 32768; };
 const isMobile = () => /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Mac/.test(navigator.platform));
