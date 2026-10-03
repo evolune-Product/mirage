@@ -14,12 +14,13 @@ async def main():
     H = {"x-api-key": key}
     p = h.post("/personas", json={"name": "S", "system_prompt": "You are a friendly assistant.", "llm": "ollama/llama3.2:1b"}, headers=H).json()
     cid = h.post("/conversations", json={"persona_id": p["id"]}, headers=H).json()["id"]
+    tk = h.post("/realtime/ticket", json={"conversation_id": cid}, headers=H).json()["ticket"]  # key stays in a header, not the URL
     tts = KokoroTTS()
     pcm24 = b"".join([c async for c in tts.synthesize("Hi, can you tell me what a digital twin is?")])
     a = np.frombuffer(pcm24, np.int16).astype(np.float32)
     pcm16 = np.interp(np.linspace(0, len(a), int(len(a) * 16 / 24), endpoint=False), np.arange(len(a)), a).astype(np.int16).tobytes()
     pcm16 += bytes(32000 * 2)  # 2 s silence ends the turn
-    url = BASE.replace("http", "ws") + f"/v1/conversations/{cid}/stream?api_key={key}"
+    url = BASE.replace("http", "ws") + f"/v1/conversations/{cid}/stream?ticket={tk}"
     async with websockets.connect(url, max_size=None) as ws:
         print(json.loads(await ws.recv()))
         t0, first, nbytes = None, None, 0

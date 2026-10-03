@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { Eye, Headphones, Loader2, MessagesSquare, Play, Square, Clock, ChevronDown, Link2, ExternalLink } from "lucide-react";
+import PlaygroundFrame from "@/components/PlaygroundFrame";
 import { API_URL, api, Perception, Conversation, Persona, ShareLink, getKey, saveId, fmtDate, fmtDur } from "@/lib/api";
 import ConversationDetail from "@/components/conversation/ConversationDetail";
 import { Shell, Badge, Empty, Skeleton, CopyButton, refreshCredits, toast } from "@/components/ui";
@@ -38,7 +39,6 @@ export default function Conversations() {
     try { setCur(await api<Conversation>(`/v1/conversations/${cur.id}/end`, { method: "POST", body: {} })); loadPast(); refreshCredits(); toast.success("Conversation ended."); }
     catch (x) { toast.error(x); }
   }
-  const src = cur ? `${API_URL}/static/playground.html?cid=${cur.id}&api_key=${encodeURIComponent(getKey())}&api=${encodeURIComponent(API_URL)}` : "";
   const pname = (id: string) => ps?.find((p) => p.id === id)?.name ?? id;
 
   return (
@@ -75,7 +75,7 @@ export default function Conversations() {
                 <span className="truncate font-mono text-xs text-gray-400">{cur.id}</span><Badge s={cur.status} />{cur.status === "ended" && <span className="text-xs text-gray-500">{cur.seconds_used}s used</span>}</div>
               {cur.status !== "ended" && <button className="btn-ghost !px-3 !py-1.5 text-xs" onClick={end}><Square size={12} />End</button>}
             </div>
-            <iframe src={src} className="h-[620px] w-full bg-ink" allow="camera; microphone; autoplay; display-capture; clipboard-write; fullscreen" title="Playground" />
+            <PlaygroundFrame cid={cur!.id} className="h-[620px] w-full bg-ink" allow="camera; microphone; autoplay; display-capture; clipboard-write; fullscreen" />
           </motion.div>
         )}
       </AnimatePresence>

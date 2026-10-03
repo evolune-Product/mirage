@@ -110,10 +110,11 @@ async def run_user(uid: int, base: str, replica_db: dict | None, face: bool, tur
                 body["replica_id"] = rid
             p = (await h.post("/personas", json=body, headers=H)).json()
             cid = (await h.post("/conversations", json={"persona_id": p["id"]}, headers=H)).json()["id"]
+            tk = (await h.post("/realtime/ticket", json={"conversation_id": cid}, headers=H)).json()["ticket"]
     except Exception as e:  # noqa: BLE001
         r.fatal = f"setup: {type(e).__name__}: {e}"
         return r
-    url = base.replace("http", "ws", 1) + f"/v1/conversations/{cid}/stream?api_key={key}"
+    url = base.replace("http", "ws", 1) + f"/v1/conversations/{cid}/stream?ticket={tk}"
     t_conn = time.monotonic()
     try:
         async with websockets.connect(url, max_size=None, ping_interval=None, open_timeout=30) as ws:

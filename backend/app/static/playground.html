@@ -14,10 +14,22 @@
 const $=id=>document.getElementById(id);
 const q=new URLSearchParams(location.search);
 let stored='';try{stored=localStorage.mk||''}catch(e){}
+// The key is never put in a WebSocket URL: every (re)connect trades it (sent in a header) for a single-use ticket.
+// A dashboard that embeds this page hands the key over with postMessage instead of a ?api_key= URL (which would sit in history/logs).
+const q=new URLSearchParams(location.search);
 $('key').value=q.get('api_key')||stored; $('cid').value=q.get('cid')||'';
+if(q.has('api_key')){try{history.replaceState(null,'',location.pathname+'?cid='+encodeURIComponent($('cid').value))}catch(e){}}
+if(window.parent!==window){
+  addEventListener('message',e=>{ if(e.source===window.parent&&e.data&&e.data.type==='mirage-key'&&typeof e.data.key==='string'){$('key').value=e.data.key} });
+  try{window.parent.postMessage({type:'mirage-playground-ready'},'*')}catch(e){}  // carries no secret
+}
 const proto=location.protocol==='https:'?'wss':'ws';
 const client=new MirageClient({
-  wsUrl:()=>`${proto}://${location.host}/v1/conversations/${$('cid').value}/stream?api_key=${encodeURIComponent($('key').value)}`,
+  wsUrl:async()=>{
+    const r=await fetch('/v1/realtime/ticket',{method:'POST',headers:{'x-api-key':$('key').value,'content-type':'application/json'},body:JSON.stringify({conversation_id:$('cid').value})});
+    if(!r.ok){const x=new Error(r.status===401?'This API key is not valid.':r.status===404?'Conversation not found for this key.':'Could not get a connection ticket ('+r.status+')');x.userMessage=x.message;throw x}
+    return `${proto}://${location.host}${(await r.json()).ws_path}`;
+  },
   prepare:async()=>{try{localStorage.mk=$('key').value}catch(e){}}
 });
 window.__client=client;

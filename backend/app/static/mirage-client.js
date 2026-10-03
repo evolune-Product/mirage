@@ -1,6 +1,6 @@
 /* Mirage browser client, shared by playground.html and guest.html.
  *
- *   const c = new MirageClient({ wsUrl: () => 'ws://...', prepare: async () => {...} });   // transport + audio + video
+ *   const c = new MirageClient({ wsUrl: async () => 'ws://...', prepare: async () => {...} });   // transport + audio + video
  *   MirageUI.mount(document.getElementById('mirage'), c, { mode: 'playground' | 'guest', ... });  // controls + transcript
  *
  * Protocol additions are documented in docs/overnight/realtime-client.md. A server that does not know `hello` simply
@@ -19,7 +19,9 @@ const MSG = {
   micInsecure: 'The microphone only works on HTTPS pages (or localhost). Open this page over HTTPS.',
   micOther: 'Could not open the microphone: ',
   noAudio: 'This browser cannot capture audio (no Web Audio support).',
-  4401: 'This API key is not valid.',
+  4401: 'This API key (or connection ticket) is not valid. Press Start to try again.',
+  4429: 'Too many connections or messages from this account or network. Wait a minute and try again.',
+  1009: 'A message was too large for the server.',
   4404: 'This conversation or link was not found (or it has expired).',
   4402: 'This conversation has ended, or the account is out of credits.',
   4408: 'Time limit reached - thanks for talking!',
@@ -29,7 +31,7 @@ const MSG = {
   gaveUp: 'Could not reconnect. Press Start to begin again.',
   ended: 'Conversation ended.',
 };
-const TERMINAL = new Set([4401, 4402, 4404, 4408, 4409]);
+const TERMINAL = new Set([4401, 4402, 4404, 4408, 4409, 4429, 1009]);
 const BACKOFF = [0.4, 1, 2, 4, 6, 8, 8];  // seconds; about 30 s in total, which is the server's resume grace period
 
 /* ---- audio capture helpers (browser-side resampling when the context cannot run at 16 kHz) ---------------------- */
@@ -302,8 +304,11 @@ class MirageClient {
 
   /* ---- websocket ---------------------------------------------------------------------------------------------- */
   _send(o) { if (this.ws && this.ws.readyState === 1) { try { this.ws.send(JSON.stringify(o)); } catch (e) { /* closing */ } } }
-  _connect() {
-    let url = this.o.wsUrl();
+  async _connect() {
+    let url;
+    try { url = await this.o.wsUrl(); }  // may be async: the playground trades the API key for a single-use ticket on every (re)connect
+    catch (e) { return this._closed(1006, (e && e.message) || 'ticket'); }
+    if (!this.running || this.stopping) return;
     if (this.attempt > 0) url += (url.includes('?') ? '&' : '?') + 'resume=1';
     const ws = new WebSocket(url);
     ws.binaryType = 'arraybuffer';

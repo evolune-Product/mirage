@@ -28,7 +28,8 @@ async def cycle(base, i, mode, face, reg):
             body["replica_id"] = reg(sj["account_id"], key)
         p = (await h.post("/personas", json=body, headers=H)).json()
         cid = (await h.post("/conversations", json={"persona_id": p["id"]}, headers=H)).json()["id"]
-    url = base.replace("http", "ws", 1) + f"/v1/conversations/{cid}/stream?api_key={key}"
+        tk = (await h.post("/realtime/ticket", json={"conversation_id": cid}, headers=H)).json()["ticket"]
+    url = base.replace("http", "ws", 1) + f"/v1/conversations/{cid}/stream?ticket={tk}"
     async with websockets.connect(url, max_size=None, ping_interval=None) as ws:
         await ws.send(json.dumps({"type": "hello", "framing": "tagged", "tier": 1}))
         t0 = time.time()

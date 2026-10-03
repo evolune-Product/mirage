@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowRight, Camera, Check, Film, MessagesSquare, Play, ShieldCheck } from "lucide-react";
+import PlaygroundFrame from "@/components/PlaygroundFrame";
 import { API_URL, api, errText, getKey, Instantiated, markPhotoReplica, Replica, saveId, Conversation } from "@/lib/api";
 import { Badge, Field, Shell, Spinner, toast } from "@/components/ui";
 import { Callout, Progress, Segmented } from "@/components/kit";
@@ -121,7 +122,7 @@ function StepTest({ pid, back, onFinish }: { pid: string; back: () => void; onFi
     {!pid ? <><p className="mb-4 mt-1 text-sm text-gray-400">No persona yet. Create one under Personas, then talk to it from Conversations.</p><Link href="/dashboard/personas" className="btn">Go to personas</Link></> : (<>
       <p className="mb-4 mt-1 text-sm text-gray-400">Press Start inside the window and allow your microphone. Use headphones so the agent does not hear itself.</p>
       {!conv ? <><button type="button" className="btn-grad" disabled={busy} onClick={start}>{busy ? <Spinner /> : <Play size={15} />}Start test conversation</button>{err && <div className="mt-3"><Callout tone="bad">{err}</Callout></div>}</>
-        : <iframe title="Playground" src={`${API_URL}/static/playground.html?cid=${conv.id}&api_key=${encodeURIComponent(getKey())}&api=${encodeURIComponent(API_URL)}`} allow="camera; microphone; autoplay; display-capture" className="h-[560px] w-full rounded-xl border border-white/10 bg-ink" />}
+        : <PlaygroundFrame cid={conv.id} className="h-[560px] w-full rounded-xl border border-white/10 bg-ink" />}
     </>)}
     <Nav back={back} next={onFinish} nextLabel="Finish setup" skip={onFinish} />
     <p className="mt-3 text-xs text-gray-500"><MessagesSquare size={11} className="mr-1 inline" />Finished conversations appear under Conversations with a transcript and summary.</p>

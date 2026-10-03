@@ -38,6 +38,7 @@ async def main(a):
         cfg["vlm_model"] = a.vlm
     print("perception config:", h.put(f"/personas/{p['id']}/perception", json=cfg, headers=H).json())
     cid = h.post("/conversations", json={"persona_id": p["id"]}, headers=H).json()["id"]
+    tk = h.post("/realtime/ticket", json={"conversation_id": cid}, headers=H).json()["ticket"]  # key stays in a header, not the URL
 
     from app.pipeline.local import KokoroTTS
     tts = KokoroTTS()
@@ -46,7 +47,7 @@ async def main(a):
     pcm16 = np.interp(np.linspace(0, len(x), int(len(x) * 16 / 24), endpoint=False), np.arange(len(x)), x).astype(np.int16).tobytes()
     pcm16 += bytes(32000 * 2)
     frame = json.dumps({"type": "frame", "source": a.source, "jpeg_b64": to_jpeg_b64(a.image)})
-    url = a.base.replace("http", "ws") + f"/v1/conversations/{cid}/stream?api_key={key}"
+    url = a.base.replace("http", "ws") + f"/v1/conversations/{cid}/stream?ticket={tk}"
     async with websockets.connect(url, max_size=None) as ws:
         while True:
             m = json.loads(await ws.recv())
