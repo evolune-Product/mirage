@@ -58,7 +58,7 @@ def check(x: np.ndarray, sr: int = 24000) -> dict:
         cum = np.cumsum(mean) / mean.sum()
         out["rolloff95_hz"] = int(np.searchsorted(cum, 0.95) * sr / fl)
         out["spectral_flatness"] = round(float(np.exp(np.mean(np.log(mean))) / np.mean(mean)), 5)
-        if out["rolloff95_hz"] < 1500:
+        if out["rolloff95_hz"] < 450:  # real telephone-grade speech rolls off at ~700+ Hz; below 450 is broken/muffled
             p.append("very narrow bandwidth (muffled)")
         if out["spectral_flatness"] > 0.2:
             p.append("noise-like spectrum")

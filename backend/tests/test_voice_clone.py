@@ -468,3 +468,21 @@ def test_production_rejects_typed_consent_for_cloning(env, tmp_path, monkeypatch
     rid2 = make_replica(env, tmp_path, acc, consent="typed-transcript (dev only)")
     with Session(db.engine) as s:
         assert service.active_consent(s, rid2) is None
+
+
+# ------------------------------------------------------------------ audio_checks (artifact detection)
+def test_audio_checks_flags_clipping_silence_clicks_and_passes_speech():
+    from app.voice_clone import audio_checks as ac
+
+    x = SPEECH.astype(np.float32) / 32768.0
+    x = np.interp(np.linspace(0, len(x) - 1, int(len(x) * 1.5)), np.arange(len(x)), x).astype(np.float32)
+    good = ac.check(x * (0.6 / np.abs(x).max()), 24000)
+    assert good["ok"], good["problems"]
+    assert any("clipping" in p for p in ac.check(np.clip(x * 20, -1, 1), 24000)["problems"])
+    assert any("silence" in p for p in ac.check(np.zeros(48000, np.float32), 24000)["problems"])
+    c = (x * 0.3).copy(); c[len(c) // 2:len(c) // 2 + 2] = [0.9, -0.9]
+    assert ac.check(c, 24000)["click_count"] >= 1
+    assert any("NaN" in p for p in ac.check(np.r_[x, np.nan].astype(np.float32), 24000)["problems"])
+    assert any("shorter" in p for p in ac.check(x[:100], 24000)["problems"])
+    noise = np.random.default_rng(0).normal(0, 0.1, 48000).astype(np.float32)
+    assert any("noise-like" in p for p in ac.check(noise, 24000)["problems"])

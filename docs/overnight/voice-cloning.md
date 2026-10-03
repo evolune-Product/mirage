@@ -79,3 +79,7 @@ Chatterbox 4-bit MLX is the multilingual checkpoint (23 languages). Verified by 
 
 ## Licences (final)
 Chatterbox MIT (weights MIT upstream; the mlx-community card lists Apache-2.0 for the conversion) and S3TokenizerV2 via mlx-audio (MIT) -> commercial use OK. Adopted default: Chatterbox. Rejected as defaults: Coqui XTTS (CPML), F5-TTS weights (CC-BY-NC), Fish-Speech weights (CC-BY-NC-SA). Reminder: Chatterbox embeds a Resemble "PerTh" watermark in generated audio upstream; the MLX port was not checked for it.
+
+## Oct 4 audit (clone samples)
+* demo_assets/demo_face_v2.mp4 audio is Kokoro af_heart (0.847 vs af_heart), not a human: do not use it as a "real voice" reference. Use the founder video.
+* Added `app/voice_clone/audio_checks.py` (clipping, silence, clicks, NaN, bandwidth) with a test, and `scripts_voice_clone_audit.py` (similarity vs reference and Kokoro, WER, checks). Results: ~/Desktop/Mirage_clone_samples/README.md.
