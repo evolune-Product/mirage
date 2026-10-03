@@ -42,7 +42,7 @@ Legend for Mirage "verified": **unit** = automated tests with fakes, **live** = 
 | Replica from a training video | yes | yes | personal avatars | instant avatars | ? | have (live) | consent gate; LivePortrait / Wav2Lip |
 | Replica from an image | yes | yes | yes | yes (photo) | yes | missing | |
 | Consent verification for likeness | yes | ? | consent verification | ? | ? | have (unit, live) | challenge phrase + audio check (safety module) |
-| Voice cloning | yes | yes | yes | yes | ? | missing | preset Kokoro voices only |
+| Voice cloning | yes | yes | yes | yes | ? | have (video), partial (live) | Chatterbox MIT on MLX, consent-gated; video voice verified (similarity 0.78), live +4-5 s latency on M1 so Kokoro stays the live default |
 | Text-to-video via API | yes | yes | yes | yes | yes (jobs API) | have (live) | ~107 s render for a 3.8 s clip on M1; quality limited |
 | Template variables in scripts | yes | templates (?) | templates | ? | ? | have (unit) | `{{first_name}}`, preview endpoint |
 | Bulk generation from rows | yes (API loops) | yes (?) | yes | ? | ? | have (unit) | `/v1/video-jobs/bulk`, batch status, `video_batch.completed` |

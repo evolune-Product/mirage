@@ -4,7 +4,7 @@ import re
 
 def _words(t: str) -> list[str]:
     t = (t or "").lower().replace("’", "'")
-    return re.sub(r"[^a-z0-9' ]+", " ", t).split()
+    return re.sub(r"[^\w' ]+", " ", t).split()
 
 
 def wer(reference: str, hypothesis: str) -> float:

@@ -3,6 +3,7 @@
 #   backend API :8000   lip-sync service :8100   worker (replicas + videos)   dashboard :3000
 # Requires Ollama running (`ollama serve`) for the LLM.
 cd "$(dirname "$0")"
+export MIRAGE_JUDGE_MODEL="${MIRAGE_JUDGE_MODEL:-llama3.2:3b}"  # objective judging: 1.00 accuracy vs 0.75 for the 1B model (backend/evals)
 pids=()
 trap 'kill $pids 2>/dev/null; exit' INT TERM EXIT
 (cd backend && .venv/bin/uvicorn app.main:app --port 8000 2>&1 | sed 's/^/[api] /') & pids+=($!)

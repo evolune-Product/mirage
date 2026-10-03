@@ -98,8 +98,8 @@ async def describe(body: DescribeIn, acc: Account = Depends(current_account)):
 @router.get("/perception/models")
 def models(acc: Account = Depends(current_account)):
     return {"default": VLM().model, "models": [
-        {"model": "moondream", "licence": "Apache-2.0", "commercial": True, "note": "1.8B, fastest, weak OCR"},
-        {"model": "gemma3:4b", "licence": "Gemma Terms of Use", "commercial": True, "note": "good scene + OCR, multilingual"},
+        {"model": "moondream", "licence": "Apache-2.0", "commercial": True, "note": "1.8B: fast but often returns empty answers and misses screen text (measured)"},
+        {"model": "gemma3:4b", "licence": "Gemma Terms of Use", "commercial": True, "note": "default: 8/8 on OCR+scene tests, 4.5 GB RAM"},
         {"model": "qwen2.5vl:7b", "licence": "Apache-2.0", "commercial": True, "note": "best OCR/screens, slowest"},
         {"model": "qwen2.5vl:3b", "licence": "Qwen Research (non-commercial)", "commercial": False, "note": "do not ship commercially"},
     ]}

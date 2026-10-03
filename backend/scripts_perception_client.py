@@ -100,7 +100,7 @@ async def main(a):
             print("timeout waiting for the agent")
         if sink.get("first_audio") and t_q:
             print(f"question end -> first agent audio: {sink['first_audio'] - t_q:.2f}s")
-        print("AGENT SAID:", " ".join(sink.get("assistant", [])))
+        print("AGENT SAID:", " ".join(sink.get("agent", []) + sink.get("assistant", [])))
 
 
 if __name__ == "__main__":

@@ -51,8 +51,9 @@ class CloneSidecar:
         with self._lock:
             if self.alive():
                 return
+            logf = os.environ.get("MIRAGE_CLONE_LOG")  # sidecar stderr (model load, crashes) for debugging
             self._proc = subprocess.Popen([self.python, self.worker], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                          stderr=subprocess.DEVNULL, bufsize=0)
+                                          stderr=open(logf, "ab") if logf else subprocess.DEVNULL, bufsize=0)
             ready = threading.Event()
             threading.Thread(target=self._read, args=(self._proc, ready), daemon=True).start()
             if not ready.wait(self.start_timeout) or not self.alive():

@@ -334,3 +334,15 @@ def test_feature_llm_adds_tool_rules_only_when_tools_exist():
     asyncio.run(run([lb.ToolSpec("t", "d", None, "http://x")]))
     asyncio.run(run([]))
     assert lb.TOOL_RULES in seen[0] and lb.TOOL_RULES not in seen[1]
+
+
+def test_english_questions_with_short_words_stay_english():
+    for q in ("How early should a new patient arrive?", "What is the late cancellation fee?", "do you ship to canada", "a"):
+        assert lb.detect_language(q) == "en"
+
+
+def test_select_hits_drops_clearly_worse_excerpts_only_for_dense():
+    hits = [{"score": 0.80, "method": "dense"}, {"score": 0.75, "method": "dense"}, {"score": 0.50, "method": "dense"}]
+    assert len(kb.select_hits(hits, 0.12)) == 2
+    b = [{"score": 9.0, "method": "bm25"}, {"score": 1.0, "method": "bm25"}]
+    assert kb.select_hits(b, 0.12) == b

@@ -83,7 +83,10 @@ def main() -> None:
                 out = tmp / f"{lang}_{si}_{run}.wav"
                 audio = pcm_to_wav(pcm, out)
                 dur = len(audio) / SAMPLE_RATE
-                sim = voiceprint.similarity(ref_emb, voiceprint.embed(voiceprint.decode_audio(out))) if dur > 1.6 else None
+                try:  # clips with < 1.5 s of speech cannot be scored by the speaker model
+                    sim = voiceprint.similarity(ref_emb, voiceprint.embed(voiceprint.decode_audio(out)))
+                except ValueError:
+                    sim = None
                 heard = transcribe(out, lang)
                 r = dict(lang=lang, sentence=si, run=run, first_audio_s=round(first, 2), total_s=round(total, 2),
                          audio_s=round(dur, 2), rtf=round(total / dur, 2), similarity=None if sim is None else round(sim, 3),

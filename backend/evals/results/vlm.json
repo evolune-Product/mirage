@@ -1,0 +1,154 @@
+[
+ {
+  "model": "moondream",
+  "max_side": 768,
+  "cases": [
+   {
+    "kind": "ocr",
+    "q": "What is the total due and the due date? Quote them exactly.",
+    "a": "",
+    "ok": false,
+    "ms": 2406
+   },
+   {
+    "kind": "ocr",
+    "q": "What invoice number is shown?",
+    "a": "ia-4881",
+    "ok": false,
+    "ms": 251
+   },
+   {
+    "kind": "describe",
+    "q": "This is the user's shared screen. In 1-3 short sentences say",
+    "a": "",
+    "ok": false,
+    "ms": 237
+   },
+   {
+    "kind": "ocr",
+    "q": "What error message is in the terminal?",
+    "a": "\"No module named 'numpy'\".",
+    "ok": true,
+    "ms": 3516
+   },
+   {
+    "kind": "describe",
+    "q": "This is the user's shared screen. In 1-3 short sentences say",
+    "a": "",
+    "ok": false,
+    "ms": 232
+   },
+   {
+    "kind": "scene",
+    "q": "What colour is the circle and where is it?",
+    "a": "",
+    "ok": false,
+    "ms": 1412
+   },
+   {
+    "kind": "ocr",
+    "q": "What does the sign at the bottom say?",
+    "a": "Sale 50% Off",
+    "ok": true,
+    "ms": 267
+   },
+   {
+    "kind": "scene",
+    "q": "How many shapes are there and what colours are they?",
+    "a": "There are three different shapes on the sign, which include a circle (red), triangle (green), and square (blue).",
+    "ok": true,
+    "ms": 588
+   }
+  ],
+  "load_s": 10.6,
+  "ram_gb": 1.1,
+  "face": {
+   "a": "A man wearing glasses and a gray shirt with his mouth open in surprise as he looks at the camera.",
+   "ms": 2689
+  },
+  "accuracy": 0.38,
+  "by_kind": {
+   "scene": 0.5,
+   "ocr": 0.5,
+   "describe": 0.0
+  },
+  "latency_ms_median": 428,
+  "latency_ms_max": 3516
+ },
+ {
+  "model": "gemma3:4b",
+  "max_side": 768,
+  "cases": [
+   {
+    "kind": "ocr",
+    "q": "What is the total due and the due date? Quote them exactly.",
+    "a": "Here’s the information from the image:\n\n*   **Total due:** $1,250.00\n*   **Due date:** Nov 14, 2026",
+    "ok": true,
+    "ms": 8188
+   },
+   {
+    "kind": "ocr",
+    "q": "What invoice number is shown?",
+    "a": "The invoice number shown is #4821.",
+    "ok": true,
+    "ms": 938
+   },
+   {
+    "kind": "describe",
+    "q": "This is the user's shared screen. In 1-3 short sentences say",
+    "a": "Here's a breakdown of the screen:\n\nThe screen displays an \"Acme Dashboard\" showing an overdue invoice. The key information visible is \"Invoice #4821\" and the total due amount of \"$1,250.00\". The status is also marked as \"OVERDUE\".",
+    "ok": true,
+    "ms": 4139
+   },
+   {
+    "kind": "ocr",
+    "q": "What error message is in the terminal?",
+    "a": "The error message in the terminal is:\n\n**ModuleNotFoundError: No module named 'numpy'**\n\nThis means that the Python interpreter cannot find the `numpy` library on your system.  This usually happens if you haven't installed `numpy` using `pip` (the Python package installer) or if it's not in Python's search path.",
+    "ok": true,
+    "ms": 13675
+   },
+   {
+    "kind": "describe",
+    "q": "This is the user's shared screen. In 1-3 short sentences say",
+    "a": "Here's a breakdown of the screenshot:\n\nThe screenshot shows the output of a Python script being run in Visual Studio Code. The error message clearly states: \"ModuleNotFoundError: No module named 'numpy'\".  The numbers \"2\" and \"3\" are visible in the `print` statement, indicating the values being passed to the `add` function.",
+    "ok": true,
+    "ms": 4843
+   },
+   {
+    "kind": "scene",
+    "q": "What colour is the circle and where is it?",
+    "a": "Here's the breakdown:\n\n*   **Color:** The circle is red.\n*   **Location:** It's on the left side of the image.",
+    "ok": true,
+    "ms": 8485
+   },
+   {
+    "kind": "ocr",
+    "q": "What does the sign at the bottom say?",
+    "a": "The sign at the bottom says:\n\n**\"SALE 50% OFF\"**",
+    "ok": true,
+    "ms": 1458
+   },
+   {
+    "kind": "scene",
+    "q": "How many shapes are there and what colours are they?",
+    "a": "Here's the breakdown of the shapes and their colors:\n\n*   **Shapes:** There are 3 shapes.\n*   **Colors:**\n    *   The first shape is red.\n    *   The second shape is green.\n    *   The third shape is blue.",
+    "ok": true,
+    "ms": 7159
+   }
+  ],
+  "load_s": 29.9,
+  "ram_gb": 4.5,
+  "face": {
+   "a": "Here's a description of the image:\n\nThe image shows a person wearing glasses and a gray shirt, with a sunset visible in the background featuring a prominent suspension bridge. The text \"Revanth Rajeev\" is visible in the bottom left corner of the frame.",
+   "ms": 10264
+  },
+  "accuracy": 1.0,
+  "by_kind": {
+   "scene": 1.0,
+   "ocr": 1.0,
+   "describe": 1.0
+  },
+  "latency_ms_median": 6001,
+  "latency_ms_max": 13675
+ }
+]

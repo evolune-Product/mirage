@@ -19,3 +19,22 @@ Nothing committed or pushed. Shared servers (8000/8100/3000) untouched; own isol
   tests/test_creative.py: 13 pass with faked heavy steps.
 * LivePortrait fp16 on MPS produced one garbage frame in a run; fp32 is the same speed (113 s / 50 frames) -> fp32 default + outlier-frame repair.
 * NEXT: real API+worker E2E, live lipsync bg fps measurement, SDK, API.md, worker unit checks, speed work, full test run (alembic migration needed for models_creative).
+
+## Final status (honest)
+### Verified end to end (real API 8270 + lipsync 8271 + worker, frames/contact sheets viewed)
+* Photo avatar: `POST /replicas/photo` -> typed dev consent -> worker: photo check + LivePortrait idle clip (192 s wall for 50 frames while the Mac was busy; 114 s alone) -> replica ready; live lipsync service served `/idle` (99 frames) and `/render` at 70-85 fps. Idle clip: jaw-open mean 0.001, blink up to 0.77, subtle head sway. A photo with an open mouth is rejected with a clear error (the mouth is frozen as in the photo).
+* Backgrounds: live (replica background set via API, base rebuilt once in 4.5 s, render fps unchanged 70-85 vs 73-85) and offline (colour, gradient, image asset, blur). Contact sheets show a clean cut-out; small leftover of old background near shoulders is possible; selfie model is low-res (hair strands lost).
+* Captions (bold, classic, karaoke, minimal), formats 16:9/9:16/1:1, logo, thumbnail, SRT, 3-scene slide transition video through the API: 9.0 s video, 28 s total (TTS 5.7, Whisper words 6.2, render 16), progress polled per scene (tts 0-8%, then render percent per scene), signed download of mp4/thumbnail/srt.
+* Real-run bugs found and fixed: LivePortrait fp16 garbage frame (fp32 + repair), `Logo(asset_id=...)` TypeError (fakes had hidden it), caption chunk-merge bug (found by creative_checks).
+* Tests: test_creative.py (13), test_creative_workers.py (2: runs workers/creative_checks.py, 68 asserts, + option-list sync); migrations/jobs/api/features suites pass.
+
+### Speed
+Base prep cached: 1.55 s vs 3.9-4.4 s cold per background variant. Wav2Lip ~0.6 s per second of video. Not done: parallel TTS/Whisper, batching across scenes.
+
+### NOT verified / unfinished
+* Persona-level background (only replica- and video-level); no per-conversation override in the live protocol.
+* 9:16 from 720p webcam footage is soft (source pixels ~230 px wide); photo avatars from small photos also soft. `restore: sr` option untested in the creative path.
+* Photo-avatar consent does not bind the photo to the speaker (no face match): someone could consent and upload another person's photo. Needs face verification before production. Voice-match is skipped for photo replicas (edit in routers/consent.py).
+* Only English captions/Whisper tested; transitions dip/cut untested visually; webhooks not enriched with thumbnail URL.
+* Licences: LivePortrait code MIT but its InsightFace buffalo_l detector weights are non-commercial research only (commercial use NOT allowed without replacing/licensing); Wav2Lip weights non-commercial research; MediaPipe selfie segmentation + face landmarker Apache-2.0 (commercial OK); faster-whisper base MIT (commercial OK); Kokoro Apache-2.0; PIL fonts are macOS system fonts (use DejaVu/Liberation in Docker).
+* Shared files edited (small): jobs.py hooks, consent.py, signing.py, files_signed.py, SDKs, API.md.

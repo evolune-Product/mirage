@@ -92,8 +92,8 @@ export function serveFile(file, port) {
   return new Promise((r) => srv.listen(port, '127.0.0.1', () => r({ srv, url: `http://127.0.0.1:${port}/${encodeURIComponent(name)}` })));
 }
 
-export function tts(text, voice, out, speed = 1.0, tail = 1.2) {
-  const so = execFileSync(PY, [path.join(E2E_DIR, 'tts.py'), text, voice, out, String(speed), String(tail)], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+export function tts(text, voice, out, speed = 1.0, tail = 1.2, repeat = 1) {
+  const so = execFileSync(PY, [path.join(E2E_DIR, 'tts.py'), text, voice, out, String(speed), String(tail), String(repeat)], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
   return parseFloat(so.trim().split('\n').pop());
 }
 

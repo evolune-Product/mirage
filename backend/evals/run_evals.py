@@ -89,7 +89,18 @@ def assemble(variant: str, doc: str, q: str, history=None, extra_rules=None, too
     return sys_p, history, user
 
 
-async def ask(model: str, system: str, history: list, user: str, tools=None, num_predict: int = 90):
+async def ask(*a, **k):
+    """One retry: Ollama runners get killed when other agents' models evict ours from RAM."""
+    for i in range(3):
+        try:
+            return await _ask(*a, **k)
+        except RuntimeError:
+            if i == 2:
+                return {"text": "", "ttft": None, "tsent": 0.0, "total": 0.0, "calls": [], "error": True}
+            await asyncio.sleep(8)
+
+
+async def _ask(model: str, system: str, history: list, user: str, tools=None, num_predict: int = 90):
     be = lb.OllamaBackend(model, num_predict=num_predict)
     msgs = [{"role": "system", "content": system}, *history, {"role": "user", "content": user}]
     t0 = time.monotonic()

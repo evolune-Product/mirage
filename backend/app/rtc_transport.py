@@ -78,6 +78,8 @@ class Link:
     """Per-socket negotiated state."""
     hello: bool = False
     tagged: bool = False
+    want_tagged: bool = False
+    busy: bool = False  # pump is mid-message
     tier: int = DEFAULT_TIER
     max_tier: int = len(TIERS) - 1
     idle_cached: bool = False
@@ -94,7 +96,7 @@ class Link:
 
     def apply_hello(self, m: dict) -> None:
         self.hello = True
-        self.tagged = m.get("framing") == "tagged"
+        self.want_tagged = m.get("framing") == "tagged"  # becomes `tagged` once hello_ack is on the wire
         self.idle_cached = bool(m.get("idle_cached"))
         self.resume = bool(m.get("resume"))
         self.client = {k: m.get(k) for k in ("ua", "audio", "sample_rates", "mobile") if m.get(k) is not None}

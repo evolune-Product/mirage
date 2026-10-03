@@ -12,7 +12,7 @@ import time
 import httpx
 
 OLLAMA_HOST = os.environ.get("OLLAMA_URL", os.environ.get("OLLAMA_HOST", "http://localhost:11434"))
-DEFAULT_MODEL = os.environ.get("MIRAGE_VLM_MODEL", "moondream")
+DEFAULT_MODEL = os.environ.get("MIRAGE_VLM_MODEL", "gemma3:4b")
 
 NO_ID = ("Never identify or name a person and never guess their identity, age, ethnicity or health: describe only what is "
          "visible (clothing, objects, setting, expression, visible text).")

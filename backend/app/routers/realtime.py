@@ -213,6 +213,8 @@ async def _run(ws, cid, acc, conv, persona, db, link, inbox, pump_task):
         rt.start(sess, ws, base, _allow(db, acc))  # greeting + time/credit watchdog
     # The pump (needed while models load) hands over: from here on the loop reads the socket itself, which keeps the
     # teardown path as short as it always was. Anything the pump already queued is processed first.
+    while link.busy:
+        await asyncio.sleep(0)
     pump_task.cancel()
     await asyncio.gather(pump_task, return_exceptions=True)
     try:
@@ -291,8 +293,9 @@ async def _control(ws, link: Link, txt: str) -> bool:
     t = m.get("type")
     if t == "hello":
         link.apply_hello(m)
-        await ws.send_json({"type": "hello_ack", "framing": "tagged" if link.tagged else "legacy", "tier": link.tier,
+        await ws.send_json({"type": "hello_ack", "framing": "tagged" if link.want_tagged else "legacy", "tier": link.tier,
                             "heartbeat_s": HEARTBEAT_S, "tiers": len(TIERS)})
+        link.tagged = link.want_tagged
         return True
     if t == "ping":
         await ws.send_json({"type": "pong", "t": m.get("t")})
@@ -309,14 +312,18 @@ async def _pump(ws, link: Link, inbox: asyncio.Queue) -> None:
     try:
         while True:
             msg = await ws.receive()
-            link.last_rx = time.monotonic()
-            if msg["type"] == "websocket.disconnect":
-                break
-            if msg.get("text") and await _control(ws, link, msg["text"]):
-                if link.ended:
+            link.busy = True  # the session loop waits for this to clear before it takes over (never cancel mid-send)
+            try:
+                link.last_rx = time.monotonic()
+                if msg["type"] == "websocket.disconnect":
                     break
-                continue
-            inbox.put_nowait(msg)
+                if msg.get("text") and await _control(ws, link, msg["text"]):
+                    if link.ended:
+                        break
+                    continue
+                inbox.put_nowait(msg)
+            finally:
+                link.busy = False
     except asyncio.CancelledError:
         raise
     except Exception:  # noqa: BLE001 - RuntimeError after disconnect, etc.

@@ -331,7 +331,7 @@ _NOTES = {
     "zh": "请用中文回答，最多两句简短的话。",
 }
 _GROUND_NOTES = {
-    "en": " Use only the knowledge excerpts for company facts; if they don't say, say you don't have that information.",
+    "en": " Look for the answer in the knowledge excerpts and give it directly; only if it is really not there, say you don't have that information.",
     "es": " Usa solo los fragmentos de conocimiento para datos de la empresa; si no lo dicen, di que no tienes esa información.",
     "fr": " N'utilise que les extraits de connaissance pour les faits de l'entreprise ; sinon dis que tu n'as pas cette information.",
     "pt": " Use apenas os trechos de conhecimento para fatos da empresa; se não constar, diga que não tem essa informação.",
