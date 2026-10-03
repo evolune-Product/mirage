@@ -27,9 +27,9 @@ class OllamaBackend:
     def __init__(self, model: str, host: str = OLLAMA_HOST, num_predict: int = 160):
         self.model, self.host, self.num_predict = model, host, num_predict
 
-    async def chat(self, messages: list[dict], tools: Optional[list[dict]] = None) -> AsyncIterator[tuple]:
+    async def chat(self, messages: list[dict], tools: Optional[list[dict]] = None, options: Optional[dict] = None) -> AsyncIterator[tuple]:
         body = {"model": self.model, "messages": messages, "stream": True, "keep_alive": "30m", "think": False,
-                "options": {"num_predict": self.num_predict}}
+                "options": {"num_predict": self.num_predict, **(options or {})}}
         if tools:
             body["tools"] = tools
         async with httpx.AsyncClient(timeout=None) as c:
@@ -72,7 +72,7 @@ class OpenAIBackend:
     def __init__(self, base_url: str, model: str, api_key: str = "", max_tokens: int = 160):
         self.base_url, self.model, self.api_key, self.max_tokens = base_url.rstrip("/"), model, api_key, max_tokens
 
-    async def chat(self, messages: list[dict], tools: Optional[list[dict]] = None) -> AsyncIterator[tuple]:
+    async def chat(self, messages: list[dict], tools: Optional[list[dict]] = None, options: Optional[dict] = None) -> AsyncIterator[tuple]:
         body = {"model": self.model, "messages": messages, "stream": True, "max_tokens": self.max_tokens}
         if tools:
             body["tools"] = tools
@@ -203,6 +203,11 @@ def violates(text: str, guardrails: list[dict]) -> Optional[str]:
 # ---------------- FeatureLLM ----------------
 
 
+TOOL_RULES = ("Tools: call a tool only when the user clearly asks for what it does AND you already have every required "
+              "argument (take it from what the user said; if one is missing, ask for it instead of guessing). For small talk, "
+              "thanks, goodbyes and general questions do NOT call any tool - just answer briefly.")
+
+
 class FeatureLLM:
     def __init__(self, backend, tools: list[ToolSpec] | None = None, ctx: dict | None = None,
                  on_tool: Callable[[dict], None] | None = None):
@@ -210,6 +215,8 @@ class FeatureLLM:
         self.ctx, self.on_tool = ctx or {}, on_tool
 
     async def _rounds(self, system: str, history: list[dict], user: str) -> AsyncIterator[str]:
+        if self.tools:
+            system = system + "\n\n" + TOOL_RULES
         msgs = [{"role": "system", "content": system}, *history, {"role": "user", "content": user}]
         schemas = [t.schema() for t in self.tools.values()]
         be = self.backend
@@ -297,6 +304,116 @@ class GuardedLLM:
             aclose = getattr(src, "aclose", None)
             if aclose:
                 await aclose()
+
+
+# ---------------- grounding scaffold (small-model discipline) ----------------
+
+
+# Language of the user's turn: the reminder is written IN that language, otherwise small models answer in English
+# (measured: an English reminder dropped Spanish/Hindi language match from 100% to 25% on llama3.2:3b).
+_STOPWORDS = {
+    "es": "el la los las de que es en un una por para con no se su como cuanto cuanta cual cuando donde puedo tengo qué cuánto aceptan".split(),
+    "fr": "le la les des de du est un une pour avec ne pas que qui quel quelle combien comment où puis je vous est-ce".split(),
+    "pt": "os as de que é em um uma por para com não se seu como quanto qual quando onde posso você".split(),
+    "it": "il lo la gli le di che è in un una per con non si suo come quanto quale quando dove posso".split(),
+    "de": "der die das und ist ein eine für mit nicht wie viel was wann wo kann ich sie".split(),
+    "en": "the is are what how much do does can i you my your it of to for with".split(),
+}
+_NOTES = {
+    "en": "Reply in at most two short spoken sentences (under 30 words).",
+    "es": "Responde en español, en máximo dos frases cortas habladas (menos de 30 palabras).",
+    "fr": "Réponds en français, en deux phrases courtes maximum (moins de 30 mots).",
+    "pt": "Responda em português, em no máximo duas frases curtas (menos de 30 palavras).",
+    "it": "Rispondi in italiano, in al massimo due frasi brevi (meno di 30 parole).",
+    "de": "Antworte auf Deutsch in höchstens zwei kurzen gesprochenen Sätzen (unter 30 Wörtern).",
+    "hi": "हिंदी में, अधिकतम दो छोटे वाक्यों में जवाब दें (30 शब्दों से कम)।",
+    "ja": "日本語で、短く2文以内で答えてください。",
+    "zh": "请用中文回答，最多两句简短的话。",
+}
+_GROUND_NOTES = {
+    "en": " Use only the knowledge excerpts for company facts; if they don't say, say you don't have that information.",
+    "es": " Usa solo los fragmentos de conocimiento para datos de la empresa; si no lo dicen, di que no tienes esa información.",
+    "fr": " N'utilise que les extraits de connaissance pour les faits de l'entreprise ; sinon dis que tu n'as pas cette information.",
+    "pt": " Use apenas os trechos de conhecimento para fatos da empresa; se não constar, diga que não tem essa informação.",
+    "it": " Usa solo gli estratti di conoscenza per i fatti aziendali; se non lo dicono, di' che non hai questa informazione.",
+    "de": " Nutze nur die Wissensauszüge für Firmenfakten; wenn dort nichts steht, sage, dass du die Information nicht hast.",
+    "hi": " कंपनी की जानकारी के लिए केवल दिए गए अंशों का उपयोग करें; यदि उनमें नहीं है तो कहें कि आपके पास यह जानकारी नहीं है।",
+    "ja": " 会社の情報は提供された抜粋のみを使い、なければ情報がないと答えてください。",
+    "zh": " 公司信息只能使用提供的资料摘录；没有的话就说你没有这方面的信息。",
+}
+_NAME_TO_CODE = {"spanish": "es", "french": "fr", "portuguese": "pt", "italian": "it", "german": "de", "hindi": "hi",
+                 "japanese": "ja", "chinese": "zh", "english": "en"}
+
+
+def detect_language(text: str, system: str = "") -> str:
+    """Best-effort language code of the user's turn. A language forced by the persona/conversation
+    ('Always speak and reply in Spanish') wins over detection."""
+    m = re.search(r"Always speak and reply in ([A-Za-z]+)", system or "")
+    if m and m.group(1).lower() in _NAME_TO_CODE:
+        return _NAME_TO_CODE[m.group(1).lower()]
+    letters = [c for c in text if c.isalpha()]
+    if not letters:
+        return "en"
+    n = len(letters)
+    if sum("\u0900" <= c <= "\u097f" for c in letters) / n > 0.3:
+        return "hi"
+    if sum("\u3040" <= c <= "\u30ff" for c in letters) / n > 0.2:
+        return "ja"
+    if sum("\u4e00" <= c <= "\u9fff" for c in letters) / n > 0.3:
+        return "zh"
+    words = re.findall(r"[^\W\d_]+", text.lower())
+    if "¿" in text or "¡" in text or "ñ" in text.lower():
+        return "es"
+    scores = {code: sum(w in sw for w in words) for code, sw in _STOPWORDS.items()}
+    best = max((c for c in scores if c != "en"), key=lambda c: scores[c])
+    # non-English needs two real stop-word hits and must clearly beat English ("a new patient" is not Portuguese)
+    return best if scores[best] >= 2 and scores[best] > scores["en"] else "en"
+
+
+class GroundedLLM:
+    """Wraps any `stream(system, history, user)` LLM with the things small models need to stay on-script (measured with
+    backend/evals/run_evals.py): a one-line reminder appended to the *user* turn (small models weigh the last message far
+    more than the system prompt: voice brevity, answer only from the excerpts, reply in the user's language - written in
+    that language) and a trimmed history (the last few messages, long agent replies cut) so the knowledge excerpts and
+    the question stay in focus. The reminder is only sent to the model, never stored in the transcript."""
+
+    MAX_MSGS = int(os.environ.get("MIRAGE_HISTORY_MSGS", "8"))
+    ENABLED = os.environ.get("MIRAGE_GROUNDING", "1") != "0"
+
+    @staticmethod
+    def prepare(system: str, history: list[dict], user: str, max_msgs: int | None = None) -> tuple[str, list[dict], str]:
+        if not GroundedLLM.ENABLED:
+            return system, history, user
+        n = max_msgs or GroundedLLM.MAX_MSGS
+        hist = [{**m, "content": (m["content"][:400] + "...") if m.get("role") == "assistant" and len(m.get("content") or "") > 400
+                 else m.get("content")} for m in history[-n:]]
+        while hist and hist[0].get("role") != "user":  # never start with an orphan assistant message
+            hist = hist[1:]
+        lang = detect_language(user, system)
+        note = _NOTES.get(lang, _NOTES["en"])
+        if "Relevant knowledge" in system and os.environ.get("MIRAGE_NOTE_GROUND", "1") != "0":
+            note += _GROUND_NOTES.get(lang, _GROUND_NOTES["en"])
+        return system, hist, f"{user}\n\n({note})"
+
+    def __init__(self, inner):
+        self.inner = inner
+
+    def __getattr__(self, name):  # warmup(), model, ...
+        return getattr(self.inner, name)
+
+    async def stream(self, system: str, history: list[dict], user: str) -> AsyncIterator[str]:
+        system, history, user = self.prepare(system, history, user)
+        async for tok in self.inner.stream(system, history, user):
+            yield tok
+
+
+def ground_session(sess) -> None:
+    """Wrap the live session's LLM with GroundedLLM - real stack only (tests that inject fake providers are untouched)."""
+    from .pipeline import session as S
+
+    if not GroundedLLM.ENABLED or S._factory is not S.default_provider_factory:
+        return
+    sess.p = S.Providers(sess.p.stt, GroundedLLM(sess.p.llm), sess.p.tts)
 
 
 # ---------------- non-streaming completion ----------------

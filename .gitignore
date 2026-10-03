@@ -16,3 +16,4 @@ web/.next-*/
 demo_assets/
 backend/.venv-tts/
 backend/**/.venv-*/
+.venv-clone/

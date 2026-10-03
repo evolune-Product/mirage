@@ -6,7 +6,17 @@ from sqlmodel import Field, Session, SQLModel, create_engine
 
 import os
 
-engine = create_engine(os.environ.get("MIRAGE_DB_URL", "sqlite:///mirage.db"), connect_args={"check_same_thread": False})
+DB_URL = os.environ.get("MIRAGE_DB_URL", "sqlite:///mirage.db")
+
+
+def engine_kwargs(url: str) -> dict:
+    """check_same_thread is a sqlite-only option (psycopg rejects it); other databases get pooled, health-checked connections."""
+    if url.startswith("sqlite"):
+        return {"connect_args": {"check_same_thread": False}}
+    return {"pool_pre_ping": True, "pool_size": int(os.environ.get("MIRAGE_DB_POOL", "10")), "max_overflow": 10}
+
+
+engine = create_engine(DB_URL, **engine_kwargs(DB_URL))
 
 
 def now() -> datetime:
@@ -68,7 +78,12 @@ class Video(SQLModel, table=True):
 
 
 def init_db() -> None:
-    SQLModel.metadata.create_all(engine)
+    # Dev default: create missing tables. Production with Alembic: MIRAGE_AUTO_CREATE=0 and run `python -m app.migrate upgrade`.
+    if os.environ.get("MIRAGE_AUTO_CREATE", "1") != "0":
+        SQLModel.metadata.create_all(engine)
+    from . import migrate
+
+    migrate.warn_if_behind(engine)
 
 
 def get_session():

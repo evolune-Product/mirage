@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from sqlmodel import Session, select
 
 from ..auth import current_account
-from ..billing import record_usage
+from ..billing import authorize, estimate_video_seconds, record_usage, session_allowance, settle_usage
 from ..safety import moderate_or_raise
 from ..db import Account, Conversation, Persona, Replica, Video, get_session
 
@@ -52,10 +52,22 @@ class PersonaIn(BaseModel):
     knowledge: str = ""
 
 
+def _check_voice(s: Session, acc: Account, voice: str) -> None:
+    """tts_voice 'clone:<replica_id>' must be a ready cloned voice of the caller's own replica."""
+    if voice.startswith("clone"):
+        from ..voice_clone import service
+
+        try:
+            service.validate_persona_voice(s, acc.id, voice)
+        except service.CloneRefused as e:
+            raise HTTPException(e.status if e.status in (404, 409) else 422, str(e))
+
+
 @router.post("/personas")
 def create_persona(body: PersonaIn, acc: Account = Depends(current_account), s: Session = Depends(get_session)):
     if body.replica_id:
         owned(s, Replica, body.replica_id, acc)
+    _check_voice(s, acc, body.tts_voice)
     p = Persona(account_id=acc.id, **body.model_dump())
     s.add(p); s.commit(); s.refresh(p)
     return p
@@ -66,6 +78,7 @@ def update_persona(pid: str, body: PersonaIn, acc: Account = Depends(current_acc
     p = owned(s, Persona, pid, acc)
     if body.replica_id:
         owned(s, Replica, body.replica_id, acc)
+    _check_voice(s, acc, body.tts_voice)
     for k, v in body.model_dump().items():
         setattr(p, k, v)
     s.add(p); s.commit(); s.refresh(p)
@@ -91,8 +104,9 @@ class ConversationIn(BaseModel):
 @router.post("/conversations")
 def create_conversation(body: ConversationIn, acc: Account = Depends(current_account), s: Session = Depends(get_session)):
     owned(s, Persona, body.persona_id, acc)
-    if acc.credits_seconds <= 0:
-        raise HTTPException(402, "out of credits")
+    allowance = authorize(s, acc)  # 402 when out of credits (and overage is off / capped)
+    if body.max_seconds is None or body.max_seconds > allowance:
+        body.max_seconds = allowance  # a session can never run past what the account may spend
     c = Conversation(account_id=acc.id, persona_id=body.persona_id)
     c.room_url = f"/rooms/{c.id}"  # replaced by LiveKit room URL once media server is wired
     from ..convo_runtime import on_conversation_created
@@ -110,10 +124,9 @@ def end_conversation(cid: str, background: BackgroundTasks, acc: Account = Depen
     c.status, c.ended_at = "ended", datetime.now(timezone.utc)
     started = c.started_at.replace(tzinfo=timezone.utc) if c.started_at.tzinfo is None else c.started_at
     c.seconds_used = max(int((c.ended_at - started).total_seconds()), 1)
-    acc.credits_seconds = max(acc.credits_seconds - c.seconds_used, 0)
-    s.add_all([c, acc]); s.commit(); s.refresh(c)
-    record_usage(s, acc, c.seconds_used, f"conv:{c.id}")
-    s.refresh(c)  # record_usage commits, which expires c
+    s.add(c); s.commit(); s.refresh(c)
+    settle_usage(s, acc, c.seconds_used, f"conv:{c.id}")  # credits first, then capped overage; writes ledger rows
+    s.refresh(c)  # settle_usage commits, which expires c
     from ..convo_runtime import finalize_conversation
 
     background.add_task(finalize_conversation, c.id, "ended")  # summary -> memory, metrics, webhooks
@@ -137,6 +150,7 @@ def create_video(body: VideoIn, acc: Account = Depends(current_account), s: Sess
     if r.status != "ready":
         raise HTTPException(409, "replica not ready")
     moderate_or_raise(body.script)
+    authorize(s, acc, estimate_video_seconds(body.script))  # early 402; the worker bills when it starts the render
     v = Video(account_id=acc.id, **body.model_dump())
     s.add(v); s.commit(); s.refresh(v)
     return v

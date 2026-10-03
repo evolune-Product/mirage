@@ -17,3 +17,30 @@ up:
 	docker compose -f infra/docker-compose.yml up -d --build
 down:
 	docker compose -f infra/docker-compose.yml down
+
+# ---- platform: e2e / checks (append-only section) ----
+.PHONY: e2e e2e-smoke e2e-install check
+e2e-install:     ## install the e2e Playwright dependency (one time)
+	cd e2e && npm install --no-audit --no-fund
+e2e:             ## full end-to-end suite on isolated ports (needs Ollama, Kokoro models, lipsync env, founder footage); artifacts in e2e/artifacts
+	@test -d e2e/node_modules || $(MAKE) e2e-install
+	cd e2e && node run.mjs
+e2e-smoke:       ## fast e2e: backend + dashboard only (no GPU/models/Ollama): signup, personas, webhooks, all routes @1440/390
+	@test -d e2e/node_modules || $(MAKE) e2e-install
+	cd e2e && node run.mjs --smoke
+check:           ## tsc + backend unit tests + e2e smoke
+	cd web && npx tsc --noEmit -p .
+	cd backend && .venv/bin/python -m pytest -q
+	$(MAKE) e2e-smoke
+
+# ---- intelligence: conversation + retrieval + vision evals (append-only section, agent "brain") ----
+.PHONY: evals evals-quick evals-retrieval evals-vlm
+EVAL_MODELS ?= llama3.2:1b,llama3.2:3b
+evals:           ## full conversation-quality eval against local Ollama models (EVAL_MODELS=a,b); writes backend/evals/results/*.json
+	cd backend && .venv/bin/python -m evals.run_evals --models $(EVAL_MODELS) --prompt v2
+evals-quick:     ## 3 cases per suite, one model: smoke test of the harness
+	cd backend && .venv/bin/python -m evals.run_evals --models llama3.2:1b --limit 3
+evals-retrieval: ## hit@k / MRR for chunking + embedders + BM25 fusion (add ARGS=--combined for one index over all docs)
+	cd backend && .venv/bin/python -u -m evals.retrieval_eval $(ARGS)
+evals-vlm:       ## speed + OCR/scene accuracy of local vision models (VLMS=moondream,gemma3:4b)
+	cd backend && .venv/bin/python -m evals.vlm_eval --models $(or $(VLMS),moondream)

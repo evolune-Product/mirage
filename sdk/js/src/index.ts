@@ -135,6 +135,10 @@ export class Mirage {
 
   // ---- voices / languages ----
   voices(language?: string) { return this.req<{ languages: any[]; voices: any[] }>("GET", "/voices", undefined, true, language ? { language } : undefined); }
+  // ---- cloned voice (consent-gated: needs an active, voice-verified consent record for the replica) ----
+  createVoice(replica_id: string, force = false) { return this.req<ReplicaVoice>("POST", `/replicas/${replica_id}/voice`, { force }); }
+  getVoice(replica_id: string) { return this.req<ReplicaVoice>("GET", `/replicas/${replica_id}/voice`); }
+  deleteVoice(replica_id: string) { return this.req<{ deleted: boolean }>("DELETE", `/replicas/${replica_id}/voice`); }
 
   // ---- API keys ----
   createKey(name = "key") { return this.req<{ id: string; key: string; prefix: string }>("POST", "/keys", { name }); }
@@ -143,6 +147,19 @@ export class Mirage {
 
   // ---- analytics ----
   analytics(days = 30) { return this.req<any>("GET", "/analytics", undefined, true, { days }); }
+
+  // ---- creative: photo avatar, backgrounds, assets, creative videos ----
+  createPhotoReplica(name: string, photo_url: string, opts: { idle_seconds?: number; head_motion?: number } = {}) { return this.req<Replica>("POST", "/replicas/photo", { name, photo_url, ...opts }); }
+  getPhotoReplica(id: string) { return this.req<any>("GET", `/replicas/${id}/photo`); }
+  setBackground(id: string, spec: { type: "color" | "gradient" | "image" | "blur" | "none"; color?: string; colors?: string[]; angle?: number; asset_id?: string; blur?: number; radius?: number }) { return this.req<any>("POST", `/replicas/${id}/background`, spec); }
+  getBackground(id: string) { return this.req<any>("GET", `/replicas/${id}/background`); }
+  deleteBackground(id: string) { return this.req<any>("DELETE", `/replicas/${id}/background`); }
+  uploadAsset(file: Blob, kind: "background" | "logo" = "background", filename = "asset.png") { const f = new FormData(); f.append("file", file, filename); f.append("kind", kind); return this.req<any>("POST", "/creative/assets", f); }
+  listAssets() { return this.req<any[]>("GET", "/creative/assets"); }
+  creativeOptions() { return this.req<any>("GET", "/creative/options"); }
+  previewScenes(script: string) { return this.req<any>("POST", "/videos/scenes/preview", { script }); }
+  renderVideo(b: { replica_id: string; script: string; voice?: string; callback_url?: string; format?: "16:9" | "9:16" | "1:1"; resolution?: 480 | 720 | 1080; background?: any; captions?: { style: "classic" | "bold" | "minimal" | "karaoke"; accent?: string }; logo?: { asset_id: string; position?: string; scale?: number; opacity?: number }; transition?: "cut" | "fade" | "dip" | "slide"; transition_s?: number; scenes?: "paragraphs" | "single"; thumbnail?: boolean }) { return this.req<any>("POST", "/video-jobs/render", b); }
+  getVideoCreative(id: string) { return this.req<any>("GET", `/videos/${id}/creative`); }
 
   // ---- video features ----
   previewTemplate(script_template: string, variables: Record<string, string> = {}) { return this.req<{ variables: string[]; missing: string[]; rendered: string | null }>("POST", "/videos/template/preview", { script_template, variables }); }
@@ -155,4 +172,10 @@ export class Mirage {
   createShareLink(persona_id: string, o: { label?: string; max_seconds?: number; max_total_seconds?: number; max_sessions_per_hour?: number; max_sessions_per_ip_hour?: number; expires_in_hours?: number } = {}) { return this.req<{ token: string; url: string }>("POST", `/personas/${persona_id}/share`, o); }
   listShareLinks(persona_id: string) { return this.req<any[]>("GET", `/personas/${persona_id}/share`); }
   revokeShareLink(token: string) { return this.req("DELETE", `/share/${token}`); }
+}
+
+export interface ReplicaVoice {
+  replica_id: string; voice_id: string; status: "none" | "queued" | "processing" | "ready" | "failed" | "revoked";
+  cloned: true; engine?: string; similarity?: number | null; wer?: number | null; synth_rtf?: number | null;
+  reference_seconds?: number; error?: string | null; usable_in_conversations?: boolean; notice?: string;
 }

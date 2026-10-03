@@ -158,12 +158,22 @@ def default_webhook(url: str, payload: dict) -> str:
         return f"failed: {e}"
 
 
+def _default_voice() -> VoiceProvider:
+    """Kokoro preset voices, plus cloned voices ('clone[:replica_id]') with automatic fallback to Kokoro."""
+    try:
+        from .pipeline.providers_clone import make_default_voice
+
+        return make_default_voice()
+    except Exception:  # noqa: BLE001
+        return KokoroPresetVoice()
+
+
 @dataclass
 class Deps:
     fetch: Callable[[str, Path], None] = fetch_video
     extract_audio: Callable[[Path, Path], bool] = ffmpeg_extract_audio
     extract_face: Callable[[Path, Path], dict] = default_face_extractor
-    voice: VoiceProvider = field(default_factory=KokoroPresetVoice)
+    voice: VoiceProvider = field(default_factory=lambda: _default_voice())
     render: Callable[[Path, Path, Path, float], dict] = default_renderer
     webhook: Callable[[str, dict], str] = default_webhook
     render_fps: float = float(os.environ.get("MIRAGE_RENDER_FPS", 12))
@@ -234,6 +244,10 @@ def _prewarm_face(rid: str) -> None:
 
 
 def process_replica(rid: str, deps: Deps) -> bool:
+    from . import creative_jobs
+
+    if creative_jobs.is_photo_replica(rid):  # photo avatar: animate the photo instead of extracting a face from a video
+        return creative_jobs.process_photo_replica(rid, deps)
     t0, timings, notes = time.time(), {}, []
     with Session(db.engine) as s:
         rep = s.get(Replica, rid)
@@ -251,6 +265,9 @@ def process_replica(rid: str, deps: Deps) -> bool:
             if not face.get("ok"):
                 raise RuntimeError(face.get("error", "face extraction failed"))
             (d / "meta.json").write_text(json.dumps({"face": face, "has_voice_ref": has_voice, "notes": notes}))
+            from . import storage
+
+            storage.publish(d)  # no-op with the default local storage; uploads to S3 when MIRAGE_STORAGE=s3
         except Exception as e:  # noqa: BLE001 - surface any failure on the row
             err = f"{type(e).__name__}: {e}"
         rep.status = "error" if err else "ready"
@@ -262,6 +279,9 @@ def process_replica(rid: str, deps: Deps) -> bool:
         on_replica_finished(rid)
         if not err:
             _prewarm_face(rid)
+            from .voice_clone.service import auto_after_replica_ready
+
+            auto_after_replica_ready(rid)  # consented replicas get a cloned voice (best effort, skipped if not installed)
         return err is None
 
 
@@ -277,27 +297,52 @@ def process_video(vid: str, deps: Deps) -> bool:
             from .safety import moderate_or_raise
 
             moderate_or_raise(v.script)  # defense in depth: re-check even though the API checked at creation
+            from .billing import charge_video
+            from .db import Account as _Account
+
+            _acc = s.get(_Account, v.account_id)
+            if _acc is not None:
+                try:
+                    charge_video(s, _acc, vid, v.script)  # idempotent; HTTP 402 -> job error "out of credits"
+                except Exception as _e:  # noqa: BLE001
+                    raise RuntimeError(getattr(_e, "detail", None) or str(_e))
             rep = s.get(Replica, v.replica_id)
             if rep is None or rep.status != "ready":
                 raise RuntimeError("replica not ready")
             rd = replica_dir(rep.id)
             face = rd / "face.png"
+            from . import storage
+
+            storage.ensure_local(face); storage.ensure_local(rd / "voice_ref.wav")  # worker on another box: pull from the store
             if not face.exists():
                 raise RuntimeError("replica face asset missing")
             wav = DATA_DIR / "videos" / f"{vid}.wav"
             wav.parent.mkdir(parents=True, exist_ok=True)
-            ref = rd / "voice_ref.wav"
-            t = time.time()
-            deps.voice.synthesize(v.script, wav, ref if ref.exists() else None, meta.voice if meta else "default")
-            timings["tts"] = round(time.time() - t, 2)
-            t = time.time()
-            res = deps.render(face, wav, video_path(vid), deps.render_fps)
-            timings["render"] = round(time.time() - t, 2)
-            if not res.get("ok") or not video_path(vid).exists():
-                raise RuntimeError(res.get("error", "render failed"))
+            from . import creative_jobs
+
+            if creative_jobs.use_creative(s, vid, rep):  # Wav2Lip renderer: scenes, background, captions, formats (creative_jobs.py)
+                timings.update(creative_jobs.render_video(s, v, rep, meta, deps, video_path(vid), DATA_DIR))
+            else:
+                ref = rd / "voice_ref.wav"
+                t = time.time()
+                deps.voice.synthesize(v.script, wav, ref if ref.exists() else None, meta.voice if meta else "default")
+                timings["tts"] = round(time.time() - t, 2)
+                t = time.time()
+                res = deps.render(face, wav, video_path(vid), deps.render_fps)
+                timings["render"] = round(time.time() - t, 2)
+                if not res.get("ok") or not video_path(vid).exists():
+                    raise RuntimeError(res.get("error", "render failed"))
+            storage.publish(video_path(vid))
         except Exception as e:  # noqa: BLE001
             err = f"{type(e).__name__}: {e}"
         (DATA_DIR / "videos" / f"{vid}.wav").unlink(missing_ok=True)
+        if err:
+            try:
+                from .billing import refund_video
+
+                refund_video(s, vid)
+            except Exception:  # noqa: BLE001 - never mask the original error
+                pass
         v.status = "error" if err else "ready"
         v.output_url = None if err else f"{FILE_URL_PREFIX}/videos/{vid}.mp4"
         s.add(v); s.commit()
@@ -319,6 +364,9 @@ def run_once(deps: Optional[Deps] = None) -> Optional[tuple[str, str, bool]]:
     """Claim and process a single job. Returns (kind, id, ok) or None if the queue is empty."""
     ensure_tables(db.engine)
     deps = deps or Deps()
+    from . import metrics
+
+    metrics.worker_heartbeat()  # /health/deep + /metrics report how long ago a worker last polled
     with Session(db.engine) as s:
         job = claim_next(s)
     if job is None:

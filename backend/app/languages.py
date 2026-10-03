@@ -156,6 +156,10 @@ class LanguageTTS:
     async def synthesize(self, text: str, voice: str = "default"):
         lang = self._effective_language()
         explicit = voice not in ("default", "", None)
+        if explicit and str(voice).startswith("clone:") and self.base is not None:  # cloned voice: tell it the language
+            async for c in self.base.synthesize(text, voice if "@" in voice else f"{voice}@{lang}"):
+                yield c
+            return
         if explicit:
             kl = lang_for_voice(voice)
         else:

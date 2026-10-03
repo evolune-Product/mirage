@@ -120,10 +120,13 @@ def start(token: str, request: Request, s: Session = Depends(get_session)):
         raise HTTPException(429, "this link has reached its hourly session limit", headers={"Retry-After": "600"})
     if len([x for x in recent if x.ip == ip]) >= l.max_sessions_per_ip_hour:
         raise HTTPException(429, "too many sessions from your network; try again later", headers={"Retry-After": "600"})
-    if acc.credits_seconds <= 0:
+    from ..billing import session_allowance
+
+    host_allowance = session_allowance(s, acc)  # credits + capped overage headroom
+    if host_allowance <= 0:
         raise HTTPException(402, "the host is out of credits")
     remaining = l.max_total_seconds - l.used_seconds - _reserved(s, token)
-    allowed = min(l.max_seconds, remaining, acc.credits_seconds)
+    allowed = min(l.max_seconds, remaining, host_allowance)
     if allowed < 10:
         raise HTTPException(429, "this link has reached its usage limit")
     c = Conversation(account_id=acc.id, persona_id=p.id)
@@ -152,9 +155,12 @@ async def guest_stream(ws: WebSocket, token: str, cid: str = "", s: Session = De
     if not ss or ss.token != token or not acc:
         await ws.close(code=4404, reason="session not found")
         return
+    result = None
     try:
-        await stream(ws, cid, acc.api_key, s)  # the owner's key is only used server-side; the guest never sees it
+        result = await stream(ws, cid, acc.api_key, s)  # the owner's key is only used server-side; the guest never sees it
     finally:
+        if result == "dropped":  # connection lost without a goodbye: keep the session open so the page can reconnect and
+            return  # resume; the reaper ends it (and counts the usage) once the grace period passes without a reconnect
         try:
             s.expire_all()
             c = s.get(Conversation, cid)

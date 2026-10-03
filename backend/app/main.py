@@ -21,6 +21,10 @@ async def lifespan(_):
     tasks = []
     if _os.environ.get("MIRAGE_WEBHOOK_LOOP", "1") != "0":
         tasks = [asyncio.create_task(_wh.run_loop()), asyncio.create_task(_cr.reaper_loop())]
+        if _os.environ.get("MIRAGE_BILLING_LOOP", "1") != "0":
+            from . import billing as _bl
+
+            tasks.append(asyncio.create_task(_bl.reset_loop()))  # monthly plan lapse/expiry; idempotent
     if _os.environ.get("MIRAGE_PRELOAD", "1") != "0":
         async def _preload():  # background: the server accepts requests immediately; the first call is then warm
             try:
@@ -56,6 +60,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+from . import metrics as _metrics
+
+_metrics.install(app)  # request ids, JSON logs, /metrics, /health/deep (outermost middleware: added after CORS)
 app.mount("/static", StaticFiles(directory=os.path.join(os.path.dirname(__file__), "static")), name="static")
 app.include_router(resources.router, prefix="/v1")
 

@@ -114,8 +114,17 @@ def model_boxes(pts_arr: np.ndarray, H: int, W: int, mode: str = "lm", sigma: fl
     return boxes
 
 
-def _signature(src: Path, extra: Path | None) -> str:
-    h = hashlib.sha1(f"v{BASE_VERSION}|{IDLE_SECONDS}".encode())
+def variant_key(aspect: float | None, background: dict | None) -> str:
+    """'' for the default base; otherwise a short key of (crop aspect, background spec) -> separate cache dir."""
+    if aspect is None and not background:
+        return ""
+    import background as bgm
+
+    return hashlib.sha1(f"{aspect and round(aspect, 4)}|{bgm.spec_key(background)}".encode()).hexdigest()[:8]
+
+
+def _signature(src: Path, extra: Path | None, variant: str = "") -> str:
+    h = hashlib.sha1(f"v{BASE_VERSION}|{IDLE_SECONDS}|{variant}".encode())
     for p in (src, extra):
         if p and p.exists():
             st = p.stat()
@@ -123,15 +132,20 @@ def _signature(src: Path, extra: Path | None) -> str:
     return h.hexdigest()[:16]
 
 
-def prepare_base(rdir: Path, tracker=None, force: bool = False, win_s: float | None = None) -> Base:
+def prepare_base(rdir: Path, tracker=None, force: bool = False, win_s: float | None = None,
+                 aspect: float | None = None, background: dict | None = None) -> Base:
     """Build (or load from cache) the processed base clip for a replica directory containing source.mp4 and optionally
-    listening.mp4. Cached under <rdir>/base_v3/ (frames/*.png, base.mp4, meta.json)."""
+    listening.mp4. Cached under <rdir>/base_v3/ (frames/*.png, base.mp4, meta.json).
+    aspect: target crop aspect (w/h) for vertical/square outputs (default: source aspect);
+    background: background spec (see background.py), segmentation + replacement happen ONCE here and are cached, so live
+    frames and offline renders pay nothing per frame. Variants are cached in base_v3_<key>/."""
     rid = rdir.name
     src, listen = rdir / "source.mp4", rdir / "listening.mp4"
     if not src.exists() and not listen.exists():
         raise FileNotFoundError(f"no source video for replica {rid}")
-    sig = _signature(src, listen)
-    cache = rdir / "base_v3"
+    variant = variant_key(aspect, background)
+    sig = _signature(src, listen, variant)
+    cache = rdir / ("base_v3" + (f"_{variant}" if variant else ""))
     meta_p = cache / "meta.json"
     win = int((win_s or IDLE_SECONDS) * FPS)
     t0 = time.time()
@@ -193,12 +207,19 @@ def prepare_base(rdir: Path, tracker=None, force: bool = False, win_s: float | N
     # black bars / window edges that exist in the chosen window (layouts can change over a screen recording)
     cx0, cy0, cx1, cy1 = fl.content_rect(clip)
     bars = [r for r in ((0, 0, W, cy0), (0, cy1, W, H), (0, 0, cx0, H), (cx1, 0, W, H)) if r[2] > r[0] and r[3] > r[1]]
-    crop = fl.choose_crop(W, H, fb, list(overlays) + bars)
+    crop = fl.choose_crop(W, H, fb, list(overlays) + bars, aspect=aspect)
     meta = {"sig": sig, "n": len(clip), "crop": list(crop), "overlays": overlays, "listening": use_listen, "window_start": s,
             "jaw_mean": float(np.nanmean(jaw[s:e])), "jaw_global_mean": float(np.nanmean(jaw)),
             "tracker": "mediapipe" if tracker else "haar", "pre_crop": list(pre_crop) if pre_crop else None, "trimmed": trimmed, "src_wh": [W, H], "prep_s": round(time.time() - t0, 2)}
     cx0, cy0, cx1, cy1 = crop
     cropped = [f[cy0:cy1, cx0:cx1].copy() for f in clip]
+    if background:
+        import background as bgm
+
+        t_bg = time.time()
+        cropped = bgm.apply(cropped, background)
+        meta["background"] = bgm.normalize(background)
+        meta["bg_s"] = round(time.time() - t_bg, 2)
     cache.mkdir(parents=True, exist_ok=True)
     (cache / "frames").mkdir(exist_ok=True)
     for i, f in enumerate(cropped):

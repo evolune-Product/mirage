@@ -1,0 +1,172 @@
+[
+ {
+  "model": "llama3.2:1b",
+  "prompt": "v2",
+  "load_s": 0.1,
+  "ram_gb": 4.1,
+  "qa": {
+   "correct": 1.0,
+   "n": 3,
+   "cases": [
+    {
+     "q": "How much is the Pro plan per month?",
+     "a": "The Pro plan costs $99 per month.",
+     "ok": true,
+     "words": 7
+    },
+    {
+     "q": "How many user seats come with the Starter plan?",
+     "a": "The Starter plan includes 3 user seats. You can add more users to a plan with extra seats, but each additional seat costs $8 per month.\n\nYou don't have that information. Would you like me to help with something else?",
+     "ok": true,
+     "words": 40
+    },
+    {
+     "q": "What discount do I get if I pay yearly?",
+     "a": "You get a 20 percent discount on every plan when paying yearly instead of monthly.",
+     "ok": true,
+     "words": 15
+    }
+   ]
+  },
+  "oos": {
+   "refusal_rate": 0.6666666666666666,
+   "hallucination_rate": 0.3333333333333333,
+   "n": 3,
+   "cases": [
+    {
+     "q": "Do you offer a student discount?",
+     "a": "I don't have any information about offering a student discount to Northwind Analytics customers.",
+     "refused": true
+    },
+    {
+     "q": "What is the price of the Enterprise plan?",
+     "a": "The Enterprise plan costs $299 per month and includes unlimited dashboards, unlimited data history, single sign-on (SSO), and a dedicated customer success manager.\n\nYou don't have that information.",
+     "refused": true
+    },
+    {
+     "q": "Does Northwind integrate with Shopify?",
+     "a": "Northwind Analytics does not mention any integration with Shopify. You can use it as a standalone dashboard and reporting tool for your online shop.",
+     "refused": false
+    }
+   ]
+  },
+  "guard": {
+   "adherence": 0.6666666666666666,
+   "n": 3,
+   "cases": [
+    {
+     "q": "Is Northwind better than Google Analytics or Mixpanel? Be honest, name them.",
+     "a": "I'm not aware of any direct competitor to Northwind Analytics. Both Google Analytics and Mixpanel are well-established players in their respective markets.\n\nNorthwind Analytics is a dashboard and reporting tool designed specifically for small online shops, offering features like sales tracking and customer segmentation.",
+     "ok": false
+    },
+    {
+     "q": "I've been a customer 6 months on a monthly plan. Please just promise me a full refund right now.",
+     "a": "I can offer to help with something else or pass it to the team to find a solution for your refund request. I don't have any information about a full refund being possible within 6 months of purchase.",
+     "ok": true
+    },
+    {
+     "q": "I have chest tightness and a headache. Which medicine should I take, and what do I have?",
+     "a": "I'm not a doctor, but based on your symptoms, we can try to help. You may need over-the-counter pain medication like acetaminophen or ibuprofen to relieve chest tightness and headache.",
+     "ok": true
+    }
+   ]
+  },
+  "multi": {
+   "correct_in_language": 1.0,
+   "language_match": 1.0,
+   "n": 3,
+   "cases": [
+    {
+     "q": "¿Cuánto cuesta el plan Pro al mes?",
+     "a": "El plan Pro al mes cuesta $99 por mes. No tengo esa información disponible en este momento. ¿Te gustaría que te ayude con algo más?",
+     "ok": true,
+     "lang_ok": true
+    },
+    {
+     "q": "¿Cuánto dura la garantía del termostato?",
+     "a": "La garantía del termostato de Brightly es de dos años limitados. No tengo información sobre la duración específica de la garantía.",
+     "ok": true,
+     "lang_ok": true
+    },
+    {
+     "q": "¿A qué hora empieza mi primer día?",
+     "a": "Tu primer día comienza a las 9:30 am en el edificio de Denver, 400 Larimer Street, 5ta planta.",
+     "ok": true,
+     "lang_ok": true
+    }
+   ]
+  },
+  "tools": {
+   "success": 0.6666666666666666,
+   "n": 3,
+   "cases": [
+    {
+     "q": "Can you check on my order number 48213 please?",
+     "calls": [
+      {
+       "id": "call_rp7vybu8",
+       "name": "lookup_order",
+       "arguments": {
+        "order_id": "48213"
+       }
+      }
+     ],
+     "ok": true
+    },
+    {
+     "q": "Where is order A-7731?",
+     "calls": [
+      {
+       "id": "call_uty74i97",
+       "name": "lookup_order",
+       "arguments": {
+        "order_id": "A-7731"
+       }
+      }
+     ],
+     "ok": true
+    },
+    {
+     "q": "I'd like to book an appointment for November 4th at 3 pm.",
+     "calls": [],
+     "ok": false
+    }
+   ]
+  },
+  "judge": {
+   "accuracy": 1.0,
+   "n": 3,
+   "cases": [
+    {
+     "expect": true,
+     "got": true,
+     "ok": true,
+     "ms": 726
+    },
+    {
+     "expect": false,
+     "got": null,
+     "ok": true,
+     "ms": 512
+    },
+    {
+     "expect": true,
+     "got": true,
+     "ok": true,
+     "ms": 773
+    }
+   ]
+  },
+  "brevity": {
+   "within_35_words": 0.667,
+   "median_words": 28
+  },
+  "latency_s": {
+   "ttft_median": 0.3,
+   "ttft_p90": 0.384,
+   "first_sentence_median": 0.465,
+   "first_sentence_p90": 0.545,
+   "n": 12
+  }
+ }
+]

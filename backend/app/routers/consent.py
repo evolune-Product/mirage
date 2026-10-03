@@ -14,7 +14,7 @@ from sqlmodel import Session, select
 from ..auth import current_account
 from ..db import Account, Replica, get_session
 from ..models_billing import AuditLog, ConsentChallenge, ConsentRecord
-from .. import consent_verify, settings, voiceprint
+from .. import consent_verify, settings, storage, voiceprint
 from ..models_safety import ConsentVerification
 from ..safety import (CODE_WORDS, audit, code_words_present, enforce_rate_limit, has_consent, moderate,
                       phrase_score)
@@ -127,6 +127,7 @@ async def record_consent_audio(rid: str, challenge_id: str = Form(...), speaker_
         raise HTTPException(422, "could not process the recording") from e
     transcript, pscore, voice_score, voice_status = res
     sha = consent_verify.sha256_file(path)
+    storage.publish(path)  # durable copy of the evidence (no-op on local storage)
     ch.used = True
     rec.transcript, rec.audio_sha256 = transcript, sha
     rec.audio_url = f"consent://{rid}/{rec.id}"
@@ -156,6 +157,10 @@ def _verify(rep: Replica, ch: ConsentChallenge, path: Path):
         raise HTTPException(422, {"error": "phrase_mismatch",
                                   "message": "the recording does not match the challenge phrase and code words",
                                   "heard": transcript, "score": round(pscore, 2)})
+    from .. import creative_jobs
+
+    if creative_jobs.is_photo_replica(rep.id):  # photo replica: there is no voice in the training material to compare against
+        return transcript, pscore, None, "skipped"
     mode = settings.voice_match_mode()
     if mode == "off":
         return transcript, pscore, None, "skipped"
@@ -188,7 +193,7 @@ def consent_audio_file(rid: str, consent_id: str, acc: Account = Depends(current
     _own_replica(s, rid, acc)
     v = s.exec(select(ConsentVerification).where(ConsentVerification.consent_id == consent_id,
                                                  ConsentVerification.replica_id == rid)).first()
-    if not v or not Path(v.audio_path).exists():
+    if not v or not (storage.ensure_local(Path(v.audio_path)) if Path(v.audio_path).is_absolute() else Path(v.audio_path).exists()):
         raise HTTPException(404, "not found")
     return FileResponse(v.audio_path, headers={"Cache-Control": "no-store"})
 
@@ -219,6 +224,9 @@ def revoke_consent(rid: str, acc: Account = Depends(current_account), s: Session
         rec.revoked = True; s.add(rec); n += 1
     s.commit()
     audit(s, acc.id, "consent.revoked", rid, f"{n} records")
+    from ..voice_clone.service import delete_voice
+
+    delete_voice(s, rid, acc.id, reason="revoked")  # a cloned voice must not outlive its consent
     return {"revoked": n}
 
 

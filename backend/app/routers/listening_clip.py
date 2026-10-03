@@ -16,7 +16,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlmodel import Session
 
-from .. import jobs
+from .. import jobs, storage
 from ..auth import current_account
 from ..db import Account, Replica, get_session, now
 from ..models_face import ListeningClip
@@ -96,6 +96,7 @@ def set_listening_clip(rid: str, body: ListeningIn, acc: Account = Depends(curre
         tmp.unlink(missing_ok=True)
         raise HTTPException(422, str(e))
     tmp.replace(dest)
+    storage.publish(dest)
     row = s.get(ListeningClip, rid) or ListeningClip(replica_id=rid)
     row.source_url, row.bytes, row.updated_at = body.url, dest.stat().st_size, now()
     row.duration_s, row.width, row.height, row.fps = info["duration_s"], info["width"], info["height"], info["fps"]
@@ -121,6 +122,7 @@ def delete_listening_clip(rid: str, acc: Account = Depends(current_account), s: 
     if row:
         s.delete(row); s.commit()
     clip_path(rid).unlink(missing_ok=True)
+    storage.remove(clip_path(rid))
     _notify_lipsync(rid)
     if not existed:
         raise HTTPException(404, "no listening clip for this replica")

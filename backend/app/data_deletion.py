@@ -6,7 +6,7 @@ from pathlib import Path
 from sqlalchemy import delete, select, update
 from sqlmodel import Session, SQLModel
 
-from . import jobs, settings
+from . import jobs, settings, storage
 from .db import Account, Persona, Replica, Video
 from .models_safety import DataDeletion
 
@@ -40,7 +40,9 @@ def delete_replica(s: Session, acc: Account, rid: str) -> int:
     files = 0
     for vid in vids:
         files += _rm(jobs.video_path(vid))
+        storage.remove(jobs.video_path(vid))
     files += _rm(jobs.replica_dir(rid))
+    storage.remove(jobs.replica_dir(rid)); storage.remove(settings.data_dir() / "consent" / rid)
     files += _rm(settings.data_dir() / "consent" / rid)
     s.exec(update(Persona).where(Persona.replica_id == rid, Persona.account_id == acc.id).values(replica_id=None))
     _purge_cols(s, {"replica_id": [rid], "video_id": vids, "ref_id": [rid] + vids}, skip={"persona", "replica", "video"})
@@ -60,8 +62,10 @@ def delete_account(s: Session, acc: Account) -> int:
     files = 0
     for vid in vids:
         files += _rm(jobs.video_path(vid))
+        storage.remove(jobs.video_path(vid))
     for rid in rids:
         files += _rm(jobs.replica_dir(rid)) + _rm(settings.data_dir() / "consent" / rid)
+        storage.remove(jobs.replica_dir(rid)); storage.remove(settings.data_dir() / "consent" / rid)
     cids = []
     for name, t in SQLModel.metadata.tables.items():
         if name == "conversation":

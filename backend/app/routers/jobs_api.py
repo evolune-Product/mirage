@@ -6,7 +6,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from sqlmodel import Session
 
-from .. import db, jobs, settings, signing
+from .. import db, jobs, settings, signing, storage
 from ..auth import current_account
 from ..db import Account, Replica, Video, get_session
 from ..models_extra import JobClaim, VideoMeta, ensure_tables
@@ -70,16 +70,16 @@ def _require_signature(request: Request, path: str) -> None:
 @router.get("/files/videos/{name}")
 def get_video_file(name: str, request: Request):
     vid = name.removesuffix(".mp4")
-    if not _ID.match(vid) or not jobs.video_path(vid).exists():
+    if not _ID.match(vid) or not storage.exists(jobs.video_path(vid)):
         raise HTTPException(404, "not found")
     _require_signature(request, f"/v1/files/videos/{name}")
-    return FileResponse(jobs.video_path(vid), media_type="video/mp4", headers={"Cache-Control": "private, max-age=300"})
+    return storage.serve(jobs.video_path(vid), "video/mp4", {"Cache-Control": "private, max-age=300"})
 
 
 @router.get("/files/replicas/{rid}/face.png")
 def get_face(rid: str, request: Request):
     p = jobs.replica_dir(rid) / "face.png"
-    if not _ID.match(rid) or not p.exists():
+    if not _ID.match(rid) or not storage.exists(p):
         raise HTTPException(404, "not found")
     _require_signature(request, f"/v1/files/replicas/{rid}/face.png")
-    return FileResponse(p, media_type="image/png", headers={"Cache-Control": "private, max-age=300"})
+    return storage.serve(p, "image/png", {"Cache-Control": "private, max-age=300"})

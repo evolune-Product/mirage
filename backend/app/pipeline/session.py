@@ -11,8 +11,9 @@ from collections import deque
 from dataclasses import dataclass
 from typing import Any, Awaitable, Callable
 
+from .echo import EchoReference
 from .local import sentences
-from .turn_taking import SileroVAD, TurnTaker, make_vad, utterance_complete
+from .turn_taking import EnergyVAD, SileroVAD, TurnTaker, make_vad, utterance_complete
 
 log = logging.getLogger("mirage.voice")
 if os.environ.get("MIRAGE_LOG_VOICE"):  # per-turn stage timings on stderr
@@ -25,6 +26,8 @@ BARGE_IN_FRAMES_SILERO = int(os.environ.get("MIRAGE_BARGE_IN_FRAMES", "5"))  # S
 BARGE_MIN_RMS = float(os.environ.get("MIRAGE_BARGE_MIN_RMS", "600"))  # echo at -18 dB is ~330 rms; speech ~1500-3000
 SPEECH_ON = 0.5  # Silero speech-probability threshold normally ...
 SPEECH_ON_WHILE_AGENT_TALKS = float(os.environ.get("MIRAGE_BARGE_IN_PROB", "0.7"))  # ... stricter during agent audio (echo)
+BARGE_IN_FRAMES_ECHO = int(os.environ.get("MIRAGE_BARGE_IN_FRAMES_ECHO", "8"))  # longer proof of speech when echo is suspected
+ECHO_TAIL_FRAMES = 25  # keep gating this long after the last agent audio should have finished playing
 PAUSE_MS = int(os.environ.get("MIRAGE_PAUSE_MS", "150"))  # silence after which STT starts speculatively
 MIN_COMMIT_MS = int(os.environ.get("MIRAGE_MIN_COMMIT_MS", "350"))  # earliest early end-of-turn (complete sentence)
 EARLY_COMMIT = os.environ.get("MIRAGE_EARLY_COMMIT", "1") != "0"
@@ -56,7 +59,7 @@ def default_provider_factory(llm_spec: str = "") -> Providers:
             pass
         _singletons["stt"] = stt
     if "tts" not in _singletons:
-        _singletons["tts"] = _make_tts()
+        _singletons["tts"] = _with_clone(_make_tts())
     model = os.environ.get("MIRAGE_LLM") or (llm_spec.split("/", 1)[-1] if llm_spec else "llama3.2:1b")
     return Providers(_singletons["stt"], OllamaLLM(model), _singletons["tts"])
 
@@ -79,6 +82,16 @@ def _make_tts():
             if mode == "mlx":
                 raise
     return _warm(KokoroTTS())
+
+
+def _with_clone(tts):
+    """Optional cloned-voice routing (voice ids 'clone:<replica_id>'); pass-through for every other voice."""
+    try:
+        from .providers_clone import wrap_tts
+
+        return wrap_tts(tts)
+    except Exception:  # noqa: BLE001 - cloning is optional, never break the default TTS
+        return tts
 
 
 def _warm(tts):
@@ -119,7 +132,7 @@ MIN_RENDER_S = 0.3  # shorter audio is zero-padded for rendering (server errors 
 LIPSYNC_MAX_FAILS = 3  # consecutive render failures before the face is switched off for the call
 
 
-async def warmup_providers(p, system: str = "") -> None:
+async def warmup_providers(p, system: str = "", voice: str = "") -> None:
     """Pre-pay one-time costs (LLM load + system-prompt prefill, TTS sidecar start). Call on the *unwrapped* providers
     before the first turn. Never raises."""
     async def llm():
@@ -132,7 +145,12 @@ async def warmup_providers(p, system: str = "") -> None:
         if st:
             await st()
 
-    await asyncio.gather(llm(), tts(), return_exceptions=True)
+    async def clone():
+        w = getattr(p.tts, "warm_voice", None)  # cloned persona voice: start the sidecar + speaker conditioning early
+        if w and voice.startswith("clone"):
+            await w(voice)
+
+    await asyncio.gather(llm(), tts(), clone(), return_exceptions=True)
 
 
 class Session:
@@ -144,7 +162,12 @@ class Session:
         self.p, self.system, self.voice = providers, system, voice
         self.retriever = retriever  # query -> context text from the persona's knowledge base
         self.lipsync = lipsync  # optional LipsyncClient-like: render(pcm24k) -> {'fps','frames'}
-        self.send_json, self.send_bytes = send_json, send_bytes
+        self.send_json = send_json
+        self._send_bytes_raw = send_bytes
+        self.echo = EchoReference()  # what we sent the client to play; lets us tell echo from the user (pipeline/echo.py)
+        self.ptt = False  # push-to-talk: the client marks turn boundaries, VAD/echo gating are bypassed
+        self._ptt_down = False
+        self._echo_flag = False
         # Silero VAD for the real local stack (or when forced via MIRAGE_VAD); unit tests that inject fake providers
         # keep the dependency-free energy gate.
         vad = make_vad(energy_threshold=energy_threshold) if (_factory is default_provider_factory or os.environ.get("MIRAGE_VAD")) else None
@@ -165,6 +188,10 @@ class Session:
         self._jobs: set[asyncio.Task] = set()
         self.started = time.monotonic()
         self.metrics: dict[str, float] = {}
+
+    async def send_bytes(self, b: bytes) -> None:
+        self.echo.add_agent(b)
+        await self._send_bytes_raw(b)
 
     # ---- helpers ----
     @property
@@ -191,8 +218,20 @@ class Session:
             await self._frame(buf[i:i + FRAME_BYTES])
 
     async def _frame(self, f: bytes) -> None:
+        self.echo.push_mic(EnergyVAD.rms(f))
+        if self.ptt:
+            if self._ptt_down:
+                self._utt.append(f)
+            return
         was_speaking = self.turn.s.speaking
-        talking = self.agent_speaking  # echo-robust barge-in: stricter + louder speech needed while the agent talks
+        audible = self.echo.agent_audible(ECHO_TAIL_FRAMES)  # may still be playing on the client after we finished sending
+        talking = self.agent_speaking or audible  # echo-robust barge-in: stricter + louder speech needed while the agent talks
+        explained = False
+        if talking:
+            explained, _ = self.echo.assess()
+            explained = explained or (self._silero and self.echo.warming())  # (energy-VAD unit tests have no echo physics)
+            await self._echo_report()
+        self.turn.suppress = explained  # mic frame follows the agent's own audio and is not louder than that explains
         self.turn.on = SPEECH_ON_WHILE_AGENT_TALKS if talking else SPEECH_ON
         self.turn.min_rms = BARGE_MIN_RMS if talking and self._silero else 0.0
         ev = self.turn.push(f, FRAME_MS)
@@ -207,8 +246,9 @@ class Session:
                 self._drop_spec()  # user resumed after a pause: the speculative transcript is stale
             self._utt.append(f)
             self._speech_run += 1
-            if self.agent_speaking and self._speech_run >= self.barge_frames:
-                await self.interrupt()
+            need = BARGE_IN_FRAMES_ECHO if self._echo_flag and self.barge_frames < BARGE_IN_FRAMES_ECHO else self.barge_frames
+            if talking and self._speech_run >= need:
+                await self._barge()
         else:
             self._speech_run = 0
             if self.turn.s.speaking or ev == "end_of_turn":
@@ -245,8 +285,52 @@ class Session:
             return False
         return self.turn.s.silence_ms >= MIN_COMMIT_MS and utterance_complete(sp.result())
 
+    async def _echo_report(self) -> None:
+        """Tell the client (additive `echo` event, on change only) when the agent's voice keeps coming back in the mic."""
+        e = self.echo
+        if e.voiced_frames >= 75:
+            flag = e.suspect_fraction >= 0.5
+            if flag != self._echo_flag:
+                self._echo_flag = flag
+                await self.send_json({"type": "echo", "suspected": flag, "score": round(e.score, 2)})
+            if e.voiced_frames >= 200:
+                e.reset_stats()
+
+    async def _barge(self) -> None:
+        """The user is talking over the agent: stop the reply if one is still being produced, and always tell the client
+        to drop whatever it has buffered (it may be playing audio long after the server finished sending)."""
+        if self.agent_speaking:
+            await self.interrupt()
+        else:
+            self.echo.clear()
+            await self.send_json({"type": "interrupted"})
+
+    # ---- push-to-talk (client decides when the user is talking) ----
+    def set_ptt(self, on: bool) -> None:
+        self.ptt = bool(on)
+        self._ptt_down, self._utt = False, []
+        self.turn.force_end()
+
+    async def ptt_down(self) -> None:
+        if not self.ptt or self._ptt_down:
+            return
+        if self.agent_speaking or self.echo.agent_audible(ECHO_TAIL_FRAMES):
+            await self._barge()
+        self._ptt_down, self._utt = True, []
+        await self.send_json({"type": "speech_start"})
+
+    async def ptt_up(self) -> None:
+        if not (self.ptt and self._ptt_down):
+            return
+        self._ptt_down = False
+        pcm, self._utt = b"".join(self._utt), []
+        self.metrics["eot_at"] = time.monotonic()
+        if len(pcm) * 1000 // 32 >= MIN_UTTERANCE_MS:
+            await self._start_turn(pcm, None)
+
     async def interrupt(self) -> None:
         """Barge-in: cancel in-flight reply (LLM stream + TTS)."""
+        self.echo.clear()
         t = self.reply_task
         if t and not t.done():
             t.cancel()

@@ -217,6 +217,275 @@ def current_plan(session: Session, account_id: str) -> Plan:
     return PLANS.get(row.plan if row else "free", PLANS["free"])
 
 
+# ---------------- metering, allowances, overage (billing enforcement) ----------------
+# Units: credit balance = seconds (Account.credits_seconds). Overage money = MILLICENTS (1/1000 cent) so per-second
+# pricing never drifts. Plans are one-time monthly purchases (see /billing/plans), so "reset" = lapse + expiry at
+# the calendar-month boundary (UTC), never a proration.
+import math
+from datetime import datetime, timedelta, timezone
+
+from .models_platform import BillingSettings, OverageCharge
+
+WORDS_PER_SECOND = 2.5  # ~150 wpm narration: how a video script is converted to billable seconds
+MIN_VIDEO_SECONDS = 2
+
+
+def period_key(now: datetime | None = None) -> str:
+    n = now or datetime.now(timezone.utc)
+    return f"{n.year:04d}-{n.month:02d}"
+
+
+def period_bounds(period: str) -> tuple[datetime, datetime]:
+    y, m = int(period[:4]), int(period[5:7])
+    start = datetime(y, m, 1, tzinfo=timezone.utc)
+    end = datetime(y + (m == 12), 1 if m == 12 else m + 1, 1, tzinfo=timezone.utc)
+    return start, end
+
+
+def overage_millicents(seconds: int, cents_per_min: int) -> int:
+    """Exact per-second price, rounded UP to a whole millicent: ceil(seconds * cents_per_min * 1000 / 60)."""
+    if seconds <= 0 or cents_per_min <= 0:
+        return 0
+    return -(-(seconds * cents_per_min * 1000) // 60)
+
+
+def overage_seconds_for(millicents: int, cents_per_min: int) -> int:
+    """How many whole seconds `millicents` buys (floor), the inverse of overage_millicents."""
+    if millicents <= 0 or cents_per_min <= 0:
+        return 0
+    return (millicents * 60) // (cents_per_min * 1000)
+
+
+def estimate_video_seconds(script: str) -> int:
+    return max(math.ceil(len((script or "").split()) / WORDS_PER_SECOND), MIN_VIDEO_SECONDS)
+
+
+def get_overage_settings(session: Session, account_id: str) -> BillingSettings:
+    return session.get(BillingSettings, account_id) or BillingSettings(account_id=account_id)
+
+
+def set_overage(session: Session, account_id: str, enabled: bool, cap_cents: int | None = None) -> BillingSettings:
+    """Raises ValueError when the request makes no sense (free plan, missing/zero cap)."""
+    plan = current_plan(session, account_id)
+    row = session.get(BillingSettings, account_id) or BillingSettings(account_id=account_id)
+    cap = row.overage_cap_cents if cap_cents is None else cap_cents
+    if cap < 0:
+        raise ValueError("cap must be >= 0")
+    if enabled:
+        if plan.overage_cents_per_min <= 0:
+            raise ValueError(f"the {plan.name} plan has no overage rate; upgrade to enable overage")
+        if cap <= 0:
+            raise ValueError("a monthly spend cap greater than 0 is required to enable overage")
+    row.overage_enabled, row.overage_cap_cents = enabled, cap
+    row.updated_at = datetime.now(timezone.utc)
+    session.add(row); session.commit(); session.refresh(row)
+    return row
+
+
+def overage_spent_millicents(session: Session, account_id: str, period: str) -> int:
+    rows = session.exec(select(OverageCharge.amount_millicents).where(
+        OverageCharge.account_id == account_id, OverageCharge.period == period)).all()
+    return int(sum(rows))
+
+
+def overage_headroom_seconds(session: Session, acc: Account, now: datetime | None = None) -> int:
+    """Seconds of overage still purchasable this month (0 when disabled / free plan / cap reached)."""
+    st = session.get(BillingSettings, acc.id)
+    plan = current_plan(session, acc.id)
+    if not st or not st.overage_enabled or plan.overage_cents_per_min <= 0 or st.overage_cap_cents <= 0:
+        return 0
+    left = st.overage_cap_cents * 1000 - overage_spent_millicents(session, acc.id, period_key(now))
+    return overage_seconds_for(left, plan.overage_cents_per_min)
+
+
+def session_allowance(session: Session, acc: Account, now: datetime | None = None) -> int:
+    """Seconds this account may consume right now: credit balance + remaining overage headroom."""
+    return max(acc.credits_seconds, 0) + overage_headroom_seconds(session, acc, now)
+
+
+def authorize(session: Session, acc: Account, needed_seconds: int = 1) -> int:
+    """HTTP 402 unless the account can cover `needed_seconds`; returns the allowance. Never mutates."""
+    from fastapi import HTTPException
+
+    allowance = session_allowance(session, acc)
+    if allowance < max(needed_seconds, 1):
+        st = session.get(BillingSettings, acc.id)
+        if st and st.overage_enabled and acc.credits_seconds <= 0 and overage_headroom_seconds(session, acc) <= 0:
+            raise HTTPException(402, "overage spend cap reached for this month")
+        raise HTTPException(402, "out of credits")
+    return allowance
+
+
+def settle_usage(session: Session, acc: Account, seconds: int, ref: str, note: str = "") -> dict:
+    """End-of-session accounting, idempotent on `ref` (e.g. 'conv:<id>', 'video:<id>'): spend credits first, meter
+    the rest as overage (only if enabled and within this month's cap). Writes the usage ledger row (-seconds) and,
+    for the overage part, an OverageCharge. Returns the split."""
+    seconds = max(int(seconds), 0)
+    if session.exec(select(LedgerEntry).where(LedgerEntry.ref == ref)).first() is not None:
+        return {"duplicate": True, "from_credits": 0, "overage_seconds": 0, "overage_millicents": 0}
+    from_credits = min(max(acc.credits_seconds, 0), seconds)
+    over = seconds - from_credits
+    charged_s, charged_mc = 0, 0
+    if over > 0:
+        plan = current_plan(session, acc.id)
+        head = overage_headroom_seconds(session, acc)
+        charged_s = min(over, head)
+        if charged_s > 0:
+            period = period_key()
+            st = get_overage_settings(session, acc.id)
+            mc = overage_millicents(charged_s, plan.overage_cents_per_min)
+            mc = min(mc, st.overage_cap_cents * 1000 - overage_spent_millicents(session, acc.id, period))  # never bill past the cap
+            charged_mc = max(mc, 0)
+            if charged_mc:
+                session.add(OverageCharge(account_id=acc.id, period=period, seconds=charged_s, amount_millicents=charged_mc,
+                                          rate_cents_per_min=plan.overage_cents_per_min, ref=ref))
+    acc.credits_seconds = max(acc.credits_seconds - from_credits, 0)
+    session.add(acc)
+    detail = f"credits={from_credits};overage_s={charged_s};overage_mc={charged_mc}" + (f";{note}" if note else "")
+    try:
+        session.add(LedgerEntry(account_id=acc.id, kind="usage", seconds=-seconds, ref=ref, note=detail))
+        session.commit()
+    except IntegrityError:
+        session.rollback()
+        return {"duplicate": True, "from_credits": 0, "overage_seconds": 0, "overage_millicents": 0}
+    return {"duplicate": False, "from_credits": from_credits, "overage_seconds": charged_s, "overage_millicents": charged_mc,
+            "unbilled_seconds": over - charged_s}
+
+
+def charge_video(session: Session, acc: Account, video_id: str, script: str) -> dict:
+    """Bill a video when a worker starts it (so every creation path, including bulk, is covered). Raises HTTP 402
+    if the account cannot cover the estimated narration length; idempotent per video."""
+    est = estimate_video_seconds(script)
+    ref = f"video:{video_id}"
+    if session.exec(select(LedgerEntry).where(LedgerEntry.ref == ref)).first() is not None:
+        return {"duplicate": True}
+    authorize(session, acc, est)
+    out = settle_usage(session, acc, est, ref, f"video_est_s={est}")
+    out["estimated_seconds"] = est
+    return out
+
+
+def refund_video(session: Session, video_id: str) -> bool:
+    """Undo charge_video for a render that failed. Returns False if nothing to refund / already refunded."""
+    ref = f"video:{video_id}"
+    row = session.exec(select(LedgerEntry).where(LedgerEntry.ref == ref)).first()
+    if row is None or session.exec(select(LedgerEntry).where(LedgerEntry.ref == f"refund:{video_id}")).first() is not None:
+        return False
+    parts = dict(p.split("=", 1) for p in row.note.split(";") if "=" in p)
+    back = int(parts.get("credits", 0))
+    acc = session.get(Account, row.account_id)
+    if acc is None:
+        return False
+    acc.credits_seconds += back
+    session.add(acc)
+    oc = session.exec(select(OverageCharge).where(OverageCharge.ref == ref)).first()
+    if oc is not None:
+        session.delete(oc)
+    session.add(LedgerEntry(account_id=acc.id, kind="adjust", seconds=-row.seconds, ref=f"refund:{video_id}", note="video render failed: refund"))
+    session.commit()
+    return True
+
+
+# ---------------- reports ----------------
+def usage_report(session: Session, acc: Account, period: str | None = None) -> dict:
+    period = period or period_key()
+    start, end = period_bounds(period)
+    rows = session.exec(select(LedgerEntry).where(LedgerEntry.account_id == acc.id, LedgerEntry.created_at >= start,
+                                                  LedgerEntry.created_at < end)).all()
+    by = {"conversation": 0, "video": 0, "other": 0}
+    daily: dict[str, int] = {}
+    granted = 0
+    for r in rows:
+        if r.kind == "usage":
+            k = "conversation" if (r.ref or "").startswith("conv:") else "video" if (r.ref or "").startswith("video:") else "other"
+            by[k] += -r.seconds
+            d = r.created_at.strftime("%Y-%m-%d")
+            daily[d] = daily.get(d, 0) + -r.seconds
+        elif r.kind in ("topup", "plan", "grant"):
+            granted += r.seconds
+    plan = current_plan(session, acc.id)
+    st = get_overage_settings(session, acc.id)
+    spent = overage_spent_millicents(session, acc.id, period)
+    charges = session.exec(select(OverageCharge).where(OverageCharge.account_id == acc.id, OverageCharge.period == period)).all()
+    return {
+        "period": period, "period_start": start.isoformat(), "period_end": end.isoformat(),
+        "plan": {"id": plan.id, "name": plan.name, "included_minutes": plan.included_minutes, "overage_cents_per_min": plan.overage_cents_per_min},
+        "credits_seconds": acc.credits_seconds,
+        "granted_seconds": granted,
+        "used_seconds": sum(by.values()), "used_seconds_by_kind": by,
+        "daily_used_seconds": [{"date": d, "seconds": v} for d, v in sorted(daily.items())],
+        "overage": {"enabled": st.overage_enabled, "cap_cents": st.overage_cap_cents, "rate_cents_per_min": plan.overage_cents_per_min,
+                    "seconds": sum(c.seconds for c in charges), "spent_cents": round(spent / 1000, 3),
+                    "remaining_cents": round(max(st.overage_cap_cents * 1000 - spent, 0) / 1000, 3) if st.overage_enabled else 0,
+                    "headroom_seconds": overage_headroom_seconds(session, acc) if period == period_key() else 0},
+    }
+
+
+# ---------------- monthly reset job ----------------
+def run_monthly_reset(session: Session, now: datetime | None = None) -> dict:
+    """Idempotent; safe to run hourly or from cron. For every account on a paid plan purchased in an EARLIER calendar month:
+    1. the unused part of that month's plan allowance expires (plan credits are consumed before top-ups):
+       expire = min(balance, max(plan_seconds_granted_in_purchase_month - seconds_used_in_that_month, 0)),
+    2. the plan lapses to 'free' (plans are one-time monthly purchases, there is no auto-renewal),
+    3. overage settings are switched off when the new plan has no overage rate (the cap itself resets via the period key).
+    Top-up credits never expire. No proration: purchase day inside the month does not change the allowance."""
+    n = now or datetime.now(timezone.utc)
+    this = period_key(n)
+    out = {"period": this, "lapsed": 0, "expired_seconds": 0, "accounts": []}
+    for ap in session.exec(select(AccountPlan).where(AccountPlan.plan != "free")).all():
+        bought = ap.updated_at if ap.updated_at.tzinfo else ap.updated_at.replace(tzinfo=timezone.utc)
+        pk = period_key(bought)
+        if pk >= this:
+            continue
+        start, end = period_bounds(pk)
+        rows = session.exec(select(LedgerEntry).where(LedgerEntry.account_id == ap.account_id, LedgerEntry.created_at >= start,
+                                                      LedgerEntry.created_at < end)).all()
+        granted = sum(r.seconds for r in rows if r.kind == "plan")
+        used = sum(-r.seconds for r in rows if r.kind == "usage")
+        acc = session.get(Account, ap.account_id)
+        expire = 0
+        if acc is not None:
+            expire = min(max(acc.credits_seconds, 0), max(granted - used, 0))
+            if expire > 0:
+                try:
+                    session.add(LedgerEntry(account_id=acc.id, kind="expire", seconds=-expire, ref=f"expire:{acc.id}:{pk}",
+                                            note=f"unused {ap.plan} allowance from {pk} expired"))
+                    session.flush()
+                    acc.credits_seconds -= expire
+                    session.add(acc)
+                except IntegrityError:  # already expired by an earlier run
+                    session.rollback()
+                    expire = 0
+        old = ap.plan
+        ap.plan, ap.updated_at = "free", n
+        session.add(ap)
+        st = session.get(BillingSettings, ap.account_id)
+        if st and st.overage_enabled:
+            st.overage_enabled = False
+            session.add(st)
+        session.commit()
+        out["lapsed"] += 1; out["expired_seconds"] += expire
+        out["accounts"].append({"account_id": ap.account_id, "plan": old, "expired_seconds": expire})
+    return out
+
+
+async def reset_loop(interval: float = 3600.0) -> None:
+    """API-process background task (disable with MIRAGE_BILLING_LOOP=0). Idempotent, so extra processes are harmless."""
+    import asyncio
+
+    from . import db
+
+    while True:
+        try:
+            def _run():
+                with Session(db.engine) as s:
+                    return run_monthly_reset(s)
+            await asyncio.to_thread(_run)
+        except Exception:  # noqa: BLE001
+            pass
+        await asyncio.sleep(interval)
+
+
 # ---------------- margin calculator ----------------
 def margin(price_per_min: float, cost_per_min: float) -> dict:
     gross = price_per_min - cost_per_min

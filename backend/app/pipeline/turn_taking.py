@@ -130,6 +130,7 @@ class TurnTaker:
         self.threshold = energy_threshold
         self.vad = vad if vad is not None else EnergyVAD(energy_threshold)
         self.on, self.off = on_threshold, off_threshold
+        self.suppress = False  # session sets this while a mic frame is explained by agent echo: never counts as speech
         self.min_rms = 0.0  # when > 0, speech must also be at least this loud (session raises it while the agent talks)
         self._buf = b""
         self._in_speech = False  # VAD hysteresis state (distinct from s.speaking, which spans short pauses)
@@ -144,7 +145,7 @@ class TurnTaker:
         n = self.vad.chunk_samples * 2
         if not n:  # energy VAD: whole frame
             self.speech_prob = self.vad.prob(frame)
-            if self.min_rms and EnergyVAD.rms(frame) < self.min_rms:
+            if self.suppress or (self.min_rms and EnergyVAD.rms(frame) < self.min_rms):
                 self.speech_prob = 0.0
             self._in_speech = self.speech_prob >= 0.5
             return self._in_speech
@@ -152,7 +153,7 @@ class TurnTaker:
         while len(self._buf) >= n:
             chunk, self._buf = self._buf[:n], self._buf[n:]
             p = self.vad.prob(chunk)
-            if self.min_rms and EnergyVAD.rms(chunk) < self.min_rms:
+            if self.suppress or (self.min_rms and EnergyVAD.rms(chunk) < self.min_rms):
                 p = 0.0  # too quiet to be the user over the agent's own (echoed) voice
             self.speech_prob = p
             self._in_speech = p >= (self.off if self._in_speech else self.on)

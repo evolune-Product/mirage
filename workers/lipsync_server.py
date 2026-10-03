@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import base64
 import collections
+import json
 import logging
 import os
 import sys
@@ -35,6 +36,7 @@ from scipy.signal import resample_poly
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
+import background as bg  # noqa: E402
 import face_render as fr  # noqa: E402
 import facelib as fl  # noqa: E402
 
@@ -90,7 +92,17 @@ def engine():
 
 def _clip_mtime(rid: str) -> float:
     d = DATA / "replicas" / rid
-    return max((p.stat().st_mtime for p in (d / "source.mp4", d / "listening.mp4") if p.exists()), default=0.0)
+    return max((p.stat().st_mtime for p in (d / "source.mp4", d / "listening.mp4", d / "background.json") if p.exists()), default=0.0)
+
+
+def background_for(rid: str) -> dict | None:
+    """Per-replica background spec written by the backend (POST /v1/replicas/{id}/background). Applied once to the base clip."""
+    p = DATA / "replicas" / rid / "background.json"
+    try:
+        return bg.normalize(json.loads(p.read_text())) if p.exists() else None
+    except Exception as e:  # noqa: BLE001 - a broken file must not take the replica down
+        log.warning("ignoring bad background.json for %s: %s", rid, e)
+        return None
 
 
 def base_for(rid: str) -> fr.Base:
@@ -103,7 +115,7 @@ def base_for(rid: str) -> fr.Base:
         raise HTTPException(404, f"no source video for replica {rid}")
     t0 = time.time()
     try:
-        b = fr.prepare_base(rdir, tracker())
+        b = fr.prepare_base(rdir, tracker(), background=background_for(rid))
     except ValueError as e:
         raise HTTPException(422, str(e))
     b.info["_mtime"] = mt
@@ -152,7 +164,8 @@ def health():
             "torch": torch.__version__, "cuda": torch.cuda.is_available(), "mps": bool(torch.backends.mps.is_available()),
             "tracker": "mediapipe" if _tracker else ("haar" if _tracker_tried else "not loaded yet"), "load_s": _load_s,
             "replicas": {k: {"frames": len(v.frames), "crop": v.info.get("crop"), "listening": v.info.get("listening"),
-                             "tracker": v.info.get("tracker"), "overlays": len(v.info.get("overlays", []))}
+                             "tracker": v.info.get("tracker"), "overlays": len(v.info.get("overlays", [])),
+                             "background": (v.info.get("background") or {}).get("type")}
                          for k, v in _bases.items()},
             "perf": agg}
 

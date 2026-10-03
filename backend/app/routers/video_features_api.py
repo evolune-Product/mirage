@@ -5,10 +5,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 
-from .. import convo_runtime as cr, db, languages, llm_backends as lb
+from .. import convo_runtime as cr, creative_options as co, db, languages, llm_backends as lb
 from ..auth import current_account
 from ..db import Account, Replica, Video, get_session
-from ..models_extra import VideoMeta, ensure_tables
+from ..models_creative import VideoOptions
+from ..models_extra import JobClaim, VideoMeta, ensure_tables
 from ..models_features import VideoBatch, VideoBatchItem
 from ..safety import moderate_or_raise
 from .. import webhooks
@@ -70,9 +71,23 @@ class BulkIn(BaseModel):
     rows: list[dict[str, str]] = Field(min_length=1, max_length=MAX_ROWS)
     voice: str = "default"
     callback_url: str | None = None
+    options: dict | None = None  # creative render options (format, background, captions, ...), see POST /video-jobs/render
 
 
-def _make_videos(s: Session, acc: Account, rep: Replica, kind: str, items: list[dict], voice_for, callback_url) -> VideoBatch:
+def _creative_options(s: Session, acc: Account, raw: dict | None) -> dict | None:
+    """Validate creative options (None when not given -> legacy renderer). Assets must belong to the caller."""
+    if not raw:
+        return None
+    from .photo_replica import resolver_for
+
+    try:
+        return co.validate_options(raw, resolver_for(s, acc))
+    except (ValueError, TypeError) as e:
+        raise HTTPException(422, f"options: {e}")
+
+
+def _make_videos(s: Session, acc: Account, rep: Replica, kind: str, items: list[dict], voice_for, callback_url,
+                 options: dict | None = None) -> VideoBatch:
     ensure_tables(db.engine)
     cr.ensure()
     batch = VideoBatch(account_id=acc.id, kind=kind, replica_id=rep.id, total=len(items))
@@ -81,6 +96,8 @@ def _make_videos(s: Session, acc: Account, rep: Replica, kind: str, items: list[
         v = Video(account_id=acc.id, replica_id=rep.id, script=it["script"])
         s.add(v); s.flush()
         s.add(VideoMeta(video_id=v.id, callback_url=callback_url, voice=voice_for(it)))
+        if options:
+            s.add(VideoOptions(video_id=v.id, options=json.dumps(options)))
         s.add(VideoBatchItem(video_id=v.id, batch_id=batch.id, row_index=i, language=it.get("language", ""),
                              variables=json.dumps(it.get("variables", {})), rendered_script=it["script"]))
     s.commit(); s.refresh(batch)
@@ -110,6 +127,7 @@ def bulk(body: BulkIn, acc: Account = Depends(current_account), s: Session = Dep
     """One video per row; every {{variable}} in the template must be present in every row (422 lists the bad rows)."""
     rep = _replica(s, body.replica_id, acc)
     _check_url(body.callback_url)
+    opts = _creative_options(s, acc, body.options)
     try:
         moderate_or_raise(cr.render(body.script_template, {v: "friend" for v in cr.template_vars(body.script_template)}))
     except HTTPException:
@@ -127,7 +145,7 @@ def bulk(body: BulkIn, acc: Account = Depends(current_account), s: Session = Dep
         items.append({"script": script, "variables": row})
     if problems:
         raise HTTPException(422, {"error": "invalid rows", "rows": problems[:50]})
-    b = _make_videos(s, acc, rep, "bulk", items, lambda _: body.voice, body.callback_url)
+    b = _make_videos(s, acc, rep, "bulk", items, lambda _: body.voice, body.callback_url, opts)
     return _batch_out(s, b)
 
 
@@ -139,6 +157,7 @@ class TranslateIn(BaseModel):
     voices: dict[str, str] = {}  # optional per-language Kokoro voice override
     include_original: bool = False
     callback_url: str | None = None
+    options: dict | None = None
 
 
 _translator_model = None
@@ -165,6 +184,7 @@ async def translate(body: TranslateIn, acc: Account = Depends(current_account), 
     that language's voice. NOTE: lip movement is audio-driven, so each variant is re-rendered (not re-timed)."""
     rep = _replica(s, body.replica_id, acc)
     _check_url(body.callback_url)
+    opts = _creative_options(s, acc, body.options)
     moderate_or_raise(body.script)
     try:
         src = languages.normalize_language(body.source_language)
@@ -195,7 +215,7 @@ async def translate(body: TranslateIn, acc: Account = Depends(current_account), 
     if not items:
         raise HTTPException(422, "nothing to render (target languages equal the source language)")
     voice_for = lambda it: body.voices.get(it["language"]) or languages.default_voice(it["language"])  # noqa: E731
-    b = _make_videos(s, acc, rep, "translate", items, voice_for, body.callback_url)
+    b = _make_videos(s, acc, rep, "translate", items, voice_for, body.callback_url, opts)
     return _batch_out(s, b)
 
 
@@ -213,3 +233,100 @@ def get_batch(bid: str, acc: Account = Depends(current_account), s: Session = De
     if not b or b.account_id != acc.id:
         raise HTTPException(404, "batch not found")
     return _batch_out(s, b)
+
+
+# ---------------------------------------------------------------- creative renders (format, background, captions, logo, scenes)
+class RenderIn(BaseModel):
+    replica_id: str
+    script: str = Field(min_length=1, max_length=MAX_SCRIPT)
+    voice: str = "default"
+    callback_url: str | None = None
+    format: str = "16:9"                       # 16:9 | 9:16 | 1:1 (face-aware crop)
+    resolution: int = 720                      # short side: 480 | 720 | 1080
+    background: dict | None = None             # {type: color|gradient|image|blur, ...}; default = the replica's background
+    captions: dict | None = None               # {style: classic|bold|minimal|karaoke, accent: "#ffd23f"}
+    logo: dict | None = None                   # {asset_id, position, scale, opacity}
+    transition: str = "fade"                   # cut | fade | dip | slide (between scenes)
+    transition_s: float = 0.4
+    scenes: str = "paragraphs"                 # 'paragraphs': blank-line separated paragraphs become scenes; 'single'
+    thumbnail: bool = True
+    restore: str = "none"                      # 'sr' = Real-ESRGAN mouth sharpening (slower)
+
+
+def _scene_split(script: str) -> list[str]:
+    import sys
+    from pathlib import Path
+
+    sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "workers"))
+    from scenes import split_scenes  # pure python
+
+    return split_scenes(script)
+
+
+class ScenePreviewIn(BaseModel):
+    script: str = Field(min_length=1, max_length=MAX_SCRIPT)
+
+
+@router.post("/videos/scenes/preview")
+def scenes_preview(body: ScenePreviewIn, acc: Account = Depends(current_account)):
+    """How a script is split into scenes (blank-line paragraphs), with a rough duration estimate (~15 characters per second)."""
+    try:
+        sc = _scene_split(body.script)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    return {"scenes": [{"index": i + 1, "text": t, "chars": len(t), "est_seconds": round(len(t) / 15.0, 1)} for i, t in enumerate(sc)]}
+
+
+@router.post("/video-jobs/render")
+def render_video_job(body: RenderIn, acc: Account = Depends(current_account), s: Session = Depends(get_session)):
+    """Queue a creative video: Wav2Lip lip-sync on the replica (video or photo avatar) with custom background, burned-in
+    captions, output format, logo watermark, thumbnail and multi-scene transitions. Progress per scene: GET /v1/jobs/video/{id}
+    -> detail.progress {stage, scene, scenes, percent}; extras: GET /v1/videos/{id}/creative."""
+    ensure_tables(db.engine)
+    rep = _replica(s, body.replica_id, acc)
+    _check_url(body.callback_url)
+    moderate_or_raise(body.script)
+    raw = body.model_dump(include={"format", "resolution", "background", "captions", "logo", "transition", "transition_s", "scenes",
+                                   "thumbnail", "restore"})
+    opts = _creative_options(s, acc, raw)
+    try:
+        if opts["scenes"] == "paragraphs":
+            n_scenes = len(_scene_split(body.script))
+        else:
+            n_scenes = 1
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    v = Video(account_id=acc.id, replica_id=rep.id, script=body.script)
+    s.add(v); s.flush()
+    s.add(VideoMeta(video_id=v.id, callback_url=body.callback_url, voice=body.voice))
+    s.add(VideoOptions(video_id=v.id, options=json.dumps(opts)))
+    s.commit(); s.refresh(v)
+    return {**v.model_dump(), "scenes": n_scenes, "options": _public_options(opts)}
+
+
+def _public_options(opts: dict) -> dict:
+    out = json.loads(json.dumps(opts))
+    for k in ("background", "logo"):
+        if out.get(k):
+            out[k].pop("path", None)
+    return out
+
+
+@router.get("/videos/{vid}/creative")
+def video_creative(vid: str, acc: Account = Depends(current_account), s: Session = Depends(get_session)):
+    """Render options, live progress and extra outputs (thumbnail, captions .srt) of a creative video."""
+    ensure_tables(db.engine)
+    v = s.get(Video, vid)
+    if not v or v.account_id != acc.id:
+        raise HTTPException(404, "video not found")
+    row = s.get(VideoOptions, vid)
+    c = s.get(JobClaim, f"video:{vid}")
+    detail = json.loads(c.detail) if c and c.detail else {}
+    from .. import jobs
+
+    p = jobs.video_path(vid)
+    return {"video_id": vid, "status": v.status, "options": _public_options(json.loads(row.options)) if row else None,
+            "progress": detail.get("progress") or ({"stage": "done", "percent": 100} if v.status == "ready" else None),
+            "thumbnail_url": f"/v1/files/creative/videos/{vid}/thumbnail.jpg" if p.with_suffix(".jpg").exists() else None,
+            "captions_url": f"/v1/files/creative/videos/{vid}/captions.srt" if p.with_suffix(".srt").exists() else None,
+            "output_url": v.output_url}

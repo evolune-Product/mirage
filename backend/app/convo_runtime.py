@@ -434,14 +434,13 @@ async def finalize_conversation(cid: str, reason: str = "ended") -> bool:
 
 def end_conversation_row(s: DB, acc, c) -> None:
     """Same accounting as POST /conversations/{id}/end (seconds, credits, usage ledger)."""
-    from .billing import record_usage
+    from .billing import settle_usage
 
     c.status, c.ended_at = "ended", datetime.now(timezone.utc)
     started = utc(c.started_at)
     c.seconds_used = c.seconds_used or max(int((c.ended_at - started).total_seconds()), 1)  # WS meter wins if present
-    acc.credits_seconds = max(acc.credits_seconds - c.seconds_used, 0)
-    s.add_all([c, acc]); s.commit(); s.refresh(c)
-    record_usage(s, acc, c.seconds_used, f"conv:{c.id}")
+    s.add(c); s.commit(); s.refresh(c)
+    settle_usage(s, acc, c.seconds_used, f"conv:{c.id}")  # credits first, then capped overage (billing.py)
     s.refresh(c)
     count_share_usage(s, c)
 

@@ -2,7 +2,7 @@ import hashlib
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-from fastapi import Depends, Header, HTTPException
+from fastapi import Depends, Header, HTTPException, Request
 from sqlmodel import Session, select
 
 from .db import Account, get_session
@@ -32,9 +32,13 @@ def account_for_key(session: Session, key: str) -> Optional[Account]:
 
 
 def current_account(
-    x_api_key: str = Header(...), session: Session = Depends(get_session)
+    request: Request, x_api_key: str = Header(...), x_workspace: Optional[str] = Header(None), session: Session = Depends(get_session)
 ) -> Account:
     acc = account_for_key(session, x_api_key)
     if not acc:
         raise HTTPException(401, "invalid api key")
+    if x_workspace and not request.url.path.startswith("/v1/workspaces"):
+        from . import workspaces  # opt-in team mode: run as the workspace owner, limited by the caller's role
+
+        return workspaces.resolve(session, acc, x_workspace, request.method, request.url.path)
     return acc

@@ -43,6 +43,31 @@ class Mirage:
     def list_replicas(self) -> list: return self._req("GET", "/replicas")
     def get_replica(self, rid: str) -> dict: return self._req("GET", f"/replicas/{rid}")
 
+    # creative: photo avatar, backgrounds, assets, creative videos
+    def create_photo_replica(self, name: str, photo_url: str, idle_seconds: float = 4.0, head_motion: float = 1.0) -> dict:
+        """Replica from ONE portrait photo (closed mouth, open eyes). Needs consent like any replica; animation takes minutes once."""
+        return self._req("POST", "/replicas/photo", json={"name": name, "photo_url": photo_url, "idle_seconds": idle_seconds, "head_motion": head_motion})
+    def get_photo_replica(self, rid: str) -> dict: return self._req("GET", f"/replicas/{rid}/photo")
+    def set_background(self, rid: str, **spec) -> dict:
+        """e.g. set_background(rid, type="color", color="#101828") | type="gradient", colors=[..] | type="image", asset_id=.. | type="blur"."""
+        return self._req("POST", f"/replicas/{rid}/background", json=spec)
+    def get_background(self, rid: str) -> dict: return self._req("GET", f"/replicas/{rid}/background")
+    def delete_background(self, rid: str) -> dict: return self._req("DELETE", f"/replicas/{rid}/background")
+    def upload_asset(self, path: str, kind: str = "background") -> dict:
+        with open(path, "rb") as f:
+            return self._req("POST", "/creative/assets", files={"file": (path.split("/")[-1], f)}, data={"kind": kind})
+    def list_assets(self) -> list: return self._req("GET", "/creative/assets")
+    def delete_asset(self, asset_id: str) -> dict: return self._req("DELETE", f"/creative/assets/{asset_id}")
+    def creative_options(self) -> dict: return self._req("GET", "/creative/options")
+    def preview_scenes(self, script: str) -> dict: return self._req("POST", "/videos/scenes/preview", json={"script": script})
+    def render_video(self, replica_id: str, script: str, **options) -> dict:
+        """Creative video: format ("16:9"|"9:16"|"1:1"), resolution, background, captions={"style":..}, logo={"asset_id":..},
+        transition, scenes, voice, callback_url. Blank-line separated paragraphs become scenes."""
+        return self._req("POST", "/video-jobs/render", json={"replica_id": replica_id, "script": script, **options})
+    def video_creative(self, vid: str) -> dict:
+        """Options, progress {stage, scene, scenes, percent}, thumbnail_url, captions_url of a creative video."""
+        return self._req("GET", f"/videos/{vid}/creative")
+
     # consent
     def consent_challenge(self, rid: str) -> dict: return self._req("POST", f"/replicas/{rid}/consent/challenge")
     def record_consent(self, rid: str, challenge_id: str, speaker_name: str, audio_url: str, transcript: str) -> dict:
@@ -148,6 +173,22 @@ class Mirage:
     def voices(self, language: Optional[str] = None) -> dict:
         return self._req("GET", "/voices", params={"language": language} if language else None)
     def languages(self) -> list: return self._req("GET", "/languages")
+
+    # ---- cloned voice (consent-gated: needs an active, voice-verified consent record for the replica) ----
+    def create_voice(self, replica_id: str, force: bool = False) -> dict:
+        """Start cloning the replica's voice (async). Poll get_voice() until status == 'ready'. 403 without consent."""
+        return self._req("POST", f"/replicas/{replica_id}/voice", json={"force": force})
+    def get_voice(self, replica_id: str) -> dict:
+        """status none|queued|processing|ready|failed|revoked, similarity, wer, synth_rtf, usable_in_conversations."""
+        return self._req("GET", f"/replicas/{replica_id}/voice")
+    def delete_voice(self, replica_id: str) -> dict: return self._req("DELETE", f"/replicas/{replica_id}/voice")
+    def preview_voice(self, replica_id: str, text: str, language: str = "en") -> bytes:
+        """WAV bytes of the cloned voice saying `text`."""
+        r = self._http.post(f"/v1/replicas/{replica_id}/voice/preview", headers={"x-api-key": self.api_key},
+                            json={"text": text, "language": language}, timeout=300)
+        if r.status_code >= 400:
+            raise MirageError(r.status_code, r.text)
+        return r.content
 
     # ---- API keys ----
     def create_key(self, name: str = "key") -> dict: return self._req("POST", "/keys", json={"name": name})

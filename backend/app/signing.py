@@ -7,7 +7,8 @@ from urllib.parse import quote
 
 from . import settings
 
-_FILE_RE = re.compile(r"^/v1/files/(videos/[a-z]+_[0-9a-f]+\.mp4|replicas/[a-z]+_[0-9a-f]+/face\.png)$")
+_FILE_RE = re.compile(r"^/v1/files/(videos/[a-z]+_[0-9a-f]+\.mp4|replicas/[a-z]+_[0-9a-f]+/face\.png"
+                      r"|creative/replicas/[a-z]+_[0-9a-f]+/idle\.mp4|creative/videos/[a-z]+_[0-9a-f]+/(thumbnail\.jpg|captions\.srt))$")
 
 
 def valid_file_path(path: str) -> bool:

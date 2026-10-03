@@ -1,7 +1,10 @@
+import re
+
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
+from .. import billing
 from ..auth import current_account
 from ..billing import (PLANS, TOPUPS, ProviderNotConfigured, SignatureError, apply_credit,
                        current_plan, get_provider, resolve_sku)
@@ -23,7 +26,45 @@ def plans():
 
 @router.get("/billing/status")
 def status(acc: Account = Depends(current_account), s: Session = Depends(get_session)):
-    return {"plan": current_plan(s, acc.id).__dict__, "credits_seconds": acc.credits_seconds}
+    st = billing.get_overage_settings(s, acc.id)
+    return {"plan": current_plan(s, acc.id).__dict__, "credits_seconds": acc.credits_seconds,
+            "period": billing.period_key(),
+            "overage": {"enabled": st.overage_enabled, "cap_cents": st.overage_cap_cents,
+                        "headroom_seconds": billing.overage_headroom_seconds(s, acc)},
+            "available_seconds": billing.session_allowance(s, acc)}
+
+
+class OverageIn(BaseModel):
+    enabled: bool
+    cap_cents: int | None = None  # monthly spend cap in US cents; required (> 0) to enable
+
+
+@router.get("/billing/overage")
+def get_overage(acc: Account = Depends(current_account), s: Session = Depends(get_session)):
+    plan = current_plan(s, acc.id)
+    st = billing.get_overage_settings(s, acc.id)
+    spent = billing.overage_spent_millicents(s, acc.id, billing.period_key())
+    return {"enabled": st.overage_enabled, "cap_cents": st.overage_cap_cents, "rate_cents_per_min": plan.overage_cents_per_min,
+            "available": plan.overage_cents_per_min > 0, "spent_cents": round(spent / 1000, 3),
+            "headroom_seconds": billing.overage_headroom_seconds(s, acc), "period": billing.period_key()}
+
+
+@router.put("/billing/overage")
+def put_overage(body: OverageIn, acc: Account = Depends(current_account), s: Session = Depends(get_session)):
+    try:
+        st = billing.set_overage(s, acc.id, body.enabled, body.cap_cents)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    audit(s, acc.id, "billing.overage_set", "", f"enabled={st.overage_enabled} cap_cents={st.overage_cap_cents}")
+    return get_overage(acc, s)
+
+
+@router.get("/usage/report")
+def usage_report(period: str | None = None, acc: Account = Depends(current_account), s: Session = Depends(get_session)):
+    """Usage for one calendar month (UTC): seconds by kind, daily series, overage seconds + spend + cap."""
+    if period is not None and not re.fullmatch(r"\d{4}-(0[1-9]|1[0-2])", period):
+        raise HTTPException(422, "period must be YYYY-MM")
+    return billing.usage_report(s, acc, period)
 
 
 class CheckoutIn(BaseModel):
