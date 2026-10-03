@@ -13,3 +13,4 @@ workers/.venv-face/
 workers/MuseTalk/
 *.whl
 web/.next-*/
+demo_assets/

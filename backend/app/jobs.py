@@ -220,6 +220,19 @@ def _finish(s: Session, kind: str, ref: str, error: Optional[str], detail: dict)
 # ---------------- processors ----------------
 
 
+def _prewarm_face(rid: str) -> None:
+    """Best-effort: ask the live lip-sync service to prepare this replica's base clip now (face tracking, overlay
+    crop; ~8 s cold) so the first conversation does not pay for it. Never fails the replica job."""
+    import urllib.request
+
+    url = os.environ.get("MIRAGE_LIPSYNC_URL", "http://localhost:8100").rstrip("/")
+    try:
+        req = urllib.request.Request(f"{url}/prepare/{rid}", method="POST", data=b"")
+        urllib.request.urlopen(req, timeout=120).read()
+    except Exception:  # noqa: BLE001 - service may be down or not configured
+        pass
+
+
 def process_replica(rid: str, deps: Deps) -> bool:
     t0, timings, notes = time.time(), {}, []
     with Session(db.engine) as s:
@@ -247,6 +260,8 @@ def process_replica(rid: str, deps: Deps) -> bool:
         from .events import on_replica_finished
 
         on_replica_finished(rid)
+        if not err:
+            _prewarm_face(rid)
         return err is None
 
 
