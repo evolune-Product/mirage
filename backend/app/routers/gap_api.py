@@ -54,8 +54,9 @@ def add_url(pid: str, body: UrlIn, acc: Account = Depends(current_account), s: S
         doc = kb.ingest(pid, body.title or title, text, "url", session=s)
     except ValueError as e:
         raise HTTPException(422, str(e))
+    out = {**doc.model_dump(), "url": body.url.strip()}
     s.add(KnowledgeSource(doc_id=doc.id, persona_id=pid, url=body.url.strip(), content_hash=h)); s.commit()
-    return {**doc.model_dump(), "url": body.url.strip()}
+    return out
 
 
 @router.post("/personas/{pid}/knowledge/{did}/refresh")
@@ -271,7 +272,7 @@ def clear_schedule(token: str, acc: Account = Depends(current_account), s: Sessi
 
 
 def _ics_escape(t: str) -> str:
-    return t.replace("\\", "\\\\").replace(";", "\;").replace(",", "\\,").replace("\n", "\\n")
+    return t.replace("\\", "\\\\").replace(";", "\\;").replace(",", "\\,").replace("\n", "\\n")
 
 
 def schedule_ics(x: ShareSchedule, url: str, title: str) -> str:
