@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Eye, BrainCircuit, FileText, Link2, Loader2, Plus, Save, Target, Trash2, Wrench, ShieldAlert, Cpu, Send, Brain, ExternalLink, Play } from "lucide-react";
 import { api, errText, Perception, Persona, Replica, PersonaConfig, Objective, Guardrail, Tool, ShareLink, Voice, Lang, fmtDate, fmtDur } from "@/lib/api";
 import EmbedTab from "@/components/persona/EmbedTab";
+import { KnowledgeUrl, VoiceExtras, ScheduleCall } from "@/components/persona/GapPanels";
 import { Callout } from "@/components/kit";
 import { Modal, Tabs, Section, Toggle, Field, Badge, CopyButton, ConfirmDialog, Spinner, toast } from "@/components/ui";
 
@@ -43,6 +44,7 @@ function Knowledge({ pid }: { pid: string }) {
         <textarea className="input h-24" placeholder="Paste the text..." required value={text} onChange={(e) => setText(e.target.value)} />
         <button className="btn" disabled={busy}>{busy ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}Add document</button>
       </form>
+      <KnowledgeUrl pid={pid} onChanged={load} />
     </div>
   );
 }
@@ -184,6 +186,7 @@ function Share({ pid }: { pid: string }) {
         </div>
         <button className="btn" disabled={busy}>{busy ? <Spinner size={14} /> : <Plus size={14} />}Create link</button>
       </form>
+      <ScheduleCall pid={pid} />
       <ConfirmDialog open={!!revoke} title="Revoke this link?" body="Guests who open it will see an error and running sessions end at their next check. This cannot be undone." confirmLabel="Revoke" onClose={() => setRevoke(null)}
         onConfirm={async () => { try { await api(`/v1/share/${revoke!.token}`, { method: "DELETE" }); setRevoke(null); toast.success("Link revoked."); load(); } catch (x) { toast.error(x); } }} />
     </div>
@@ -375,6 +378,7 @@ export default function PersonaDrawer({ open, onClose, persona, reps, onSaved }:
           <Toggle checked={cfg.memory_enabled} onChange={(v) => setCfg({ ...cfg, memory_enabled: v })} label="Remember past conversations" hint="Recall summaries from earlier conversations with the same participant." />
         </div>)}
         <SaveBtn label="Voice and language" section="voice" persona />
+        {pid && <VoiceExtras pid={pid} />}
       </>)}
 
       {tab === "behavior" && !locked && (<>
