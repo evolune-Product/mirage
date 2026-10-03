@@ -177,7 +177,7 @@ def start(token: str, request: Request, body: GuestStartIn | None = None, s: Ses
 
 @router.websocket("/guest/{token}/stream")
 async def guest_stream(ws: WebSocket, token: str, cid: str = "", s: Session = Depends(get_session)):
-    from .realtime import stream
+    from .realtime import serve_stream
 
     try:
         l = _link(s, token)
@@ -198,7 +198,7 @@ async def guest_stream(ws: WebSocket, token: str, cid: str = "", s: Session = De
         return
     result = None
     try:
-        result = await stream(ws, cid, acc.api_key, s)  # the owner's key is only used server-side; the guest never sees it
+        result = await serve_stream(ws, cid, acc, s, guest=True)  # authenticated by the share token; the guest never sees any key
     finally:
         if result in ("dropped", "busy"):  # connection lost without a goodbye: keep the session open so the page can reconnect and
             return  # resume; the reaper ends it (and counts the usage) once the grace period passes without a reconnect

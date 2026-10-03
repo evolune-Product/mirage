@@ -22,6 +22,7 @@ DEFAULTS = {
     "REPLICA": (20, 60),
     "MODERATION": (30, 60),
     "WEBHOOK": (120, 60),
+    "TICKET": (60, 60),       # POST /v1/realtime/ticket
 }
 
 # (method, path regex, rule name, scope) ; scope "key" = per api key (falls back to ip), "ip" = per IP
@@ -32,6 +33,7 @@ ROUTES = [
     ("POST", re.compile(r"^/v1/conversations$"), "CONVERSATION", "key"),
     ("POST", re.compile(r"^/v1/replicas$"), "REPLICA", "key"),
     ("POST", re.compile(r"^/v1/moderation/check$"), "MODERATION", "key"),
+    ("POST", re.compile(r"^/v1/realtime/ticket$"), "TICKET", "key"),
     ("POST", re.compile(r"^/v1/billing/webhooks/"), "WEBHOOK", "ip"),
 ]
 NO_CSP = ("/docs", "/redoc", "/openapi.json", "/v1/playground", "/static")
@@ -198,7 +200,7 @@ class Hardening:
         return h
 
 
-_SCRUB_HINTS = ("mk_", "sk_", "whsec_", "rzp_", "api_key", "apikey", "api-key", "token", "sig=", "secret", "password", "Bearer", "bearer")
+_SCRUB_HINTS = ("mk_", "sk_", "whsec_", "rzp_", "api_key", "apikey", "api-key", "token", "ticket", "sig=", "secret", "password", "Bearer", "bearer")
 _factory_wrapped = False
 
 

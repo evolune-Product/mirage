@@ -86,6 +86,12 @@ def allow_typed_consent() -> bool:
     return _flag("MIRAGE_ALLOW_TYPED_CONSENT", not is_production())
 
 
+def allow_key_in_url() -> bool:
+    """Legacy `?api_key=` on the WebSocket URL (leaks into proxy logs/history). Off unless MIRAGE_ALLOW_KEY_IN_URL=1; clients use
+    POST /v1/realtime/ticket instead."""
+    return _flag("MIRAGE_ALLOW_KEY_IN_URL", False)
+
+
 def signed_url_ttl() -> int:
     return _int("MIRAGE_SIGNED_URL_TTL", 3600)
 
@@ -126,5 +132,5 @@ def redact(s: str) -> str:
     import re
     s = re.sub(r"(mk_|sk_|whsec_|rzp_)[A-Za-z0-9_\-]{6,}", lambda m: m.group(1) + "***", s or "")
     # key-like query/header values whatever their prefix: ?api_key=..., ?token=..., ?sig=... (signed URL), Bearer ...
-    s = re.sub(r"(?i)\b(api_key|apikey|x-api-key|token|sig|secret|password)([=:]\s*)[^\s&\"',;}]+", lambda m: m.group(1) + m.group(2) + "***", s)
+    s = re.sub(r"(?i)\b(api_key|apikey|x-api-key|token|ticket|sig|secret|password)([=:]\s*)[^\s&\"',;}]+", lambda m: m.group(1) + m.group(2) + "***", s)
     return re.sub(r"(?i)\bBearer\s+[A-Za-z0-9._~+/=\-]{8,}", "Bearer ***", s)

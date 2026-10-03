@@ -1,4 +1,4 @@
-"""Browser real-time voice: WebSocket /v1/conversations/{cid}/stream?api_key=...
+"""Browser real-time voice: WebSocket /v1/conversations/{cid}/stream?ticket=... (ticket from POST /v1/realtime/ticket)
 
 Client -> server: binary int16 16 kHz mono PCM; text JSON {"type":"interrupt"}.
 Server -> client: binary int16 24 kHz mono PCM (agent audio); JSON events
@@ -18,7 +18,9 @@ from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 from sqlmodel import Session as DBSession, select
 
+from .. import settings, wsguard
 from ..auth import account_for_key
+from ..hardening import client_ip
 from ..db import Account, Conversation, Persona, get_session
 from ..pipeline.session import Session, build_system_prompt, get_providers, warmup_providers
 from ..rtc_transport import DEAD_AFTER_S, HEARTBEAT_S, TAG_AUDIO, TIERS, Link, b64_frames, pack_video, recode
@@ -69,10 +71,33 @@ def playground():
 
 
 @router.websocket("/conversations/{cid}/stream")
-async def stream(ws: WebSocket, cid: str, api_key: str = "", db: DBSession = Depends(get_session)):
-    acc = account_for_key(db, api_key) if api_key else None
+async def stream(ws: WebSocket, cid: str, api_key: str = "", ticket: str = "", db: DBSession = Depends(get_session)):
+    """Auth: `?ticket=` (single-use, from POST /v1/realtime/ticket) is the supported way. `?api_key=` still works only with
+    MIRAGE_ALLOW_KEY_IN_URL=1 (the key would otherwise land in proxy/CDN logs and browser history)."""
+    ip = client_ip(ws.scope)
+    if not wsguard.connect_allowed(ip):
+        await ws.close(code=wsguard.CLOSE_RATE, reason="too many connection attempts")
+        return
+    acc = None
+    if ticket:
+        aid = wsguard.redeem_ticket(ticket, cid)
+        acc = db.get(Account, aid) if aid else None
+    elif api_key and settings.allow_key_in_url():
+        acc = account_for_key(db, api_key)
     if not acc:
-        await ws.close(code=4401, reason="invalid api key")
+        if not wsguard.auth_failure_allowed(ip):
+            await ws.close(code=wsguard.CLOSE_RATE, reason="too many failed attempts")
+        else:
+            await ws.close(code=4401, reason="invalid or expired ticket" if (ticket or not api_key) else "invalid api key")
+        return
+    return await serve_stream(ws, cid, acc, db)
+
+
+async def serve_stream(ws: WebSocket, cid: str, acc, db: DBSession, guest: bool = False):
+    """The authenticated half of the stream endpoint (also used by the guest/widget endpoint, which authenticates by share
+    token and is exempt from the per-account session cap: the host's guests are not the host's own sessions)."""
+    if not guest and not wsguard.account_connect_allowed(acc.id):
+        await ws.close(code=wsguard.CLOSE_RATE, reason="too many connection attempts")
         return
     conv = db.get(Conversation, cid)
     if not conv or conv.account_id != acc.id:
@@ -85,6 +110,17 @@ async def stream(ws: WebSocket, cid: str, api_key: str = "", db: DBSession = Dep
     if conv.status == "ended" or allowance <= 0 or not persona:
         await ws.close(code=4402, reason="conversation ended or out of credits")
         return
+    if not guest and not wsguard.acquire_session(acc.id, cid):
+        await ws.close(code=wsguard.CLOSE_RATE, reason="too many concurrent sessions for this account")
+        return
+    try:
+        return await _serve_accepted(ws, cid, acc, conv, persona, db)
+    finally:
+        if not guest:
+            wsguard.release_session(acc.id, cid)
+
+
+async def _serve_accepted(ws, cid, acc, conv, persona, db):
     await ws.accept()
     from .. import admission, jobs as _jobs
 
@@ -262,9 +298,15 @@ async def _run(ws, cid, acc, conv, persona, db, link, inbox, pump_task, allow_fa
     await asyncio.gather(pump_task, return_exceptions=True)
     try:
         while True:
-            msg = inbox.get_nowait() if not inbox.empty() else await ws.receive()
+            if not inbox.empty():
+                msg, counted = inbox.get_nowait(), True  # the pump already charged the budget
+            else:
+                msg, counted = await ws.receive(), False
             link.last_rx = time.monotonic()
             if msg is None or msg["type"] == "websocket.disconnect":
+                break
+            if not counted and (bad := link.guard.check(msg)):
+                await ws.close(code=bad[0], reason=bad[1])
                 break
             if msg.get("text") and await _control(ws, link, msg["text"]):
                 if link.ended:
@@ -365,6 +407,9 @@ async def _pump(ws, link: Link, inbox: asyncio.Queue) -> None:
             try:
                 link.last_rx = time.monotonic()
                 if msg["type"] == "websocket.disconnect":
+                    break
+                if bad := link.guard.check(msg):
+                    await ws.close(code=bad[0], reason=bad[1])
                     break
                 if msg.get("text") and await _control(ws, link, msg["text"]):
                     if link.ended:

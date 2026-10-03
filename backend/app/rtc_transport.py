@@ -73,6 +73,9 @@ def unpack_video(blob: bytes) -> tuple[dict, list[bytes]]:
     return head, frames
 
 
+from .wsguard import MsgGuard  # noqa: E402
+
+
 @dataclass
 class Link:
     """Per-socket negotiated state."""
@@ -87,6 +90,7 @@ class Link:
     ended: bool = False  # the client said goodbye (vs. the socket just dropping)
     client: dict = field(default_factory=dict)
     last_rx: float = field(default_factory=time.monotonic)
+    guard: MsgGuard = field(default_factory=MsgGuard)  # per-connection message/byte budget (wsguard.py)
     bytes_video: int = 0
     bytes_audio: int = 0
     # adaptation inputs
