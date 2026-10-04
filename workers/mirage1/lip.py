@@ -9,6 +9,8 @@ import torch
 import torch.nn.functional as F
 
 from .data import Clips, LIP_NAMES
+from .audiofeat import read_wav16k
+from .melfeat import logmel
 from .model import LipNet, WIN, count
 from .train import CK, DATA
 
@@ -30,55 +32,57 @@ def evaluate(net, ds):
 
 
 class Ridge:
-    """PCA(64) of the wav2vec2 features, 11-frame window, ridge regression -> lip state. Beat the small neural LipNet on held-out
-    val (the neural net overfits within ~100 steps on ~1 minute of data), so this is what inference uses."""
-    def __init__(self, P, W, lip_mean, lip_std):
-        self.P, self.W, self.lip_mean, self.lip_std = P, W, lip_mean, lip_std
+    """log-mel (40 bands, 25 fps), 11-frame window, ridge regression -> standardised lip state. On the held-out val segment this beat
+    both the neural LipNet (overfits in ~100 steps on ~1 min of data) and ridge on wav2vec2 features, so inference uses it.
+    No pretrained component."""
+    def __init__(self, mu, sd, W, lip_mean, lip_std):
+        self.mu, self.sd, self.W, self.lip_mean, self.lip_std = mu, sd, W, lip_mean, lip_std
 
     @staticmethod
-    def _win(Z):  # Z (N,npc) -> (N, WIN*npc), edge-replicated
+    def _win(Z):  # (N,D) -> (N, WIN*D), edge-replicated
         pad = WIN // 2
         idx = np.clip(np.arange(len(Z))[:, None] + np.arange(-pad, pad + 1)[None], 0, len(Z) - 1)
         return Z[idx].reshape(len(Z), -1)
 
-    def predict(self, feats_n):  # feats_n: (N,768) normalised like training -> (N,28) standardised lip state
-        return self._win(feats_n @ self.P) @ self.W
+    def predict_wav(self, wav):  # 16 kHz float32 -> (N,28) standardised lip state
+        return self._win((logmel(wav) - self.mu) / self.sd) @ self.W
 
-    def save(self, path, extra=None):
-        np.savez(path, P=self.P, W=self.W, lip_mean=self.lip_mean, lip_std=self.lip_std, **(extra or {}))
+    def save(self, path):
+        np.savez(path, mu=self.mu, sd=self.sd, W=self.W, lip_mean=self.lip_mean, lip_std=self.lip_std)
 
     @classmethod
     def load(cls, path):
         z = np.load(path)
-        return cls(z["P"], z["W"], z["lip_mean"], z["lip_std"])
+        return cls(z["mu"], z["sd"], z["W"], z["lip_mean"], z["lip_std"])
 
 
-def fit_ridge(npc=64, lam=1e4, device="cpu"):
+def fit_ridge(lam=1e3, device="cpu"):
+    import json as _j
     tr = Clips(DATA, device)
     va = Clips(DATA, device, split="val", mean=tr.mean, std=tr.std, lip_stats=(tr.lip_mean, tr.lip_std))
-    gather = lambda c, which: np.concatenate([(c.feats[ci][lo:hi].cpu().numpy() if which == "x" else c.lips[ci][lo:hi].cpu().numpy())
-                                              for ci, (lo, hi) in enumerate(c.ranges)])
-    # windows must not cross clip boundaries: build per clip
-    def build(c, P):
+    mel = {n: logmel(read_wav16k(_j.loads((DATA / n / "meta.json").read_text())["source"])) for n in tr.names}
+    N = {n: len(tr.feats[i]) for i, n in enumerate(tr.names)}
+    mel = {n: m[:N[n]] if len(m) >= N[n] else np.pad(m, ((0, N[n] - len(m)), (0, 0)), mode="edge") for n, m in mel.items()}
+    mm = np.concatenate([mel[n][lo:hi] for n, (lo, hi) in zip(tr.names, tr.ranges)])
+    mu, sd = mm.mean(0), mm.std(0) + 1e-5
+
+    def build(c):
         X, Y = [], []
         for ci, (lo, hi) in enumerate(c.ranges):
-            Z = c.feats[ci].cpu().numpy() @ P
-            X.append(Ridge._win(Z)[lo:hi]); Y.append(c.lips[ci][lo:hi].cpu().numpy())
+            X.append(Ridge._win((mel[c.names[ci]] - mu) / sd)[lo:hi]); Y.append(c.lips[ci][lo:hi].cpu().numpy())
         return np.concatenate(X), np.concatenate(Y)
-    allx = np.concatenate([tr.feats[ci][lo:hi].cpu().numpy() for ci, (lo, hi) in enumerate(tr.ranges)])
-    P = np.linalg.svd(allx, full_matrices=False)[2][:npc].T.astype(np.float32)
-    A, Yt = build(tr, P)
+    A, Yt = build(tr)
     W = np.linalg.solve(A.T @ A + lam * np.eye(A.shape[1]), A.T @ Yt).astype(np.float32)
-    B, Yv = build(va, P)
+    B, Yv = build(va)
     p = B @ W
     r = [float(np.corrcoef(p[:, k], Yv[:, k])[0, 1]) for k in range(Yv.shape[1])]
     m = dict(corr={n: round(x, 3) for n, x in zip(LIP_NAMES, r)}, mean_corr=round(float(np.nanmean(r)), 3),
              mse=round(float(((p - Yv) ** 2).mean()), 4), mse_predict_mean=round(float((Yv ** 2).mean()), 4),
-             pred_std_over_gt_std=round(float(p.std(0).mean() / Yv.std(0).mean()), 3), npc=npc, lam=lam,
-             train_mean_corr=round(float(np.nanmean([np.corrcoef((A @ W)[:, k], Yt[:, k])[0, 1] for k in range(Yt.shape[1])])), 3))
-    rd = Ridge(P, W, tr.lip_mean.numpy(), tr.lip_std.numpy())
+             pred_std_over_gt_std=round(float(p.std(0).mean() / Yv.std(0).mean()), 3), lam=lam, features="log-mel40 x 11 frames",
+             train_mean_corr=round(float(np.nanmean([np.corrcoef((A @ W)[:, k], Yt[:, k])[0, 1] for k in range(Yt.shape[1])])), 3),
+             note="lam, window and feature type were chosen by looking at this val segment (about 9 s): optimistic")
     CK.mkdir(parents=True, exist_ok=True)
-    rd.save(CK / "lipridge.npz")
+    Ridge(mu.astype(np.float32), sd.astype(np.float32), W, tr.lip_mean.numpy(), tr.lip_std.numpy()).save(CK / "lipridge.npz")
     json.dump(m, open(CK / "lipridge_metrics.json", "w"), indent=1)
     print(json.dumps(m))
 

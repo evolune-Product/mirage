@@ -20,6 +20,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from mirage1 import align, audiofeat  # noqa: E402
 from mirage1.model import WIN, Generator, make_mask  # noqa: E402
+from mirage1.data import LIP_NAMES, LIP_IDX  # noqa: E402
 
 FACE_PY = HERE / ".venv-face/bin/python"
 DEFAULT_CKPT = HERE.parent / "data/mirage1/ckpt/gen_main.pt"
@@ -27,9 +28,10 @@ DEFAULT_CKPT = HERE.parent / "data/mirage1/ckpt/gen_main.pt"
 
 def load_gen(ckpt, dev):
     ck = torch.load(ckpt, map_location="cpu")
-    g = Generator()
+    lipmode = ck.get("args", {}).get("cond") == "lip"
+    g = Generator(lip_dim=len(LIP_NAMES) if lipmode else 0)
     g.load_state_dict(ck["ema"])
-    return g.to(dev).eval(), ck["mean"], ck["std"]
+    return g.to(dev).eval(), ck["mean"], ck["std"], lipmode, ck
 
 
 def landmarks(path):
@@ -40,18 +42,20 @@ def landmarks(path):
 
 
 @torch.no_grad()
-def generate_crops(g, crops, ref_crop, feats_n, dev, bs=32):
-    """crops: (N,S,S,3) BGR uint8 aligned; ref_crop (S,S,3); feats_n (N,768) normalised. Returns generated crops (N,S,S,3) uint8 BGR."""
+def generate_crops(g, crops, ref_crop, cond, dev, bs=32):
+    """crops: (N,S,S,3) BGR uint8 aligned; ref_crop (S,S,3); cond: either (N,768) normalised audio feats (audio generator, windowed here)
+    or (N,28) standardised lip state (lip generator). Returns generated crops (N,S,S,3) uint8 BGR."""
     N = len(crops)
     pad = WIN // 2
-    fp = torch.from_numpy(feats_n).float().to(dev)
+    fp = torch.from_numpy(cond).float().to(dev)
     o = torch.arange(-pad, pad + 1, device=dev)
+    lipmode = cond.shape[1] != 768
     rgb = lambda a: torch.from_numpy(a[..., ::-1].copy()).permute(0, 3, 1, 2).float().to(dev) / 255
     ref = rgb(ref_crop[None])
     out = []
     for s in range(0, N, bs):
         idx = torch.arange(s, min(N, s + bs), device=dev)
-        win = fp[(idx[:, None] + o[None]).clamp(0, len(fp) - 1)]
+        win = fp[idx] if lipmode else fp[(idx[:, None] + o[None]).clamp(0, len(fp) - 1)]
         tg = rgb(crops[s:s + len(idx)])
         m = make_mask(len(idx), dev)
         y = g(tg * (1 - m), ref.expand(len(idx), -1, -1, -1), m, win)
@@ -73,6 +77,8 @@ def main():
     ap.add_argument("--fps", type=float, default=25.0)  # fixed 25 fps; accepted for CLI compatibility
     ap.add_argument("--ckpt", default=str(DEFAULT_CKPT))
     ap.add_argument("--no-smooth", action="store_true")
+    ap.add_argument("--lip-gain", type=float, default=2.5, help="lip generator: scale of predicted lip state (ridge output has ~0.36x the std of real lip state)")
+    ap.add_argument("--lip-npy", help="evaluation only: raw (N,52) blendshape file used instead of the audio->lip prediction (oracle)")
     ap.add_argument("--max-side", type=int, default=720)
     a = ap.parse_args()
     t0 = time.time()
@@ -80,10 +86,21 @@ def main():
         print(json.dumps({"ok": False, "error": f"mirage1 checkpoint missing: {a.ckpt}"}))
         return 1
     dev = "mps" if torch.backends.mps.is_available() else "cpu"
-    g, mean, std = load_gen(a.ckpt, dev)
+    g, mean, std, lipmode, ck = load_gen(a.ckpt, dev)
     wav = audiofeat.read_wav16k(a.audio)
     feats = (audiofeat.features(wav, device=dev) - mean.numpy()) / std.numpy()
     N = len(feats)
+    cond = feats
+    if lipmode:
+        from mirage1.lip import Ridge
+        from facelib import smooth_series
+        if a.lip_npy:
+            raw = np.nan_to_num(np.load(a.lip_npy)[:, LIP_IDX])[:N]
+            cond = (raw - ck["lip_mean"].numpy()) / ck["lip_std"].numpy()
+            N = len(cond)
+        else:
+            cond = Ridge.load(Path(a.ckpt).with_name("lipridge.npz")).predict_wav(wav)[:N] * a.lip_gain
+            cond = smooth_series(cond, 1.0).astype(np.float32)
     is_img = Path(a.image).suffix.lower() in (".png", ".jpg", ".jpeg", ".webp")
     if is_img:
         base = [cv2.imread(a.image)]
@@ -92,8 +109,6 @@ def main():
         from facelib import load_frames
         base = load_frames(a.image, 25.0)
     sc = min(1.0, a.max_side / max(base[0].shape[:2]))
-    if sc < 1:  # landmarks are found on the original, frames are shrunk afterwards (coordinates scaled)
-        pass
     raw = landmarks(a.image)
     if np.isnan(raw[:, 0, 0]).all():
         print(json.dumps({"ok": False, "error": "no face found in input"}))
@@ -106,11 +121,10 @@ def main():
     Ms = np.stack([align.fit(p, tpl) for p in pts])
     # frame i of the output uses base frame pingpong(i)
     nb = len(base)
-    order = np.abs(((np.arange(N) + nb - 1) % (2 * max(nb - 1, 1))) - (nb - 1)) if nb > 1 else np.zeros(N, int)
     order = np.clip((nb - 1) - np.abs((np.arange(N) % (2 * (nb - 1))) - (nb - 1)), 0, nb - 1) if nb > 1 else np.zeros(N, int)
     crops_b = np.stack([align.warp_crop(f, M) for f, M in zip(base, Ms)])
     crops = crops_b[order]
-    gen = generate_crops(g, crops, crops_b[0], feats, dev)
+    gen = generate_crops(g, crops, crops_b[0], cond, dev)
     if not a.no_smooth:
         gen = smooth_time(gen)
     pm = align.paste_mask()
