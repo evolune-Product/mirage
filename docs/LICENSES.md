@@ -112,3 +112,9 @@ blockers that the flag does **not** remove are listed in section 5 (eSpeak NG GP
 - Measured on M1 Pro, Model_Lite: ~19x slower than real time (6 s clip = 113 s). Real-time needs an NVIDIA GPU (unverified here).
 
 **Decision (Oct 4):** SoulX-FlashHead is the only generative face model we keep. JoyVASA was tried and dropped (poor quality, depended on LivePortrait/InsightFace). Wav2Lip remains only as the dev-mode live engine until FlashHead runs real time on a GPU.
+
+## Mirage-1 (our own model, clean-room; see docs/MIRAGE1.md)
+- Code: written in this repo (workers/mirage1), no code or weights taken from SoulX-FlashHead, MuseTalk, Wav2Lip, LivePortrait or JoyVASA.
+- `facebook/wav2vec2-base-960h`: Apache-2.0 (HF model card fetched 2026-10-04: "License: apache-2.0"; pretrained/fine-tuned on LibriSpeech, audio only). Used by the audio-driven variant and the sync critic.
+- MediaPipe FaceLandmarker (`workers/models/face_landmarker.task`, Apache-2.0 per MediaPipe): landmarks for alignment and blendshape scores used as lip-state labels. Not verified on disk here.
+- Training footage: only the owner's own consented videos (founder video, demo_face_v2.mp4). No VoxCeleb/HDTF/LRS.
