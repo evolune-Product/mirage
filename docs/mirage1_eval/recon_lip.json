@@ -1,0 +1,88 @@
+{
+ "founder": {
+  "frames": 172,
+  "copy_reference_frame": {
+   "l1": 0.0621,
+   "psnr": 20.79,
+   "ssim": 0.5735
+  },
+  "mean_train_frame": {
+   "l1": 0.0554,
+   "psnr": 22.18,
+   "ssim": 0.6661
+  },
+  "oracle_gt_lip": {
+   "l1": 0.02,
+   "psnr": 30.78,
+   "ssim": 0.9044
+  },
+  "oracle_gt_lip_shuffled": {
+   "l1": 0.0244,
+   "psnr": 28.56,
+   "ssim": 0.8699
+  },
+  "audio_pred_lip_gain1": {
+   "l1": 0.0221,
+   "psnr": 29.78,
+   "ssim": 0.8895
+  },
+  "audio_pred_lip_gain2_5": {
+   "l1": 0.0224,
+   "psnr": 29.7,
+   "ssim": 0.8881
+  },
+  "audio_pred_lip_shuffled": {
+   "l1": 0.0243,
+   "psnr": 28.77,
+   "ssim": 0.8738
+  },
+  "zero_lip": {
+   "l1": 0.0231,
+   "psnr": 29.28,
+   "ssim": 0.8819
+  }
+ },
+ "demo": {
+  "frames": 64,
+  "copy_reference_frame": {
+   "l1": 0.0636,
+   "psnr": 21.35,
+   "ssim": 0.5929
+  },
+  "mean_train_frame": {
+   "l1": 0.0505,
+   "psnr": 22.46,
+   "ssim": 0.6826
+  },
+  "oracle_gt_lip": {
+   "l1": 0.0131,
+   "psnr": 33.81,
+   "ssim": 0.954
+  },
+  "oracle_gt_lip_shuffled": {
+   "l1": 0.0181,
+   "psnr": 29.75,
+   "ssim": 0.9191
+  },
+  "audio_pred_lip_gain1": {
+   "l1": 0.015,
+   "psnr": 32.11,
+   "ssim": 0.9435
+  },
+  "audio_pred_lip_gain2_5": {
+   "l1": 0.0159,
+   "psnr": 31.85,
+   "ssim": 0.9397
+  },
+  "audio_pred_lip_shuffled": {
+   "l1": 0.0179,
+   "psnr": 30.43,
+   "ssim": 0.9203
+  },
+  "zero_lip": {
+   "l1": 0.0169,
+   "psnr": 30.55,
+   "ssim": 0.9308
+  }
+ }
+}

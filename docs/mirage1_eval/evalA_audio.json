@@ -1,0 +1,40 @@
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+/Users/revanthrajeev/Desktop/Mirage/workers/mirage1/evaluate.py:35: RuntimeWarning: Mean of empty slice.
+  return np.array([np.sqrt((a[i * hop:(i + 1) * hop] ** 2).mean() + 1e-12) for i in range(n)])
+/Users/revanthrajeev/Desktop/Mirage/workers/.venv-face/lib/python3.11/site-packages/numpy/_core/_methods.py:144: RuntimeWarning: invalid value encountered in divide
+  ret = ret.dtype.type(ret / rcount)
+{
+ "fh": {
+  "frames": 462,
+  "size": "512x512",
+  "face_found": 1.0,
+  "lip_audio_corr": 0.169,
+  "lag_frames": 0,
+  "jaw_range": 0.411,
+  "head_jitter": 0.0066,
+  "sharpness": 24.5,
+  "identity_cos": 0.905
+ },
+ "wav2lip": {
+  "frames": 462,
+  "size": "566x320",
+  "face_found": 1.0,
+  "lip_audio_corr": 0.148,
+  "lag_frames": -3,
+  "jaw_range": 0.227,
+  "head_jitter": 0.0072,
+  "sharpness": 48.4,
+  "identity_cos": 0.873
+ },
+ "m1a": {
+  "frames": 462,
+  "size": "640x640",
+  "face_found": 1.0,
+  "lip_audio_corr": 0.155,
+  "lag_frames": 1,
+  "jaw_range": 0.054,
+  "head_jitter": 0.001,
+  "sharpness": 63.9,
+  "identity_cos": 0.968
+ }
+}

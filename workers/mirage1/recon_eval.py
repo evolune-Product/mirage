@@ -13,7 +13,11 @@ import torch.nn.functional as F
 from . import align
 from .data import Clips
 from .model import Generator, make_mask
-from .train import DATA, CK, device, low
+from .train import DATA, CK, low
+from .data import LIP_NAMES
+from .melfeat import logmel
+from .audiofeat import read_wav16k
+from .lip import Ridge
 
 
 def ssim(a, b, win=7):
@@ -40,12 +44,13 @@ def main():
     ap.add_argument("--ckpt", default=str(CK / "gen_main.pt"))
     ap.add_argument("--split", default="val")
     a = ap.parse_args()
-    dev = device()
+    dev = "cpu"  # 236 frames: CPU is fast enough and avoids MPS glitches while a training job shares the GPU
     ck = torch.load(a.ckpt, map_location="cpu")
-    g = Generator().to(dev).eval()
+    lipmode = ck.get('args', {}).get('cond') == 'lip'
+    g = Generator(lip_dim=len(LIP_NAMES) if lipmode else 0).to(dev).eval()
     g.load_state_dict(ck["ema"])
     tr = Clips(DATA, dev)
-    ds = Clips(DATA, dev, split=a.split, mean=ck["mean"], std=ck["std"])
+    ds = Clips(DATA, dev, split=a.split, mean=ck["mean"], std=ck["std"], lip_stats=(ck.get("lip_mean", tr.lip_mean), ck.get("lip_std", tr.lip_std)))
     res = {}
     for ci, name in enumerate(ds.names):
         lo, hi = ds.ranges[ci]
@@ -55,13 +60,24 @@ def main():
         # reference: a train frame with a CLOSED/neutral mouth is what a user photo looks like; use the train-segment median-time frame
         ref = ds.crops[ci][torch.full_like(idx, (t_lo + t_hi) // 2)].float() / 255
         m = make_mask(len(idx), dev)
-        run = lambda au: g(tg * (1 - m), ref, m, au)
-        au = ds.window(ci, idx)
-        sh = ds.window(ci, (idx - lo + 75) % (hi - lo) + lo)
+        run = lambda c: g(tg * (1 - m), ref, m, c)
+        shift = lambda x: x[(idx - lo + 75) % (hi - lo)]  # same data, 3 s later: breaks the audio/lip <-> mouth pairing
         trmean = (tr.crops[ci][t_lo:t_hi].float() / 255).mean(0, keepdim=True).expand_as(tg)
-        res[name] = dict(frames=len(idx), mirage1_true_audio=stats(run(au), tg), mirage1_shuffled_audio=stats(run(sh), tg),
-                         mirage1_zero_audio=stats(run(torch.zeros_like(au)), tg), copy_reference_frame=stats(ref, tg),
-                         mean_train_frame=stats(trmean, tg))
+        r = dict(frames=len(idx), copy_reference_frame=stats(ref, tg), mean_train_frame=stats(trmean, tg))
+        if not lipmode:
+            au = ds.window(ci, idx)
+            r.update(mirage1_true_audio=stats(run(au), tg), mirage1_shuffled_audio=stats(run(shift(au)), tg),
+                     mirage1_zero_audio=stats(run(torch.zeros_like(au)), tg))
+        else:
+            gt = ds.lips[ci][idx]
+            rd = Ridge.load(CK / "lipridge.npz")
+            import json as _j
+            src = _j.loads((DATA / name / "meta.json").read_text())["source"]
+            pr = torch.from_numpy(rd.predict_wav(read_wav16k(src)).astype(np.float32))[lo:hi]  # standardised, from AUDIO only
+            r.update(oracle_gt_lip=stats(run(gt), tg), oracle_gt_lip_shuffled=stats(run(shift(gt)), tg),
+                     audio_pred_lip_gain1=stats(run(pr), tg), audio_pred_lip_gain2_5=stats(run(pr * 2.5), tg),
+                     audio_pred_lip_shuffled=stats(run(shift(pr * 2.5)), tg), zero_lip=stats(run(torch.zeros_like(gt)), tg))
+        res[name] = r
     print(json.dumps(res, indent=1))
 
 

@@ -1,0 +1,51 @@
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+{
+ "real": {
+  "frames": 172,
+  "size": "720x404",
+  "face_found": 1.0,
+  "lip_audio_corr": 0.079,
+  "lag_frames": -2,
+  "jaw_range": 0.359,
+  "head_jitter": 0.0059,
+  "sharpness": 38.0,
+  "identity_cos": 0.815,
+  "jaw_corr_vs_real": 1.0
+ },
+ "m1a": {
+  "frames": 172,
+  "size": "720x404",
+  "face_found": 1.0,
+  "lip_audio_corr": -0.0,
+  "lag_frames": -3,
+  "jaw_range": 0.464,
+  "head_jitter": 0.0064,
+  "sharpness": 34.0,
+  "identity_cos": 0.802,
+  "jaw_corr_vs_real": 0.526
+ },
+ "m1b": {
+  "frames": 172,
+  "size": "720x404",
+  "face_found": 1.0,
+  "lip_audio_corr": 0.081,
+  "lag_frames": -2,
+  "jaw_range": 0.364,
+  "head_jitter": 0.0062,
+  "sharpness": 33.7,
+  "identity_cos": 0.804,
+  "jaw_corr_vs_real": 0.607
+ },
+ "m1b_oracle": {
+  "frames": 172,
+  "size": "720x404",
+  "face_found": 1.0,
+  "lip_audio_corr": 0.043,
+  "lag_frames": -1,
+  "jaw_range": 0.346,
+  "head_jitter": 0.0062,
+  "sharpness": 33.8,
+  "identity_cos": 0.804,
+  "jaw_corr_vs_real": 0.92
+ }
+}
