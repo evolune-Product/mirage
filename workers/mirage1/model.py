@@ -69,10 +69,33 @@ class AudioEnc(nn.Module):
         return t, t.mean(1)
 
 
-class Generator(nn.Module):
-    def __init__(s, ch=(16, 48, 96, 128, 192), adim=192):  # narrow full-res level: MPS speed (measured 2x faster than 32 ch)
+class LipEnc(nn.Module):
+    """Condition = per-frame lip-state vector (jaw/mouth blendshape scores, standardised) -> 4 tokens + pooled vector."""
+    def __init__(s, lip_dim, dim=192, ntok=4):
         super().__init__()
-        s.aud = AudioEnc(adim)
+        s.net = nn.Sequential(nn.Linear(lip_dim, 256), nn.SiLU(), nn.Linear(256, dim * ntok))
+        s.ntok, s.dim = ntok, dim
+
+    def forward(s, z):
+        t = s.net(z).reshape(-1, s.ntok, s.dim)
+        return t, t.mean(1)
+
+
+class LipNet(nn.Module):
+    """audio window (WIN x 768 wav2vec2 feats) -> lip-state vector. Small, heavily regularised (about 1 minute of training data)."""
+    def __init__(s, lip_dim, dim=128):
+        super().__init__()
+        s.enc = AudioEnc(dim, layers=1)
+        s.head = nn.Sequential(nn.Dropout(0.2), nn.Linear(dim, 128), nn.SiLU(), nn.Linear(128, lip_dim))
+
+    def forward(s, a):
+        return s.head(s.enc(a)[1])
+
+
+class Generator(nn.Module):
+    def __init__(s, ch=(16, 48, 96, 128, 192), adim=192, lip_dim=0):  # narrow full-res level: MPS speed (measured 2x faster than 32 ch)
+        super().__init__()
+        s.aud = LipEnc(lip_dim, adim) if lip_dim else AudioEnc(adim)
         s.stem = nn.Conv2d(7, ch[0], 3, padding=1)
         s.enc = nn.ModuleList()
         s.down = nn.ModuleList()

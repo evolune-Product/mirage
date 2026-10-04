@@ -64,7 +64,7 @@ def train_sync(a):
     opt = torch.optim.AdamW(sn.parameters(), 1e-3, weight_decay=1e-2)
     log = []
     for step in range(1, a.steps + 1):
-        tg, _, au = tr.sample(64)
+        tg, _, au, _ = tr.sample(64)
         v = sn.embed_v(tg)
         pa = sn.embed_a(au)
         # negatives = the other items in the batch (random frames of the same clips)
@@ -88,7 +88,7 @@ def to_img_grid(rows):
 
 
 @torch.no_grad()
-def val_eval(g, va, n=96):
+def val_eval(g, va, n=96, cond='audio'):
     """Held-out reconstruction: PSNR/L1 on the hidden lower region for val frames, with a reference frame from the TRAIN part of the clip."""
     g.eval()
     ps, l1s = [], []
@@ -99,7 +99,7 @@ def val_eval(g, va, n=96):
         tg = va.crops[ci][idx].float() / 255
         rf = va.crops[ci][ref_i].float() / 255
         m = make_mask(len(idx), va.dev)
-        out = g(tg * (1 - m), rf, m, va.window(ci, idx))
+        out = g(tg * (1 - m), rf, m, va.lips[ci][idx] if cond == 'lip' else va.window(ci, idx))
         d = (low(out) - low(tg))
         l1s.append(d.abs().mean().item())
         ps.append((-10 * torch.log10((d ** 2).mean((1, 2, 3)) + 1e-8)).mean().item())
@@ -113,15 +113,18 @@ def val_eval(g, va, n=96):
 def train_gen(a):
     dev = device()
     tr = Clips(DATA, dev)
-    va = Clips(DATA, dev, split="val", mean=tr.mean, std=tr.std)
+    va = Clips(DATA, dev, split="val", mean=tr.mean, std=tr.std, lip_stats=(tr.lip_mean, tr.lip_std))
+    lipmode = a.cond == "lip"
     if a.overfit:  # sanity: a handful of train frames, no augmentation, must be memorised
         for i in range(len(tr.ranges)):
             tr.ranges[i] = (tr.ranges[i][0], tr.ranges[i][0] + 40)
-    g, d = Generator().to(dev), PatchDisc().to(dev)
-    ema = Generator().to(dev)
+    from .data import LIP_NAMES
+    mk = lambda: Generator(lip_dim=len(LIP_NAMES) if lipmode else 0).to(dev)
+    g, d = mk(), PatchDisc().to(dev)
+    ema = mk()
     ema.load_state_dict(g.state_dict())
     sn = SyncNet().to(dev)
-    use_sync = (CK / "sync.pt").exists() and a.w_sync > 0
+    use_sync = (CK / "sync.pt").exists() and a.w_sync > 0 and not lipmode
     if use_sync:
         sn.load_state_dict(torch.load(CK / "sync.pt")["sync"])
     sn.eval().requires_grad_(False)
@@ -141,11 +144,12 @@ def train_gen(a):
     mask = make_mask(a.bs, dev)
     while step < a.steps:
         step += 1
-        tg, rf, au = tr.sample(a.bs, min_gap=1 if a.overfit else 25, aug=not a.overfit)
+        tg, rf, au, lp = tr.sample(a.bs, min_gap=1 if a.overfit else 25, aug=not a.overfit)
+        cond = lp + a.lip_noise * torch.randn_like(lp) if lipmode else au
         if a.overfit:
             tg = tg  # augmentation already mild; overfit test uses same pipeline
         inp = tg * (1 - mask)
-        out = g(inp, rf, mask, au)
+        out = g(inp, rf, mask, cond)
         l_low = (low(out) - low(tg)).abs().mean()
         l_up = ((out - tg).abs() * (1 - mask)).mean()
         l_lap = lap_l1(out[:, :, -48:], tg[:, :, -48:])
@@ -161,11 +165,12 @@ def train_gen(a):
         if a.w_gan > 0 and step > a.warm:
             l_adv = -d(out).mean()
             loss = loss + a.w_gan * l_adv
-            ld = F.relu(1 - d(tg)).mean() + F.relu(1 + d(out.detach())).mean()
-            od.zero_grad(); ld.backward(); od.step()
         og.zero_grad(); loss.backward()
         torch.nn.utils.clip_grad_norm_(g.parameters(), 1.0)
         og.step()
+        if a.w_gan > 0 and step > a.warm:  # D update AFTER the G step (in-place weight change would break G's backward graph)
+            ld = F.relu(1 - d(tg)).mean() + F.relu(1 + d(out.detach())).mean()
+            od.zero_grad(); ld.backward(); od.step()
         with torch.no_grad():
             dec = min(a.ema, (1 + step) / (10 + step))
             for pe, p in zip(ema.parameters(), g.parameters()):
@@ -174,15 +179,15 @@ def train_gen(a):
             print(f"step {step} L1low {l_low.item():.4f} lap {l_lap.item():.4f} sync {l_sync.item():.3f} adv {l_adv.item():.3f} "
                   f"{(time.time()-t0)/60:.1f}min", flush=True)
         if step % a.eval_every == 0 or step == a.steps:
-            l1, ps, grid = val_eval(ema, va)
-            tl1, tps, tgrid = val_eval(ema, tr) if step == a.steps or a.overfit else (None, None, None)  # tr.ranges = the 40-frame subset when --overfit
+            l1, ps, grid = val_eval(ema, va, cond=a.cond)
+            tl1, tps, tgrid = val_eval(ema, tr, cond=a.cond) if step == a.steps or a.overfit else (None, None, None)  # tr.ranges = the 40-frame subset when --overfit
             hist.append(dict(step=step, val_l1_low=l1, val_psnr_low=ps, train_l1_low=tl1, train_psnr_low=tps, minutes=(time.time() - t0) / 60 + t_prev / 60))
             print("EVAL", hist[-1], flush=True)
             import cv2
             cv2.imwrite(str(CK / f"samples_{tag}.png"), to_img_grid(grid))
             CK.mkdir(parents=True, exist_ok=True)
             torch.save(dict(g=g.state_dict(), ema=ema.state_dict(), d=d.state_dict(), og=og.state_dict(), od=od.state_dict(), step=step,
-                            mean=tr.mean, std=tr.std, hist=hist, train_seconds=time.time() - t0 + t_prev, args=vars(a)), path)
+                            mean=tr.mean, std=tr.std, lip_mean=tr.lip_mean, lip_std=tr.lip_std, hist=hist, train_seconds=time.time() - t0 + t_prev, args=vars(a)), path)
     (CK / f"gen_{tag}_hist.json").write_text(json.dumps(hist, indent=1))
 
 
@@ -199,6 +204,8 @@ def main():
     ap.add_argument("--warm", type=int, default=500)
     ap.add_argument("--eval-every", type=int, default=500)
     ap.add_argument("--tag", default="main")
+    ap.add_argument("--cond", choices=["audio", "lip"], default="audio")
+    ap.add_argument("--lip-noise", type=float, default=0.15)
     ap.add_argument("--resume", action="store_true")
     ap.add_argument("--overfit", action="store_true")
     a = ap.parse_args()
