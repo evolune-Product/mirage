@@ -24,3 +24,5 @@ Same text and audio; MediaPipe jawOpen vs audio loudness (best lag, Pearson), SF
 | **FlashHead Lite** | Apache-2.0 (README) | 0.17 | 0.91 | 0.41 | 24.5 | 19x slower than real time |
 
 Caveats: the lip-audio correlation is a weak proxy (real footage scores only 0.14), so it cannot rank engines; it only shows JoyVASA barely moves its mouth. Sharpness depends on output resolution and upscaling (FlashHead renders 512x512 and is softer). Paid products (Tavus, HeyGen, D-ID) were NOT tested: no accounts. No human blind test was run; the owner judged FlashHead the best by eye.
+
+**Owner blind test (Oct 4, one rater, clips shuffled by the test page):** FlashHead Lite rated good; Wav2Lip, MuseTalk and JoyVASA all rated worst. One rater is an anecdote, not a study.
