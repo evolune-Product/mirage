@@ -1,28 +1,32 @@
 # Mirage
 
-Open-core Conversational Video Interface (CVI) platform: real-time face-to-face AI agents, digital-twin replicas, and programmatic video generation, built on free/open-source components and designed for cost-optimized GPU use.
+Open-core conversational video AI: talk face to face with an AI agent, make digital-twin replicas, and generate talking-head videos through an API. Built on free and open-source parts (faster-whisper, Ollama, Kokoro, Chatterbox, SoulX-FlashHead) so it can run on one machine.
 
-## Feature parity map (Tavus -> Mirage)
+**Status: working prototype, not a product.** It runs end to end on an Apple-silicon Mac. It has no customers, and some engines are not licensed for commercial use (see below).
 
-| Tavus | Mirage module | Free stack |
-|---|---|---|
-| Conversational Video Interface | `backend/app/routers/conversations.py`, `pipeline/` | LiveKit (self-host), faster-whisper, Ollama/any LLM, Kokoro/Piper TTS |
-| Replicas (digital twins) | `routers/replicas.py`, `workers/` | LivePortrait / MuseTalk on rented or local GPU |
-| Video generation API | `routers/videos.py` | Same renderer, batch queue |
-| Personas, knowledge base, memory | `routers/personas.py` | SQLite/Postgres + local embeddings |
-| Turn-taking, perception | `pipeline/turn_taking.py` | Silero VAD |
-| API keys, usage, billing | `auth.py`, `routers/usage.py` | Stripe/Razorpay later |
+## What works today
+- **Realtime conversation:** microphone, speech-to-text, LLM, voice, and a lip-synced face over WebSocket. About 1.4 to 1.9 s from the end of speech to first lip movement on an M1 Pro.
+- **Replicas:** from your own video (with voice and face consent checks) or from a single photo.
+- **Videos:** script to talking-head video via API. Uses SoulX-FlashHead when installed (whole face and head motion generated from audio); about 19x slower than real time on an M1 Pro.
+- **Voice cloning:** Chatterbox (MIT). Measured speaker similarity 0.70 to 0.79 on our model; judged by ear by the owner only.
+- **Platform:** personas, knowledge from documents and web pages with citations, objectives and guardrails, tools, webhooks, API keys, workspaces, analytics and sentiment, leads, guest and scheduled links, an embeddable widget.
+- **Dashboard and site:** Next.js app in `web/`.
+- **Safety:** consent checks, signed URLs, SSRF guard, WebSocket tickets and rate limits, signup bot protection. See `docs/SECURITY.md` for the honest gaps.
 
-## Cost strategy
-- Every stage is a pluggable provider (`pipeline/providers.py`): swap free local models for paid APIs per customer tier.
-- Stream everything (STT -> LLM -> TTS -> render) to hit low latency without bigger GPUs.
-- Meter usage per second so margins are visible from day one.
-
-## Run
+## Run locally
 ```
-cd backend && .venv/bin/uvicorn app.main:app --reload
-.venv/bin/pytest
+./dev.sh                  # API :8000, lip-sync :8100, worker loop, web :3000
+make test                 # backend tests (447)
+make e2e                  # full browser end-to-end suite
 ```
+Needs Python 3.11, Node 20, ffmpeg and Ollama (`llama3.2:3b`). Model files are not in git; see `docs/DEPLOY.md`.
+
+## Licences: read before selling anything
+Wav2Lip (live lip-sync) and LivePortrait/InsightFace (fallback photo avatars) use non-commercial weights. SoulX-FlashHead says Apache-2.0 in its README, not yet checked by counsel. Details and a commercial-only switch (`MIRAGE_COMMERCIAL_ONLY=1`): `docs/LICENSES.md`.
 
 ## Honest limits
-Renderer quality and sub-second latency depend on GPU-hosted open models; this repo provides the platform, orchestration and provider interfaces. See docs/ROADMAP.md.
+- Real-time FlashHead needs an NVIDIA GPU. Not yet measured: `docs/GPU_RUNBOOK.md`.
+- Docker, Postgres, S3, live payments, real microphones on phones, and iOS have not been tested.
+- Face realism is below commercial leaders such as Tavus.
+
+More: `docs/FEATURE_PARITY.md`, `docs/COMPETITOR_GAPS.md`, `docs/UNIT_ECONOMICS.md`, `docs/ROADMAP.md`.
