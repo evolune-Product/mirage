@@ -21,3 +21,9 @@ backend/**/.venv-*/
 workers/SoulX-FlashHead/
 
 # model trials (Ditto / EchoMimic V3)
+
+# Wan trial (code clone, venv, weights)
+workers/wan/Wan2.2/
+workers/wan/ckpt/
+workers/wan/dl.log
+workers/.venv-wan/
