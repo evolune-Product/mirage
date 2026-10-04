@@ -21,7 +21,3 @@ backend/**/.venv-*/
 workers/SoulX-FlashHead/
 
 # model trials (Ditto / EchoMimic V3)
-workers/.venv-ditto/
-workers/.venv-echo/
-workers/ditto/
-workers/echomimic_v3/
