@@ -110,3 +110,5 @@ blockers that the flag does **not** remove are listed in section 5 (eSpeak NG GP
 - README states Apache-2.0 for code and weights (unverified by a lawyer; check each bundled VAE/wav2vec2 licence before commercial use).
 - Mac (MPS) port: `workers/patches/flashhead-mps.patch` + `flashhead_mac_compat.py`; run in `workers/.venv-flash` (transformers 4.57.3).
 - Measured on M1 Pro, Model_Lite: ~19x slower than real time (6 s clip = 113 s). Real-time needs an NVIDIA GPU (unverified here).
+
+**Decision (Oct 4):** SoulX-FlashHead is the only generative face model we keep. JoyVASA was tried and dropped (poor quality, depended on LivePortrait/InsightFace). Wav2Lip remains only as the dev-mode live engine until FlashHead runs real time on a GPU.
