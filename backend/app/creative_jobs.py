@@ -84,6 +84,17 @@ def run_photo_check(image: Path, out_dir: Path) -> dict:
 
 
 def run_photo_idle(photo: Path, out_mp4: Path, seconds: float, head: float) -> dict:
+    from .jobs import flashhead_ready  # SoulX-FlashHead first (licence-clean); LivePortrait only as the research-licensed fallback
+
+    if flashhead_ready():
+        r = subprocess.run([str(WORKERS / ".venv-flash/bin/python"), str(WORKERS / "photo_idle_flashhead.py"), "--image", str(photo),
+                            "--out", str(out_mp4), "--seconds", str(seconds)], capture_output=True, text=True, timeout=3 * 3600)
+        try:
+            res = _last_json(r.stdout)
+        except Exception:  # noqa: BLE001
+            res = {"ok": False, "error": (r.stderr or r.stdout)[-400:] or "flashhead idle failed"}
+        if res.get("ok") or os.environ.get("MIRAGE_VIDEO_RENDERER", "auto").lower() == "flashhead":
+            return res
     r = subprocess.run([str(LP_PY), str(WORKERS / "photo_idle.py"), "--image", str(photo), "--out", str(out_mp4),
                         "--seconds", str(seconds), "--head", str(head)], capture_output=True, text=True, timeout=3 * 3600,
                        env=dict(os.environ, PYTORCH_ENABLE_MPS_FALLBACK="1"))
