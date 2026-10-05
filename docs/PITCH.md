@@ -8,7 +8,7 @@ Hosted avatar platforms are closed, priced per minute, and hard to embed in prod
 
 ## Product (what runs today, measured)
 - Real-time voice agent: speech in, answer back in ~1.4 s to first audio on a laptop (faster-whisper, local LLM, Kokoro TTS).
-- Generated videos use SoulX-FlashHead (whole face and head motion from audio, Apache-2.0 per its README; not yet counsel-checked); an owner blind test rated it best of seven engines tried, but real-time use is unmeasured and needs an NVIDIA GPU.
+- Generated videos use SoulX-FlashHead (whole face and head motion from audio, Apache-2.0 per its README; not yet counsel-checked); a single-person (owner) rating judged it best of the open engines we tried, but this is one rater and real-time use is unmeasured and needs an NVIDIA GPU.
 - Live lip-synced face on Apple Silicon: ~55-130 fps lip-sync render (Wav2Lip on the M1 GPU) streamed into the browser; ~2-2.5 s from transcript to first moving lips (improving).
 - Replicas from a short video, gated by spoken, revocable consent; audit log; moderation on scripts.
 - Knowledge base + memory, REST API, Python/JS SDKs, embed widget, usage metering, Stripe/Razorpay checkout (not yet live-tested), offline video generation.
