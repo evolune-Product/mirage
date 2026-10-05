@@ -15,12 +15,12 @@ Open-core conversational video AI: talk face to face with an AI agent, make digi
 
 ## Face model choice
 SoulX-FlashHead is the one generative face model we build on. In a one-person blind test it was rated good and Wav2Lip, MuseTalk and JoyVASA all worst (JoyVASA was dropped). Numbers and caveats: `docs/BENCHMARKS.md`.
-**Photo tip:** give it a sharp, front-facing photo cropped tight so the face fills roughly half the frame. A loose upper-body photo made the mouth barely move (jaw movement 0.08 versus 0.21 after cropping). The video path crops automatically; automatic tight-cropping for photo uploads is not built yet.
+**Photo tip:** give it a sharp, front-facing photo cropped tight so the face fills roughly half the frame. A loose upper-body photo made the mouth barely move (jaw movement 0.08 versus 0.21 after cropping). The renderer now crops automatically (`workers/face_crop.py`) for both photos and video frames. A tight frame from real video of the person looked best in our owner test.
 
 ## Run locally
 ```
 ./dev.sh                  # API :8000, lip-sync :8100, worker loop, web :3000
-make test                 # backend tests (447)
+make test                 # backend tests (447 passing on Oct 5)
 make e2e                  # full browser end-to-end suite
 ```
 Needs Python 3.11, Node 20, ffmpeg and Ollama (`llama3.2:3b`). Model files are not in git; see `docs/DEPLOY.md`.

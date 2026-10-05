@@ -22,3 +22,6 @@ moderation blocklist too narrow, 1B classifier unusable (switched to qwen3:8b), 
 
 Not tested: real microphone/speakers (fake mic file only), Stripe/Razorpay live APIs, mobile layout,
 concurrency/load, NVIDIA/GPU path (does not exist yet).
+
+## Status (Oct 5)
+Backend: `cd backend && .venv/bin/python -m pytest -q` runs 447 tests (all passing). End to end: `make e2e` runs 13 steps against a restarted stack (all green; 24 routes at 1440 and 390 px). Not covered: real microphones and phones, Docker, CUDA/NVIDIA, live payments, and subjective face/voice quality (judged by the owner only; see docs/BENCHMARKS.md).

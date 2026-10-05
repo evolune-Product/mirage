@@ -89,3 +89,6 @@ Credits are seconds on `Account.credits_seconds` (a plan purchase or top-up adds
 
 ## 14. End-to-end suite
 `make e2e-smoke` (backend + dashboard only, ~1 min, no models) and `make e2e` (full: replica + voice consent through a fake microphone fed Kokoro speech, worker training, persona + knowledge, live conversation with lip-sync frames, video render, every route at 1440/390, guest conversation, webhook delivery with HMAC check). Isolated ports + temp DB; logs and failure screenshots land in `e2e/artifacts/` (gitignored). `make check` = tsc + pytest + smoke. See `e2e/README.md`.
+
+## 4. FlashHead renderer (videos and photo avatars)
+Installed under `workers/SoulX-FlashHead` with its own env `workers/.venv-flash` (Mac patch: `workers/patches/flashhead-mps.patch`). `backend/app/jobs.py` uses it automatically when present (`MIRAGE_VIDEO_RENDERER=liveportrait|flashhead|auto`); `workers/render_flashhead.py` crops the face tightly first. On a rented NVIDIA box use `infra/gpu_flashhead_setup.sh` (untested; see `docs/GPU_RUNBOOK.md`). The live conversation still uses Wav2Lip (non-commercial) until real-time FlashHead is measured and wired in.

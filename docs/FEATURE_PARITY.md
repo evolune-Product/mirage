@@ -39,7 +39,7 @@ Legend for Mirage "verified": **unit** = automated tests with fakes, **live** = 
 
 | Feature | Tavus | HeyGen | Synthesia | D-ID | Hedra | Mirage | Notes |
 |---|---|---|---|---|---|---|---|
-| Replica from a training video | yes | yes | personal avatars | instant avatars | ? | have (live) | consent gate; LivePortrait / Wav2Lip |
+| Replica from a training video | yes | yes | personal avatars | instant avatars | ? | have (live) | consent gate; SoulX-FlashHead (videos, photo idle) / Wav2Lip (live, dev only) |
 | Replica from an image | yes | yes | yes | yes (photo) | yes | missing | |
 | Consent verification for likeness | yes | ? | consent verification | ? | ? | have (unit, live) | challenge phrase + audio check (safety module) |
 | Voice cloning | yes | yes | yes | yes | ? | have (video), partial (live) | Chatterbox MIT on MLX, consent-gated; video voice verified (similarity 0.78), live +4-5 s latency on M1 so Kokoro stays the live default |
@@ -80,7 +80,7 @@ Legend for Mirage "verified": **unit** = automated tests with fakes, **live** = 
 3. **Recordings** (audio first, mp4 later) with per-conversation consent prompt and signed download links; needed for enterprise and for QA of agents.
 4. **Voice cloning** (OpenVoice v2 tone conversion on top of Kokoro, already sketched in `jobs.VoiceProvider`) so translated videos and agents keep the person's voice. Required to be credible against HeyGen/Synthesia translation.
 5. **LiveKit/Pipecat adapters + Zoom/Meet bots**: distribution. The Session is transport-agnostic, so this is mostly glue.
-6. **Image-to-replica** and a better face model on GPU (MuseTalk / LatentSync on a rented 4090) for lip quality.
+6. **Image-to-replica** is built (photo avatars via FlashHead idle clip, automatic tight crop). Real-time FlashHead on a rented NVIDIA GPU is the next step for live quality (docs/GPU_RUNBOOK.md); MuseTalk, LatentSync, Ditto, EchoMimic V3, Wan and JoyVASA were tried or reviewed and dropped (docs/MODEL_TRIALS.md, WAN_TRIAL.md).
 7. **Teams/roles/SSO + SOC 2 groundwork**, MCP server so agents (Claude, Cursor) can build PALs the way Tavus allows.
 8. Interactive video elements / SCORM / analytics for the async-video side (Synthesia territory); only if the video product becomes the focus.
 9. Magic-Canvas-style on-screen components (cards, forms, scheduling) driven by tool results.

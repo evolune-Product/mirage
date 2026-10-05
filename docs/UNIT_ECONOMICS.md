@@ -53,3 +53,6 @@ speaking stream needs 25 fps and the agent speaks ~40 % of the time), Kokoro and
 | 4 | 50 % | $0.012 |
 Takeaway unchanged: utilisation matters more than per-stream speed; at 20 % utilisation and 4 streams the Starter plan margin is ~86 %
 ($0.158/min), at 50 % and 10 streams ~95 %.
+
+## FlashHead cost note (Oct 5, unmeasured)
+Generated-video cost on the Mac is about 25-30 s of compute per video second (Lite) and about 250 s (Pro), so the Mac is a development box only. The FlashHead authors report Lite at 96 fps or 3 concurrent real-time streams on one RTX 4090; we have NOT measured this. If true, a rented 4090 at roughly $0.3-1/h gives about $0.1-0.3 per user-minute for live video before any optimisation (my estimate). Replace this paragraph with measured numbers after the GPU test (docs/GPU_RUNBOOK.md).
