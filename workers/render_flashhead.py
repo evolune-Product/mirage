@@ -25,6 +25,19 @@ def available() -> tuple[bool, str]:
     return (not miss, "missing: " + ", ".join(miss) if miss else "")
 
 
+def tight_crop(image: Path, out_png: Path, size: int = 768) -> dict:
+    """Tight face crop via face_crop.py in the .venv-face interpreter (MediaPipe needs that environment). Falls back to the
+    untouched image on any failure."""
+    py = HERE / ".venv-face" / "bin" / "python"
+    if not py.exists():
+        return {"cropped": False, "why": ".venv-face missing"}
+    r = subprocess.run([str(py), str(HERE / "face_crop.py"), str(image), str(out_png), str(size)], capture_output=True, text=True)
+    try:
+        return json.loads(r.stdout.strip().splitlines()[-1])
+    except Exception:  # noqa: BLE001
+        return {"cropped": False, "why": (r.stderr or r.stdout)[-200:]}
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--image", required=True)
@@ -46,11 +59,17 @@ def main():
         if r.returncode:
             print(json.dumps({"ok": False, "error": "audio convert failed: " + r.stderr[-300:]}))
             return 1
-        cmd = [str(PY), "generate_video.py", "--ckpt_dir", "models/SoulX-FlashHead-1_3B", "--wav2vec_dir", "models/wav2vec2-base-960h",
-               "--model_type", a.model, "--cond_image", str(Path(a.image).resolve()), "--audio_path", str(wav16),
-               "--audio_encode_mode", "stream", "--save_file", str(Path(a.out).resolve())]
+        cond = Path(a.image).resolve()
         if not a.no_face_crop:
-            cmd += ["--use_face_crop", "1"]
+            try:
+                info = tight_crop(cond, Path(td) / "cond.png")
+                if info.get("cropped"):
+                    cond = Path(td) / "cond.png"
+            except Exception:  # noqa: BLE001 - any crop failure falls back to the original image
+                pass
+        cmd = [str(PY), "generate_video.py", "--ckpt_dir", "models/SoulX-FlashHead-1_3B", "--wav2vec_dir", "models/wav2vec2-base-960h",
+               "--model_type", a.model, "--cond_image", str(cond), "--audio_path", str(wav16),
+               "--audio_encode_mode", "stream", "--save_file", str(Path(a.out).resolve())]
         env = {**os.environ, "PYTORCH_ENABLE_MPS_FALLBACK": "1"}
         r = subprocess.run(cmd, cwd=FH, env=env, capture_output=True, text=True)
     if r.returncode or not Path(a.out).exists():
