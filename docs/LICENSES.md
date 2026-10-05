@@ -114,3 +114,5 @@ blockers that the flag does **not** remove are listed in section 5 (eSpeak NG GP
 **Decision (Oct 4):** SoulX-FlashHead is the only generative face model we keep. JoyVASA was tried and dropped (poor quality, depended on LivePortrait/InsightFace). Wav2Lip remains only as the dev-mode live engine until FlashHead runs real time on a GPU.
 
 **Oct 4:** a from-scratch own model (Mirage-1, ~75 s of data) was tried and deleted: mouth barely moved, far below FlashHead. FlashHead is the only face model we keep.
+
+**Oct 5:** Wan, the LoRA trial code/adapters and their clips were deleted at the owner's request (code remains only in git history). Only FlashHead stays as the face model; Wav2Lip is kept only as the dev live engine until FlashHead runs real time on a GPU.
