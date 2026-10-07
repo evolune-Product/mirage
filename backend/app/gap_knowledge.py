@@ -60,7 +60,7 @@ def _default_fetch(url: str) -> tuple[str, str]:
 
     netguard.check_url(url)
     with netguard.client(follow_redirects=True, timeout=20) as c:
-        with c.stream("GET", url, headers={"user-agent": "MirageBot/1.0 (+knowledge ingestion)"}) as r:
+        with c.stream("GET", url, headers={"user-agent": "VocalFaceBot/1.0 (+knowledge ingestion)"}) as r:
             r.raise_for_status()
             buf = bytearray()
             for chunk in r.iter_bytes():

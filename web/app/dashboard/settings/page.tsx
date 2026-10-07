@@ -30,39 +30,39 @@ export default function Settings() {
     <Shell title="Settings" subtitle="Your plan, this environment and your data.">
       <div className="grid gap-4 lg:grid-cols-2 [&>*]:min-w-0">
         <section className="card">
-          <h2 className="mb-4 flex items-center gap-2 font-display text-2xl"><Gauge size={18} className="text-mirage-violet" />Plan and usage</h2>
+          <h2 className="mb-4 flex items-center gap-2 font-display text-2xl"><Gauge size={18} className="text-vocalface-violet" />Plan and usage</h2>
           {!st ? <Skeleton className="h-32" /> : (<>
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1"><span className="rounded-full bg-mirage-gradient px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white" data-testid="plan-name">{st.plan.name}</span>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1"><span className="rounded-full bg-vocalface-gradient px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white" data-testid="plan-name">{st.plan.name}</span>
               <span className="text-sm text-gray-400">{st.plan.price_cents ? `$${(st.plan.price_cents / 100).toFixed(0)} / month` : "Free"} - {st.plan.included_minutes} minutes included</span></div>
             <p className="mt-5 font-display text-5xl leading-none">{Math.floor(secs / 60)}<span className="text-2xl text-gray-500">m {secs % 60}s</span></p>
             <p className="mt-1 text-xs text-gray-500">credits remaining</p>
-            {incl > 0 && <><div className="mt-4 h-1.5 overflow-hidden rounded-full bg-white/10"><div className="h-full bg-mirage-gradient" style={{ width: pct + "%" }} /></div>
+            {incl > 0 && <><div className="mt-4 h-1.5 overflow-hidden rounded-full bg-white/10"><div className="h-full bg-vocalface-gradient" style={{ width: pct + "%" }} /></div>
               <p className="mt-1.5 text-xs text-gray-500">{(used / 60).toFixed(1)} of {st.plan.included_minutes} included minutes used (from the ledger)</p></>}
             <Link href="/dashboard/billing" className="btn-ghost mt-5">Manage billing</Link>
           </>)}
         </section>
 
         <section className="card">
-          <h2 className="mb-2 flex items-center gap-2 font-display text-2xl"><Server size={18} className="text-mirage-cyan" />Environment</h2>
+          <h2 className="mb-2 flex items-center gap-2 font-display text-2xl"><Server size={18} className="text-vocalface-cyan" />Environment</h2>
           <dl>
             <Row k="API base URL" v={API_URL} />
             <Row k="API status" v={health === null ? "checking..." : health === "ok" ? <Badge s="ready" /> : <Badge s="error" />} />
             <Row k="Dashboard key" v={key ? key.slice(0, 8) + "..." : "none"} />
-            <Row k="Interactive API docs" v={<a className="text-mirage-rose hover:underline" href={API_URL + "/docs"} target="_blank" rel="noreferrer">{API_URL}/docs</a>} />
+            <Row k="Interactive API docs" v={<a className="text-vocalface-rose hover:underline" href={API_URL + "/docs"} target="_blank" rel="noreferrer">{API_URL}/docs</a>} />
             <Row k="Dashboard origin" v={typeof window !== "undefined" ? window.location.origin : ""} />
           </dl>
         </section>
 
         <section className="card lg:col-span-2">
-          <h2 className="mb-3 flex items-center gap-2 font-display text-2xl"><ScrollText size={18} className="text-mirage-amber" />Recent account activity</h2>
+          <h2 className="mb-3 flex items-center gap-2 font-display text-2xl"><ScrollText size={18} className="text-vocalface-amber" />Recent account activity</h2>
           {audit === null ? <Skeleton className="h-20" /> : audit.length === 0 ? <p className="text-sm text-gray-500">No activity recorded yet.</p> : (
             <ul className="divide-y divide-white/5 text-sm">{audit.map((a, i) => <li key={a.id ?? i} className="flex flex-wrap items-baseline gap-x-4 py-2"><span className="font-mono text-xs text-gray-200">{a.action}</span><span className="min-w-0 flex-1 truncate text-xs text-gray-500">{a.target} {a.detail}</span><span className="text-xs text-gray-500">{fmtDate(a.created_at)}</span></li>)}</ul>)}
         </section>
 
-        <section className="rounded-2xl border border-mirage-rose/30 bg-mirage-rose/[0.04] p-5 lg:col-span-2">
-          <h2 className="font-display text-2xl text-mirage-rose">Delete my data</h2>
+        <section className="rounded-2xl border border-vocalface-rose/30 bg-vocalface-rose/[0.04] p-5 lg:col-span-2">
+          <h2 className="font-display text-2xl text-vocalface-rose">Delete my data</h2>
           <p className="mt-1 max-w-2xl text-sm text-gray-400">Permanently erases your replicas, consent recordings, personas, knowledge, conversations, transcripts, videos, webhooks and keys. A deletion receipt without personal content is kept. This cannot be undone.</p>
-          <button className="mt-4 inline-flex items-center gap-2 rounded-full bg-mirage-rose px-5 py-2.5 text-sm font-semibold text-white hover:brightness-110" onClick={() => setDel(true)}><Trash2 size={15} />Delete my data</button>
+          <button className="mt-4 inline-flex items-center gap-2 rounded-full bg-vocalface-rose px-5 py-2.5 text-sm font-semibold text-white hover:brightness-110" onClick={() => setDel(true)}><Trash2 size={15} />Delete my data</button>
         </section>
       </div>
       <ConfirmDialog open={del} typed="delete-my-data" title="Delete all your data?" confirmLabel="Delete everything" onClose={() => setDel(false)}

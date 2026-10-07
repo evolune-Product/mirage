@@ -20,35 +20,35 @@ def test_request_id_header_and_inbound_honoured(client):
 
 
 def test_metrics_endpoint_counts_routes_by_template_not_by_id(client, monkeypatch):
-    monkeypatch.delenv("MIRAGE_METRICS_TOKEN", raising=False)
+    monkeypatch.delenv("VOCALFACE_METRICS_TOKEN", raising=False)
     h = signup(client)
     p = client.post("/v1/personas", headers=h, json={"name": "a", "system_prompt": "s"}).json()
     client.put(f"/v1/personas/{p['id']}", headers=h, json={"name": "b", "system_prompt": "s"})
     client.get("/v1/replicas/r_nope", headers=h)
     body = client.get("/metrics").text
-    assert 'mirage_http_requests_total{method="PUT",route="/v1/personas/{pid}",status="200"}' in body
+    assert 'vocalface_http_requests_total{method="PUT",route="/v1/personas/{pid}",status="200"}' in body
     assert 'route="/v1/replicas/{rid}",status="404"' in body
     assert p["id"] not in body  # no ids / keys as label values (cardinality + privacy)
     assert h["x-api-key"] not in body
-    assert "mirage_http_request_duration_seconds_bucket" in body and 'le="+Inf"' in body
-    for name in ("mirage_conversations_active", "mirage_worker_queue_depth", "mirage_webhook_deliveries", "mirage_first_audio_window_ms_count",
-                 "mirage_worker_heartbeat_age_seconds", "mirage_websocket_connections"):
+    assert "vocalface_http_request_duration_seconds_bucket" in body and 'le="+Inf"' in body
+    for name in ("vocalface_conversations_active", "vocalface_worker_queue_depth", "vocalface_webhook_deliveries", "vocalface_first_audio_window_ms_count",
+                 "vocalface_worker_heartbeat_age_seconds", "vocalface_websocket_connections"):
         assert name in body, name
 
 
 def test_metrics_token_protection(client, monkeypatch):
-    monkeypatch.setenv("MIRAGE_METRICS_TOKEN", "s3cret-token")
+    monkeypatch.setenv("VOCALFACE_METRICS_TOKEN", "s3cret-token")
     assert client.get("/metrics").status_code == 401
     assert client.get("/metrics", headers={"authorization": "Bearer nope"}).status_code == 401
     assert client.get("/metrics", headers={"authorization": "Bearer s3cret-token"}).status_code == 200
     assert client.get("/metrics?token=s3cret-token").status_code == 200
-    monkeypatch.delenv("MIRAGE_METRICS_TOKEN")
-    monkeypatch.setenv("MIRAGE_ENV", "production")
+    monkeypatch.delenv("VOCALFACE_METRICS_TOKEN")
+    monkeypatch.setenv("VOCALFACE_ENV", "production")
     assert client.get("/metrics").status_code == 403  # production without a token: disabled, not open
 
 
 def test_queue_depth_and_first_audio_from_db(client, monkeypatch):
-    monkeypatch.delenv("MIRAGE_METRICS_TOKEN", raising=False)
+    monkeypatch.delenv("VOCALFACE_METRICS_TOKEN", raising=False)
     h = signup(client)
     with Session(db.engine) as s:
         acc = s.exec(select(db.Account)).first()
@@ -60,20 +60,20 @@ def test_queue_depth_and_first_audio_from_db(client, monkeypatch):
             s.add(TranscriptTurn(conversation_id="c1", role="assistant", text="t", first_audio_ms=ms))
         s.commit()
     body = client.get("/metrics").text
-    assert 'mirage_worker_queue_depth{kind="video"} 2' in body and 'mirage_worker_queue_depth{kind="replica"} 1' in body
-    assert "mirage_first_audio_window_ms_count 4" in body and 'quantile="0.5"' in body
+    assert 'vocalface_worker_queue_depth{kind="video"} 2' in body and 'vocalface_worker_queue_depth{kind="replica"} 1' in body
+    assert "vocalface_first_audio_window_ms_count 4" in body and 'quantile="0.5"' in body
 
 
 def test_json_log_never_contains_secrets_or_query_strings(client, monkeypatch):
     buf = io.StringIO()
     h = logging.StreamHandler(buf)
     h.setFormatter(metrics.JsonFormatter())
-    lg = logging.getLogger("mirage.access")
+    lg = logging.getLogger("vocalface.access")
     lg.addHandler(h); lg.setLevel(logging.INFO)
     try:
         key = signup(client)["x-api-key"]
         client.get(f"/v1/usage?api_key={key}&sig=zzz", headers={"x-api-key": key, "x-request-id": "req-00112233"})
-        logging.getLogger("mirage.test").warning("leaked key %s and whsec_abcdef123456", key)
+        logging.getLogger("vocalface.test").warning("leaked key %s and whsec_abcdef123456", key)
     finally:
         lg.removeHandler(h)
     out = buf.getvalue()
@@ -88,7 +88,7 @@ def test_json_log_never_contains_secrets_or_query_strings(client, monkeypatch):
 
 def test_deep_health_db_critical_others_degrade(client, monkeypatch):
     monkeypatch.setenv("OLLAMA_URL", "http://127.0.0.1:1")
-    monkeypatch.setenv("MIRAGE_LIPSYNC_URL", "http://127.0.0.1:1")
+    monkeypatch.setenv("VOCALFACE_LIPSYNC_URL", "http://127.0.0.1:1")
     r = client.get("/health/deep")
     j = r.json()
     assert r.status_code == 200 and j["ok"] is True and j["status"] == "degraded"

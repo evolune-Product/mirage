@@ -24,7 +24,7 @@ Scope: this Mac only (M1 Pro, 32 GB, MPS), time-boxed. Nothing pushed, no spend,
 Note: the held-out windows were used only to monitor, and I did not pick a checkpoint from them (I evaluated the last one). The latent loss is the one clean win; it only says the model predicts this person's latents on that audio slightly better in a one-step teacher-forced setting.
 
 ## Rendered comparison (held-out 10 s speech, seed 42, base vs LoRA u120)
-Metrics follow `/tmp/mirage_demo/evalface.py` (SFace cosine to the reference, jaw range, lip-audio corr, sharpness, jitter) plus PSNR/SSIM of the 512 crop against the REAL held-out footage crop (own gaussian-window SSIM; face crop = central 320 px).
+Metrics follow `/tmp/vocalface_demo/evalface.py` (SFace cosine to the reference, jaw range, lip-audio corr, sharpness, jitter) plus PSNR/SSIM of the 512 crop against the REAL held-out footage crop (own gaussian-window SSIM; face crop = central 320 px).
 
 | condition | identity cos | jaw range | lip-audio corr (weak) | jaw corr vs REAL | sharpness | jitter | PSNR / SSIM vs real |
 |---|---|---|---|---|---|---|---|

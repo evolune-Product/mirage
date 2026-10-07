@@ -5,19 +5,19 @@ Status log (updated as work lands). Nothing committed. Shared servers 8000/8100/
 ## Done
 * `docs/LICENSES.md`: audit of every model/weight/library with evidence. Headline findings:
   * Wav2Lip: non-commercial (LRS2), confirmed on disk + upstream. LivePortrait: code MIT, **InsightFace buffalo_l weights non-commercial** (stated in LivePortrait's own LICENSE).
-  * MuseTalk code MIT; unet "any purpose, even commercially" (vendor) but trained on HDTF + an undisclosed private set -> marked UNCLEAR (needs a lawyer). Mirage loads only unet + sd-vae-ft-mse (MIT) + whisper-tiny (MIT); DWPose / face-parse-bisent (CelebAMask-HQ) / S3FD are NOT loaded.
+  * MuseTalk code MIT; unet "any purpose, even commercially" (vendor) but trained on HDTF + an undisclosed private set -> marked UNCLEAR (needs a lawyer). VocalFace loads only unet + sd-vae-ft-mse (MIT) + whisper-tiny (MIT); DWPose / face-parse-bisent (CelebAMask-HQ) / S3FD are NOT loaded.
   * **New finding outside lip-sync: the Kokoro TTS path pulls eSpeak NG + `phonemizer-fork` (GPL-3.0+).** Fine for pure hosting, a problem for distributed images. Not fixed by the commercial flag.
-* `workers/engines/` package: `base.py` (LipsyncEngine interface, `LicenceInfo`/`Weight`), `wav2lip.py` (research-only), `musetalk.py` (adapter, `MIRAGE_MUSETALK_RES`), `viseme.py` (licence-clean fallback), registry + gate in `__init__.py`.
-* `lipsync_server.py`: engine chosen by `MIRAGE_LIPSYNC_ENGINE=auto|viseme|musetalk|wav2lip`; `/health` reports engine, licence, `commercial_only`, `disabled_engines`, per-engine status; `MIRAGE_COMMERCIAL_ONLY=1` refuses research engines (503 with the reason on `/render`), `MIRAGE_COMMERCIAL_ALLOW_UNCLEAR=1` is the explicit opt-in for MuseTalk. `render_offline.py` (+`--engine viseme`), `photo_idle.py`, `render_liveportrait.py` refuse under the flag.
+* `workers/engines/` package: `base.py` (LipsyncEngine interface, `LicenceInfo`/`Weight`), `wav2lip.py` (research-only), `musetalk.py` (adapter, `VOCALFACE_MUSETALK_RES`), `viseme.py` (licence-clean fallback), registry + gate in `__init__.py`.
+* `lipsync_server.py`: engine chosen by `VOCALFACE_LIPSYNC_ENGINE=auto|viseme|musetalk|wav2lip`; `/health` reports engine, licence, `commercial_only`, `disabled_engines`, per-engine status; `VOCALFACE_COMMERCIAL_ONLY=1` refuses research engines (503 with the reason on `/render`), `VOCALFACE_COMMERCIAL_ALLOW_UNCLEAR=1` is the explicit opt-in for MuseTalk. `render_offline.py` (+`--engine viseme`), `photo_idle.py`, `render_liveportrait.py` refuse under the flag.
 * Tests: `backend/tests/test_engines.py` (9) driving `workers/engine_checks.py`.
 
 ## Verified / measured (details appended below as they finish)
 
 ### Viseme engine (licence-clean fallback), founder footage 576x324 crop, Kokoro 10.8 s clip
 * Speed: 227-247 fps end to end on CPU (incl. audio features), ~3 ms/frame warp+interior; composite+JPEG 2-3 ms/frame. Wav2Lip on MPS measured 61 fps in the same run (cold). Real-time needs 25.
-* Looks (6-frame side-by-side vs Wav2Lip, 4x mouth crops viewed): single clean mouth, crisp (it is the real frame), teeth band + dark cavity + tongue painted procedurally. Clearly a puppet: loud vowels open a bit wider than Wav2Lip, tongue/teeth are generic, no phoneme-specific shapes (f/s/th look alike). First gain (0.5) looked like yawning; default now 0.27 (`MIRAGE_VISEME_GAIN`).
+* Looks (6-frame side-by-side vs Wav2Lip, 4x mouth crops viewed): single clean mouth, crisp (it is the real frame), teeth band + dark cavity + tongue painted procedurally. Clearly a puppet: loud vowels open a bit wider than Wav2Lip, tongue/teeth are generic, no phoneme-specific shapes (f/s/th look alike). First gain (0.5) looked like yawning; default now 0.27 (`VOCALFACE_VISEME_GAIN`).
 * Objective (weak, favours an energy-driven method by construction): correlation of mediapipe jaw-open vs audio envelope: viseme 0.76, Wav2Lip 0.15 (0.30 at 2-frame lag). No SyncNet/LSE metric was computed.
-* Browser (isolated stack 8400/8401/8802, `MIRAGE_COMMERCIAL_ONLY=1`, fake mic, Playwright): /health showed engine=viseme, disabled=[musetalk, wav2lip]; conversation answered from the document, 7 segments, 73 speaking frames, canvas pixels changed, no page errors. Latency transcript->first lip frame was 10.1 s only because the Mac was swapping (31 GB used); not representative.
+* Browser (isolated stack 8400/8401/8802, `VOCALFACE_COMMERCIAL_ONLY=1`, fake mic, Playwright): /health showed engine=viseme, disabled=[musetalk, wav2lip]; conversation answered from the document, 7 segments, 73 speaking frames, canvas pixels changed, no page errors. Latency transcript->first lip frame was 10.1 s only because the Mac was swapping (31 GB used); not representative.
 
 ### MuseTalk 1.5 on this Mac (MPS fp16, bs 8, 100 frames, UNet+VAE decode only; base VAE encode ~10 s one-time per replica)
 | input size | fps (clean runs) | look |
@@ -28,8 +28,8 @@ Status log (updated as work lands). Nothing committed. Shared servers 8000/8100/
 MuseTalk is single-step (t=0), so "fewer steps" does not exist; shrinking resolution gains little on MPS (not conv-bound) and costs quality. Not live-capable here; needs CUDA (vendor claims 30+ fps on V100, NOT verified).
 
 ## Recommendation
-* (a) Live on Apple Silicon: ship **viseme** under MIRAGE_COMMERCIAL_ONLY (only option that is both licence-clean and >25 fps). Wav2Lip is faster/prettier but unshippable. Be upfront that it is a puppet.
-* (b) Offline video: **MuseTalk 256** after a lawyer clears the unet (HDTF+private data), enabled with MIRAGE_COMMERCIAL_ALLOW_UNCLEAR=1; fall back to viseme otherwise.
+* (a) Live on Apple Silicon: ship **viseme** under VOCALFACE_COMMERCIAL_ONLY (only option that is both licence-clean and >25 fps). Wav2Lip is faster/prettier but unshippable. Be upfront that it is a puppet.
+* (b) Offline video: **MuseTalk 256** after a lawyer clears the unet (HDTF+private data), enabled with VOCALFACE_COMMERCIAL_ALLOW_UNCLEAR=1; fall back to viseme otherwise.
 * (c) NVIDIA: **MuseTalk** (live-capable there per vendor; verify on a rented GPU), viseme as fallback.
 
 ## Plan: owner-licensed lip-sync model (not started)

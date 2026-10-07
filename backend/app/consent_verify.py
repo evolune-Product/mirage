@@ -9,7 +9,7 @@ import numpy as np
 
 from . import netguard, settings, voiceprint
 
-MAX_TRAIN_BYTES = int(os.getenv("MIRAGE_MAX_TRAIN_VIDEO_BYTES", str(300 * 1024 * 1024)))
+MAX_TRAIN_BYTES = int(os.getenv("VOCALFACE_MAX_TRAIN_VIDEO_BYTES", str(300 * 1024 * 1024)))
 _whisper = None
 _wlock = threading.Lock()
 
@@ -25,7 +25,7 @@ def transcribe(wav: np.ndarray) -> str:
     with _wlock:
         if _whisper is None:
             from faster_whisper import WhisperModel
-            _whisper = WhisperModel(os.getenv("MIRAGE_CONSENT_WHISPER", "base.en"), device="cpu", compute_type="int8")
+            _whisper = WhisperModel(os.getenv("VOCALFACE_CONSENT_WHISPER", "base.en"), device="cpu", compute_type="int8")
     segs, _ = _whisper.transcribe(wav, language="en", vad_filter=True)
     return " ".join(s.text.strip() for s in segs).strip()
 

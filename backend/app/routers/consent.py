@@ -20,7 +20,7 @@ from ..models_sec import FaceBinding
 from ..safety import (CODE_WORDS, audit, code_words_present, enforce_rate_limit, has_consent, moderate,
                       phrase_score)
 
-log = logging.getLogger("mirage.consent")
+log = logging.getLogger("vocalface.consent")
 PHRASE_MIN_SCORE = 0.8
 
 router = APIRouter()
@@ -41,7 +41,7 @@ def _own_replica(s: Session, rid: str, acc: Account) -> Replica:
 def challenge(rid: str, acc: Account = Depends(current_account), s: Session = Depends(get_session)):
     r = _own_replica(s, rid, acc)
     code = ", ".join(secrets.choice(CODE_WORDS) for _ in range(3))
-    phrase = (f"I consent to Mirage creating an AI replica of my face and voice named {r.name}. "
+    phrase = (f"I consent to VocalFace creating an AI replica of my face and voice named {r.name}. "
               f"My verification code is {code}.")
     ch = ConsentChallenge(replica_id=rid, account_id=acc.id, phrase=phrase,
                           expires_at=datetime.now(timezone.utc) + timedelta(minutes=15))

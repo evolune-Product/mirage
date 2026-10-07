@@ -278,8 +278,8 @@ def _ics_escape(t: str) -> str:
 def schedule_ics(x: ShareSchedule, url: str, title: str) -> str:
     f = lambda d: cr.utc(d).strftime("%Y%m%dT%H%M%SZ")  # noqa: E731
     return "\r\n".join([
-        "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Mirage//Scheduled call//EN", "METHOD:PUBLISH", "BEGIN:VEVENT",
-        f"UID:{x.token}@mirage", f"DTSTAMP:{f(x.created_at)}", f"DTSTART:{f(x.starts_at)}", f"DTEND:{f(x.ends_at)}",
+        "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//VocalFace//Scheduled call//EN", "METHOD:PUBLISH", "BEGIN:VEVENT",
+        f"UID:{x.token}@vocalface", f"DTSTAMP:{f(x.created_at)}", f"DTSTART:{f(x.starts_at)}", f"DTEND:{f(x.ends_at)}",
         f"SUMMARY:{_ics_escape(title)}", f"DESCRIPTION:{_ics_escape((x.note + chr(10) if x.note else '') + 'Join: ' + url)}",
         f"URL:{url}", "END:VEVENT", "END:VCALENDAR", ""])
 

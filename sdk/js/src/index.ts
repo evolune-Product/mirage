@@ -1,4 +1,4 @@
-export class MirageError extends Error {
+export class VocalFaceError extends Error {
   constructor(public status: number, public detail: unknown) {
     super(`HTTP ${status}: ${typeof detail === "string" ? detail : JSON.stringify(detail)}`);
   }
@@ -22,7 +22,7 @@ export interface PersonaConfigInput {
 export interface PersonaConfig extends Omit<PersonaConfigInput, "custom_llm"> { persona_id: string; custom_llm: { base_url: string; model: string; has_api_key: boolean } }
 export interface VideoBatch { id: string; kind: string; total: number; counts: Record<string, number>; completed: boolean; items?: { video_id: string; status: string; language: string; script: string; output_url: string | null }[] }
 
-/** Verify a `Mirage-Signature` header against the raw request body (Node 18+/browsers with WebCrypto). */
+/** Verify a `VocalFace-Signature` header against the raw request body (Node 18+/browsers with WebCrypto). */
 export async function verifyWebhook(secret: string, body: string, header: string, toleranceS = 300): Promise<boolean> {
   try {
     const parts = Object.fromEntries(header.split(",").map((p) => p.split("=", 2) as [string, string]));
@@ -34,14 +34,14 @@ export async function verifyWebhook(secret: string, body: string, header: string
   } catch { return false; }
 }
 
-export interface MirageOptions { apiKey?: string; baseUrl?: string; fetch?: typeof fetch }
+export interface VocalFaceOptions { apiKey?: string; baseUrl?: string; fetch?: typeof fetch }
 
-export class Mirage {
+export class VocalFace {
   apiKey?: string;
   private base: string;
   private f: typeof fetch;
 
-  constructor(opts: MirageOptions = {}) {
+  constructor(opts: VocalFaceOptions = {}) {
     this.apiKey = opts.apiKey;
     this.base = (opts.baseUrl ?? "http://localhost:8000").replace(/\/$/, "");
     this.f = opts.fetch ?? ((...a) => fetch(...a));
@@ -57,7 +57,7 @@ export class Mirage {
     const r = await this.f(`${this.base}/v1${path}${qs}`, init);
     const text = await r.text();
     const data = text ? JSON.parse(text) : null;
-    if (!r.ok) throw new MirageError(r.status, data?.detail ?? text);
+    if (!r.ok) throw new VocalFaceError(r.status, data?.detail ?? text);
     return data as T;
   }
 
@@ -184,7 +184,7 @@ export class Mirage {
   async exportLeadsCsv(q: { persona_id?: string; since?: string; until?: string; q?: string } = {}) {
     const qs = new URLSearchParams(Object.entries(q).filter(([, v]) => v !== undefined) as [string, string][]).toString();
     const r = await this.f(`${this.base}/v1/leads/export.csv${qs ? "?" + qs : ""}`, { headers: { "x-api-key": this.apiKey ?? "" } });
-    if (!r.ok) throw new MirageError(r.status, await r.text());
+    if (!r.ok) throw new VocalFaceError(r.status, await r.text());
     return r.text();
   }
   getLeadCapture(persona_id: string) { return this.req<any>("GET", `/personas/${persona_id}/lead-capture`); }

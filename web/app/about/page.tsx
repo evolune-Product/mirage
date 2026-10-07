@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { FinalCTA, It, PageHead, Prose, Shell } from "@/components/site/Page";
 
-export const metadata = { title: "About - Mirage", description: "Why Mirage exists, and what is real today.", alternates: { canonical: "/about" } };
+export const metadata = { title: "About - VocalFace", description: "Why VocalFace exists, and what is real today.", alternates: { canonical: "/about" } };
 export default function Page() {
   return (
     <Shell>
-      <PageHead eyebrow="About" title={<>Conversational video you can <It>own</It></>} lead="Mirage is an open-core platform for face-to-face AI agents, built to run on commodity hardware first." />
+      <PageHead eyebrow="About" title={<>Conversational video you can <It>own</It></>} lead="VocalFace is an open-core platform for face-to-face AI agents, built to run on commodity hardware first." />
       <Prose>
         <h2>Why we are building it</h2>
         <p>Talking to software should feel like talking to someone. The hosted platforms that do this well charge per minute and keep everything on their servers. We think the voice and orchestration layers can be open, swappable and cheap, with a hosted option for people who would rather not run anything.</p>

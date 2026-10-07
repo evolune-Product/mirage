@@ -1,13 +1,13 @@
 export const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-const KEY = "mirage_api_key";
+const KEY = "vocalface_api_key";
 export const getKey = (): string => { try { return localStorage.getItem(KEY) || ""; } catch { return ""; } };
 export const setKey = (k: string) => { try { localStorage.setItem(KEY, k); } catch {} };
 export const clearKey = () => { try { localStorage.removeItem(KEY); } catch {} };
 
 /** Active team workspace (sent as the X-Workspace header: requests then run as the workspace owner, limited by your role). */
-const WS = "mirage_workspace";
+const WS = "vocalface_workspace";
 export const getWorkspace = (): string => { try { return localStorage.getItem(WS) || ""; } catch { return ""; } };
-export const setWorkspace = (id: string) => { try { id ? localStorage.setItem(WS, id) : localStorage.removeItem(WS); window.dispatchEvent(new Event("mirage:workspace")); } catch {} };
+export const setWorkspace = (id: string) => { try { id ? localStorage.setItem(WS, id) : localStorage.removeItem(WS); window.dispatchEvent(new Event("vocalface:workspace")); } catch {} };
 const wsHeader = (path: string): Record<string, string> => { const w = getWorkspace(); return w && !path.startsWith("/v1/workspaces") ? { "x-workspace": w } : {}; };
 
 const detailMsg = (j: { detail?: unknown }): string => { const d = j.detail; if (typeof d === "string") return d; if (d && typeof d === "object" && typeof (d as { message?: unknown }).message === "string") return (d as { message: string }).message; return JSON.stringify(d ?? j); };
@@ -25,8 +25,8 @@ export async function api<T>(path: string, init: { method?: string; body?: unkno
 }
 
 // The backend has no list endpoints for conversations/videos, so remember ids locally.
-export function loadIds(name: string): string[] { try { return JSON.parse(localStorage.getItem("mirage_" + name) || "[]"); } catch { return []; } }
-export function saveId(name: string, id: string) { try { localStorage.setItem("mirage_" + name, JSON.stringify([id, ...loadIds(name).filter((x) => x !== id)].slice(0, 50))); } catch {} }
+export function loadIds(name: string): string[] { try { return JSON.parse(localStorage.getItem("vocalface_" + name) || "[]"); } catch { return []; } }
+export function saveId(name: string, id: string) { try { localStorage.setItem("vocalface_" + name, JSON.stringify([id, ...loadIds(name).filter((x) => x !== id)].slice(0, 50))); } catch {} }
 
 /** Multipart upload (file inputs). Do not set content-type: the browser adds the boundary. */
 export async function apiForm<T>(path: string, form: FormData): Promise<T> {
@@ -86,7 +86,7 @@ export type Workspace = { id: string; name: string; owner_account_id: string; ro
 export type Perception = { persona_id: string; enabled: boolean; consent_acknowledged: boolean; require_user_consent: boolean; camera: boolean; screen: boolean; store_frames: boolean; vlm_model: string; interval_s: number };
 
 /** Photo replicas have an image as train_video_url; remember ids we created from a photo as well (the list endpoint has no "kind" field). */
-const PH = "mirage_photo_replicas";
+const PH = "vocalface_photo_replicas";
 export const markPhotoReplica = (id: string) => { try { localStorage.setItem(PH, JSON.stringify([id, ...JSON.parse(localStorage.getItem(PH) || "[]")].slice(0, 100))); } catch {} };
 export const isPhotoReplica = (r: { id: string; train_video_url: string }): boolean => {
   if (/\.(jpe?g|png|webp)(\?|#|$)/i.test(r.train_video_url || "")) return true;

@@ -15,7 +15,7 @@ GPU lock for inference). Which job runs next is decided here, not by lock luck:
       long-answering session cannot monopolise the GPU.
 * a queued job whose HTTP client disconnected (barge-in, closed tab) is dropped without rendering;
 * a job older than its deadline (the caller's timeout, `deadline_s`) is dropped as stale;
-* admission: more than MIRAGE_LIPSYNC_MAX_QUEUE waiting jobs => 503 + Retry-After, so the backend marks the piece failed
+* admission: more than VOCALFACE_LIPSYNC_MAX_QUEUE waiting jobs => 503 + Retry-After, so the backend marks the piece failed
   (the call continues voice-only) instead of building an unbounded backlog.
 Within one session pieces are requested one at a time by the backend, so per-session order is preserved.
 """
@@ -29,10 +29,10 @@ import time
 
 from fastapi import HTTPException
 
-LANES = int(os.environ.get("MIRAGE_LIPSYNC_LANES", "2"))
-MAX_QUEUE = int(os.environ.get("MIRAGE_LIPSYNC_MAX_QUEUE", "12"))
+LANES = int(os.environ.get("VOCALFACE_LIPSYNC_LANES", "2"))
+MAX_QUEUE = int(os.environ.get("VOCALFACE_LIPSYNC_MAX_QUEUE", "12"))
 PIECE_BONUS_S = (2.0, 0.7)
-FAIR_WEIGHT = float(os.environ.get("MIRAGE_LIPSYNC_FAIR_WEIGHT", "1.0"))
+FAIR_WEIGHT = float(os.environ.get("VOCALFACE_LIPSYNC_FAIR_WEIGHT", "1.0"))
 FAIR_DECAY_S = 10.0
 
 

@@ -1,4 +1,4 @@
-// Mirage end-to-end suite. `make e2e` (full) or `make e2e-smoke`.
+// VocalFace end-to-end suite. `make e2e` (full) or `make e2e-smoke`.
 // Starts ISOLATED backend / web / lipsync / worker on free ports with a temp DB + data dir. Never touches :8000/:8100/:3000.
 import { chromium } from 'playwright';
 import crypto from 'node:crypto';
@@ -21,7 +21,7 @@ const VIDEO_TIMEOUT = Number(process.env.E2E_VIDEO_TIMEOUT_S || 600) * 1000;
 
 fs.rmSync(ART, { recursive: true, force: true });
 const LOGS = path.join(ART, 'logs'); fs.mkdirSync(LOGS, { recursive: true });
-const work = H.tmpDir('mirage-e2e-');
+const work = H.tmpDir('vocalface-e2e-');
 const DATA = path.join(work, 'data'); fs.mkdirSync(DATA);
 const ports = { api: await H.freePort(), web: await H.freePort(), lip: await H.freePort(), vid: await H.freePort(), hook: await H.freePort() };
 const API = `http://127.0.0.1:${ports.api}`, WEB = `http://127.0.0.1:${ports.web}`, LIP = `http://127.0.0.1:${ports.lip}`;
@@ -32,18 +32,18 @@ const S = {}; // shared state between steps
 const BROWSER_ARGS = ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--use-fake-ui-for-media-stream',
   '--use-fake-device-for-media-stream', '--autoplay-policy=no-user-gesture-required'];
 
-console.log(`Mirage e2e (${SMOKE ? 'smoke' : 'full'})  api=${ports.api} web=${ports.web} lipsync=${ports.lip}  work=${work}`);
+console.log(`VocalFace e2e (${SMOKE ? 'smoke' : 'full'})  api=${ports.api} web=${ports.web} lipsync=${ports.lip}  work=${work}`);
 process.on('SIGINT', () => { H.stopAll(); process.exit(130); });
 
 // ---------- services ----------
-const env = { MIRAGE_DB_URL: `sqlite:///${work}/e2e.db`, MIRAGE_DATA: DATA, MIRAGE_CORS_ORIGINS: WEB, MIRAGE_PRELOAD: SMOKE ? '0' : '1',
-  MIRAGE_LIPSYNC_URL: LIP, MIRAGE_ENV: 'dev', MIRAGE_RENDER_FPS: process.env.MIRAGE_RENDER_FPS || '8' };
+const env = { VOCALFACE_DB_URL: `sqlite:///${work}/e2e.db`, VOCALFACE_DATA: DATA, VOCALFACE_CORS_ORIGINS: WEB, VOCALFACE_PRELOAD: SMOKE ? '0' : '1',
+  VOCALFACE_LIPSYNC_URL: LIP, VOCALFACE_ENV: 'dev', VOCALFACE_RENDER_FPS: process.env.VOCALFACE_RENDER_FPS || '8' };
 H.start('backend', path.join(ROOT, 'backend/.venv/bin/uvicorn'), ['app.main:app', '--host', '127.0.0.1', '--port', String(ports.api)], { cwd: path.join(ROOT, 'backend'), env, logDir: LOGS });
 H.start('web', 'npm', ['run', 'dev', '--', '-p', String(ports.web)], { cwd: path.join(ROOT, 'web'), env: { NEXT_DIST: '.next-e2e', NEXT_PUBLIC_API_URL: API, NEXT_TELEMETRY_DISABLED: '1' }, logDir: LOGS });
 if (!SMOKE) {
   const venv = fs.existsSync(path.join(ROOT, 'workers/.venv-face/bin/uvicorn')) ? '.venv-face' : '.venv';
   H.start('lipsync', path.join(ROOT, `workers/${venv}/bin/uvicorn`), ['lipsync_server:app', '--host', '127.0.0.1', '--port', String(ports.lip)],
-    { cwd: path.join(ROOT, 'workers'), env: { PYTORCH_ENABLE_MPS_FALLBACK: '1', MIRAGE_DATA: DATA }, logDir: LOGS });
+    { cwd: path.join(ROOT, 'workers'), env: { PYTORCH_ENABLE_MPS_FALLBACK: '1', VOCALFACE_DATA: DATA }, logDir: LOGS });
   H.start('worker', H.PY, [path.join(ROOT, 'workers/run_worker.py'), '--poll', '1'], { cwd: path.join(ROOT, 'backend'), env, logDir: LOGS });
 }
 
@@ -142,7 +142,7 @@ try {
     H.tts('Please wait for the consent phrase.', 'af_heart', FAKEMIC);
     try {
       const { ctx, p } = await newPage(mic, 1440, 900, uiErrs);
-      await ctx.addInitScript((k) => localStorage.setItem('mirage_api_key', k), key());
+      await ctx.addInitScript((k) => localStorage.setItem('vocalface_api_key', k), key());
       await p.goto(WEB + '/dashboard/replicas');
       await p.click('button:has-text("New replica")');
       await p.fill('input[placeholder="e.g. Founder"]', 'Founder');
@@ -182,8 +182,8 @@ try {
   // ---------- 3. persona + knowledge (UI) ----------
   await step('persona + knowledge document', async () => {
     if (SMOKE) {
-      const pe = await api.post('/v1/personas', key(), { name: 'Sales Rep', system_prompt: 'You are a friendly sales rep for Mirage.' }); S.personaId = pe.id;
-      await api.post(`/v1/personas/${pe.id}/knowledge/text`, key(), { title: 'pricing', text: 'Mirage Starter plan costs 19 dollars per month and includes 120 minutes.' });
+      const pe = await api.post('/v1/personas', key(), { name: 'Sales Rep', system_prompt: 'You are a friendly sales rep for VocalFace.' }); S.personaId = pe.id;
+      await api.post(`/v1/personas/${pe.id}/knowledge/text`, key(), { title: 'pricing', text: 'VocalFace Starter plan costs 19 dollars per month and includes 120 minutes.' });
       return 'via API (smoke)';
     }
     need(S.replicaId, 'replica step');
@@ -191,10 +191,10 @@ try {
     await p.goto(WEB + '/dashboard/personas'); await p.click('button:has-text("New persona")');
     await p.locator('[role=dialog] input').nth(0).fill('Sales Rep');
     await p.locator('[role=dialog] select').selectOption({ index: 1 });
-    await p.locator('[role=dialog] textarea').nth(0).fill('You are a friendly sales rep for Mirage. Answer from the documents in one short sentence.');
+    await p.locator('[role=dialog] textarea').nth(0).fill('You are a friendly sales rep for VocalFace. Answer from the documents in one short sentence.');
     await p.click('[role=dialog] button:has-text("Create persona")');
     await p.fill('input[placeholder^="Title"]', 'pricing');
-    await p.fill('textarea[placeholder^="Paste"]', 'Mirage Starter plan costs 19 dollars per month and includes 120 minutes. Pro costs 79 dollars per month.');
+    await p.fill('textarea[placeholder^="Paste"]', 'VocalFace Starter plan costs 19 dollars per month and includes 120 minutes. Pro costs 79 dollars per month.');
     await p.click('button:has-text("Add document")');
     await p.waitForFunction(() => document.querySelector('[role=dialog]')?.innerText.includes('pricing'), null, { timeout: 30000 });
     const ps = await api.get('/v1/personas', key()); S.personaId = ps[0].id;
@@ -250,7 +250,7 @@ try {
   // ---------- 5. video generation (queued now, awaited later: LivePortrait is slow on a Mac) ----------
   await step('video generation submitted', async () => {
     need(S.replicaId, 'replica step');
-    const v = await api.post('/v1/videos', key(), { replica_id: S.replicaId, script: 'Hello from Mirage.' }); S.videoId = v.id;
+    const v = await api.post('/v1/videos', key(), { replica_id: S.replicaId, script: 'Hello from VocalFace.' }); S.videoId = v.id;
     return v.id;
   }, { skip: (SMOKE && 'smoke mode') || (NOVIDEO && '--skip-video') });
 
@@ -260,7 +260,7 @@ try {
     await step(`dashboard/site smoke @${w} (${routes.length} routes: no console errors, no horizontal overflow)`, async () => {
       const errs = [], bad = [];
       const { ctx, p } = await newPage(browser, w, h, errs);
-      await ctx.addInitScript((k) => localStorage.setItem('mirage_api_key', k), key());
+      await ctx.addInitScript((k) => localStorage.setItem('vocalface_api_key', k), key());
       p.on('response', (r) => { if (r.status() >= 400 && r.url().startsWith(API)) errs.push(`http ${r.status()} ${r.url().replace(API, '')}`); });
       for (const route of routes) {
         errs.length = 0;
@@ -288,7 +288,7 @@ try {
     const sh = await api.post(`/v1/personas/${S.personaId}/share`, key(), { label: 'e2e', max_seconds: 60, max_total_seconds: 300 });
     check(/\/guest\/sh_/.test(sh.url), 'share url malformed: ' + sh.url);
     const info = await api.get(`/v1/guest/${sh.token}/info`, null); check(info.available, 'guest link not available');
-    const page = await fetch(`${API}/guest/${sh.token}`); check(page.status === 200 && (await page.text()).includes('mirage-client.js'), 'guest page did not load');
+    const page = await fetch(`${API}/guest/${sh.token}`); check(page.status === 200 && (await page.text()).includes('vocalface-client.js'), 'guest page did not load');
     let note = 'page + info ok';
     if (!needLive) {
       const gcv = { id: '' };
@@ -325,7 +325,7 @@ try {
     const seen = () => hooks.map((h) => { try { return JSON.parse(h.body).type; } catch { return '?'; } });
     await until(() => need.every((e) => seen().includes(e)), { timeout: 60000, what: `events ${need.join(', ')} (got ${[...new Set(seen())].join(', ')})` });
     for (const h of hooks.filter((x) => x.path === '/hook')) {
-      const sig = h.headers['mirage-signature'] || ''; const m = /t=(\d+),v1=([0-9a-f]+)/.exec(sig); check(m, 'missing/malformed Mirage-Signature');
+      const sig = h.headers['vocalface-signature'] || ''; const m = /t=(\d+),v1=([0-9a-f]+)/.exec(sig); check(m, 'missing/malformed VocalFace-Signature');
       const mac = crypto.createHmac('sha256', S.hookSecret).update(`${m[1]}.${h.body}`).digest('hex');
       check(crypto.timingSafeEqual(Buffer.from(mac), Buffer.from(m[2])), 'HMAC signature does not verify');
     }

@@ -32,7 +32,7 @@ export default function Overview() {
     { t: "Generate a video", s: "Turn a script into a talking-head video with your replica.", done: d.vids.length > 0, href: "/dashboard/videos", cta: "Write a script", icon: Clapperboard, n: `${d.vids.length} so far` },
   ];
   const [fresh, setFresh] = useState(false);
-  useEffect(() => { if (!d) return; let dismissed = false; try { dismissed = !!JSON.parse(localStorage.getItem("mirage_onboarding") || "{}").done; } catch {} setFresh(!dismissed && d.reps.length === 0 && d.pers.length === 0); }, [d]);
+  useEffect(() => { if (!d) return; let dismissed = false; try { dismissed = !!JSON.parse(localStorage.getItem("vocalface_onboarding") || "{}").done; } catch {} setFresh(!dismissed && d.reps.length === 0 && d.pers.length === 0); }, [d]);
   const doneN = steps ? steps.filter((s) => s.done).length : 0;
   const next = steps ? steps.findIndex((s) => !s.done) : -1;
   const secs = d?.st?.credits_seconds ?? 0;
@@ -43,8 +43,8 @@ export default function Overview() {
     <Shell title="Overview" subtitle="Your path from zero to a talking AI face."
       action={d && next >= 0 ? <Link href={steps![next].href} className="btn-grad">{steps![next].cta}<ArrowRight size={15} /></Link> : <Link href="/dashboard/conversations" className="btn-grad">New conversation<ArrowRight size={15} /></Link>}>
       {fresh && (
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} data-testid="onboarding-banner" className="mb-5 flex flex-wrap items-center gap-4 rounded-2xl border border-mirage-violet/30 bg-[radial-gradient(40rem_12rem_at_0%_0%,rgba(124,92,255,.18),transparent)] p-5">
-          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-mirage-gradient text-white"><Sparkles size={20} /></span>
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} data-testid="onboarding-banner" className="mb-5 flex flex-wrap items-center gap-4 rounded-2xl border border-vocalface-violet/30 bg-[radial-gradient(40rem_12rem_at_0%_0%,rgba(124,92,255,.18),transparent)] p-5">
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-vocalface-gradient text-white"><Sparkles size={20} /></span>
           <div className="min-w-0 flex-1 basis-60"><h2 className="font-display text-2xl">New here? Set up your first agent in 5 steps</h2><p className="text-sm text-gray-400">Pick a template, add a face, give consent, create the persona and say hello. About ten minutes, and you can skip anything.</p></div>
           <Link href="/dashboard/onboarding" className="btn-grad">Start guided setup<ArrowRight size={15} /></Link>
         </motion.div>)}
@@ -54,7 +54,7 @@ export default function Overview() {
             <svg width="64" height="64" viewBox="0 0 64 64" className="shrink-0 -rotate-90"><defs><linearGradient id="ring" x1="0" y1="0" x2="1" y2="1"><stop stopColor="#ff9e5e" /><stop offset=".5" stopColor="#ff4d8d" /><stop offset="1" stopColor="#7c5cff" /></linearGradient></defs>
               <circle cx="32" cy="32" r={R} stroke="rgba(255,255,255,.08)" strokeWidth="5" fill="none" />
               <motion.circle cx="32" cy="32" r={R} stroke="url(#ring)" strokeWidth="5" fill="none" strokeLinecap="round" strokeDasharray={C} initial={{ strokeDashoffset: C }} animate={{ strokeDashoffset: C * (1 - doneN / 5) }} transition={{ duration: 0.9, ease: "easeOut" }} /></svg>
-            <div><h2 className="text-lg font-medium">Get started</h2><p className="text-sm text-gray-400">{d ? (doneN === 5 ? "All set. You have used every part of Mirage." : `${doneN} of 5 steps complete`) : "Loading your progress..."}</p></div>
+            <div><h2 className="text-lg font-medium">Get started</h2><p className="text-sm text-gray-400">{d ? (doneN === 5 ? "All set. You have used every part of VocalFace." : `${doneN} of 5 steps complete`) : "Loading your progress..."}</p></div>
           </div>
           {!steps ? <div className="space-y-3 p-5">{[0, 1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-14" />)}</div> : (
             <ol>{steps.map((s, i) => {
@@ -62,7 +62,7 @@ export default function Overview() {
               return (
                 <motion.li key={s.t} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.06 }}
                   className={`flex items-center gap-4 border-b border-white/5 p-4 pl-5 last:border-0 ${cur ? "bg-white/[0.04]" : ""}`}>
-                  <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full text-xs font-semibold ${s.done ? "bg-mirage-mint text-ink" : cur ? "bg-mirage-gradient text-white" : "bg-white/10 text-gray-400"}`}>{s.done ? <Check size={16} /> : i + 1}</span>
+                  <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full text-xs font-semibold ${s.done ? "bg-vocalface-mint text-ink" : cur ? "bg-vocalface-gradient text-white" : "bg-white/10 text-gray-400"}`}>{s.done ? <Check size={16} /> : i + 1}</span>
                   <div className="min-w-0 flex-1">
                     <p className={`text-sm font-medium ${s.done ? "text-gray-400 line-through decoration-white/20" : ""}`}>{s.t}</p>
                     <p className="text-xs text-gray-500">{cur ? s.s : s.n}</p>
@@ -75,10 +75,10 @@ export default function Overview() {
         </div>
         <div className="space-y-5">
           <div className="card">
-            <div className="flex items-center justify-between"><p className="label !mb-0">Credits</p><span className="rounded-full bg-mirage-gradient px-2 py-0.5 text-[10px] font-semibold uppercase text-white">{d?.st?.plan.name ?? "..."}</span></div>
+            <div className="flex items-center justify-between"><p className="label !mb-0">Credits</p><span className="rounded-full bg-vocalface-gradient px-2 py-0.5 text-[10px] font-semibold uppercase text-white">{d?.st?.plan.name ?? "..."}</span></div>
             {d ? <><p className="mt-3 font-display text-5xl">{Math.floor(secs / 60)}<span className="text-2xl text-gray-400"> min</span></p>
               <p className="text-xs text-gray-500">{secs} seconds remaining</p>
-              <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10"><motion.div className="h-full rounded-full bg-mirage-gradient" initial={{ width: 0 }} animate={{ width: Math.min(100, (secs / total) * 100) + "%" }} transition={{ duration: 0.9 }} /></div>
+              <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10"><motion.div className="h-full rounded-full bg-vocalface-gradient" initial={{ width: 0 }} animate={{ width: Math.min(100, (secs / total) * 100) + "%" }} transition={{ duration: 0.9 }} /></div>
               <Link href="/dashboard/billing" className="btn-ghost mt-4 w-full"><CreditCard size={15} />Top up</Link></> : <Skeleton className="mt-3 h-24" />}
           </div>
           <div className="card">
@@ -86,7 +86,7 @@ export default function Overview() {
             <div className="grid gap-2">
               {[["/dashboard/conversations", "Talk to a persona", MessagesSquare], ["/dashboard/videos", "Generate a video", Clapperboard], ["/dashboard/keys", "Copy API snippets", BookOpen]].map(([h, l, I]) => {
                 const Ico = I as typeof BookOpen;
-                return <Link key={h as string} href={h as string} className="group flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-3.5 py-2.5 text-sm transition hover:border-white/20 hover:bg-white/[0.07]"><Ico size={16} className="text-mirage-rose" />{l as string}<ArrowRight size={14} className="ml-auto text-gray-500 transition group-hover:translate-x-0.5 group-hover:text-white" /></Link>;
+                return <Link key={h as string} href={h as string} className="group flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-3.5 py-2.5 text-sm transition hover:border-white/20 hover:bg-white/[0.07]"><Ico size={16} className="text-vocalface-rose" />{l as string}<ArrowRight size={14} className="ml-auto text-gray-500 transition group-hover:translate-x-0.5 group-hover:text-white" /></Link>;
               })}
             </div>
           </div>

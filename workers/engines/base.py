@@ -8,7 +8,7 @@ An engine turns 16 kHz mono audio into per-video-frame mouth/face crops for a pr
     outs = eng.generate(base, seq, cond)  list of BGR uint8 crops, one per entry of seq; each is resized to
                                           base.boxes[seq[i]] and blended with base.masks[seq[i]] by face_render.paste
 
-Licence metadata is plain data that is readable WITHOUT importing torch or loading weights, so MIRAGE_COMMERCIAL_ONLY
+Licence metadata is plain data that is readable WITHOUT importing torch or loading weights, so VOCALFACE_COMMERCIAL_ONLY
 can refuse an engine before anything is downloaded or read from disk. See docs/LICENSES.md for the evidence behind each entry.
 """
 from __future__ import annotations
@@ -22,7 +22,7 @@ class EngineUnavailable(RuntimeError):
 
 
 class CommercialOnlyError(RuntimeError):
-    """MIRAGE_COMMERCIAL_ONLY=1 and the requested engine/weight is not licensed for commercial use."""
+    """VOCALFACE_COMMERCIAL_ONLY=1 and the requested engine/weight is not licensed for commercial use."""
 
 
 @dataclass(frozen=True)

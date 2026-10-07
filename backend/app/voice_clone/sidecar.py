@@ -4,7 +4,7 @@ One thread-based client serves both callers: the live conversation path (asyncio
 on barge-in) and the offline worker / API threads (plain blocking calls). Frames: see clone_worker.py.
 
 Setup:  ./backend/scripts_setup_clone.sh   (creates <repo>/.venv-clone with Python 3.11 + mlx-audio)
-Env:    MIRAGE_CLONE_PYTHON=<python with mlx-audio>, MIRAGE_CLONE_REPO=<mlx-community/chatterbox-4bit>"""
+Env:    VOCALFACE_CLONE_PYTHON=<python with mlx-audio>, VOCALFACE_CLONE_REPO=<mlx-community/chatterbox-4bit>"""
 import asyncio
 import json
 import os
@@ -24,7 +24,7 @@ class CloneUnavailable(RuntimeError):
 
 
 def sidecar_python() -> str | None:
-    p = os.environ.get("MIRAGE_CLONE_PYTHON") or str(REPO_ROOT / ".venv-clone" / "bin" / "python")
+    p = os.environ.get("VOCALFACE_CLONE_PYTHON") or str(REPO_ROOT / ".venv-clone" / "bin" / "python")
     return p if Path(p).exists() else None
 
 
@@ -51,7 +51,7 @@ class CloneSidecar:
         with self._lock:
             if self.alive():
                 return
-            logf = os.environ.get("MIRAGE_CLONE_LOG")  # sidecar stderr (model load, crashes) for debugging
+            logf = os.environ.get("VOCALFACE_CLONE_LOG")  # sidecar stderr (model load, crashes) for debugging
             self._proc = subprocess.Popen([self.python, self.worker], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                           stderr=open(logf, "ab") if logf else subprocess.DEVNULL, bufsize=0)
             ready = threading.Event()

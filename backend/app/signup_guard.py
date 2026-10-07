@@ -2,9 +2,9 @@
 optional stateless proof-of-work. Honest scope: this raises the cost of scripted signups; a patient attacker with many IPs
 and real mailboxes still gets through (there is no email verification). See docs/SECURITY.md.
 
-Env: MIRAGE_SIGNUP_POW_BITS (default 0 = off; 18-20 is ~0.3-3 s in a browser), MIRAGE_SIGNUP_PER_IP_DAY (prod 10, dev 0=off),
-MIRAGE_SIGNUP_GLOBAL_HOUR (prod 300, dev 0=off), MIRAGE_BLOCKED_EMAIL_DOMAINS (extra, comma list),
-MIRAGE_SIGNUP_UNIQUE_EMAIL (prod on: one account per normalized address), MIRAGE_BLOCK_DISPOSABLE_EMAIL (default on).
+Env: VOCALFACE_SIGNUP_POW_BITS (default 0 = off; 18-20 is ~0.3-3 s in a browser), VOCALFACE_SIGNUP_PER_IP_DAY (prod 10, dev 0=off),
+VOCALFACE_SIGNUP_GLOBAL_HOUR (prod 300, dev 0=off), VOCALFACE_BLOCKED_EMAIL_DOMAINS (extra, comma list),
+VOCALFACE_SIGNUP_UNIQUE_EMAIL (prod on: one account per normalized address), VOCALFACE_BLOCK_DISPOSABLE_EMAIL (default on).
 """
 import hashlib
 import hmac
@@ -54,7 +54,7 @@ def normalize_email(email: str) -> str:
 
 def is_disposable(email: str) -> bool:
     dom = email.strip().lower().rpartition("@")[2]
-    extra = {d.strip().lower() for d in os.getenv("MIRAGE_BLOCKED_EMAIL_DOMAINS", "").split(",") if d.strip()}
+    extra = {d.strip().lower() for d in os.getenv("VOCALFACE_BLOCKED_EMAIL_DOMAINS", "").split(",") if d.strip()}
     blocked = DISPOSABLE | extra
     parts = dom.split(".")
     return any(".".join(parts[i:]) in blocked for i in range(len(parts) - 1))  # subdomains of a blocked domain too
@@ -68,7 +68,7 @@ def _int(name: str, default: int) -> int:
 
 
 def pow_bits() -> int:
-    return max(0, min(_int("MIRAGE_SIGNUP_POW_BITS", 0), 28))
+    return max(0, min(_int("VOCALFACE_SIGNUP_POW_BITS", 0), 28))
 
 
 # ---- proof of work (stateless challenge, single use) ----
@@ -140,19 +140,19 @@ def check(email: str, ip: str, pow_challenge: str = "", pow_nonce: str = "") -> 
     email = (email or "").strip()
     if len(email) > 254 or not EMAIL_RE.match(email):
         _reject(422, "invalid_email", "Enter a valid email address.")
-    if os.getenv("MIRAGE_BLOCK_DISPOSABLE_EMAIL", "1").strip().lower() not in ("0", "false", "no", "off") and is_disposable(email):
+    if os.getenv("VOCALFACE_BLOCK_DISPOSABLE_EMAIL", "1").strip().lower() not in ("0", "false", "no", "off") and is_disposable(email):
         _reject(422, "disposable_email", "Disposable email addresses are not accepted. Use a real address.")
     if pow_bits() and not verify_pow(pow_challenge or "", pow_nonce or ""):
         _reject(400, "pow_required", "Proof of work missing or invalid. GET /v1/signup/challenge, solve it, and resend.")
     prod = settings.is_production()
-    per_ip = _int("MIRAGE_SIGNUP_PER_IP_DAY", 10 if prod else 0)
+    per_ip = _int("VOCALFACE_SIGNUP_PER_IP_DAY", 10 if prod else 0)
     if per_ip and not limiter.check(f"signup:day:{ip}", per_ip, 86400):
         _reject(429, "signup_limit", "Too many signups from this network today. Try again tomorrow.")
-    glob = _int("MIRAGE_SIGNUP_GLOBAL_HOUR", 300 if prod else 0)
+    glob = _int("VOCALFACE_SIGNUP_GLOBAL_HOUR", 300 if prod else 0)
     if glob and not limiter.check("signup:global", glob, 3600):
         _reject(429, "signup_busy", "Signups are temporarily limited. Try again later.")
 
 
 def unique_email_enforced() -> bool:
-    v = os.getenv("MIRAGE_SIGNUP_UNIQUE_EMAIL", "")
+    v = os.getenv("VOCALFACE_SIGNUP_UNIQUE_EMAIL", "")
     return settings.is_production() if v == "" else v.strip().lower() in ("1", "true", "yes", "on")

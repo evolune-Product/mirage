@@ -92,11 +92,11 @@ export default function BackgroundPicker({ value, onChange, faceSrc, allowNone =
         {value.type === "image" && (<div className="space-y-3">
           <FileDrop accept="image/png,image/jpeg,image/webp" label="Upload a background image" hint="PNG, JPEG or WebP, up to 15 MB" busy={busy} onFile={upload} />
           <div className="flex gap-2"><input className="input" type="url" placeholder="or an image URL" aria-label="Background image URL" value={url} onChange={(e) => setUrl(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); fromUrl(); } }} /><button type="button" onClick={fromUrl} className="btn" disabled={busy}>{busy ? <Spinner size={14} /> : "Fetch"}</button></div>
-          {err && <p className="text-xs text-mirage-rose" role="alert">{err}</p>}
+          {err && <p className="text-xs text-vocalface-rose" role="alert">{err}</p>}
           {assets && assets.length > 0 && <div><p className="label">Your uploads</p><ul className="flex flex-wrap gap-2">{assets.map((a) => (
-            <li key={a.id} className={`group relative flex items-center gap-1.5 rounded-lg border px-2 py-1 text-xs ${value.asset_id === a.id ? "border-mirage-violet bg-mirage-violet/15" : "border-white/10"}`}>
+            <li key={a.id} className={`group relative flex items-center gap-1.5 rounded-lg border px-2 py-1 text-xs ${value.asset_id === a.id ? "border-vocalface-violet bg-vocalface-violet/15" : "border-white/10"}`}>
               <button type="button" onClick={() => onChange({ type: "image", asset_id: a.id, blur: value.blur })} className="max-w-32 truncate text-gray-200">{a.filename || a.id} <span className="text-gray-500">{a.width}x{a.height}</span></button>
-              <button type="button" aria-label={`Delete ${a.filename || a.id}`} onClick={() => del(a.id)} className="text-gray-500 hover:text-mirage-rose"><Trash2 size={12} /></button></li>))}</ul></div>}
+              <button type="button" aria-label={`Delete ${a.filename || a.id}`} onClick={() => del(a.id)} className="text-gray-500 hover:text-vocalface-rose"><Trash2 size={12} /></button></li>))}</ul></div>}
           {value.asset_id && <Field label={`Softness: ${value.blur}`}><input type="range" min={0} max={40} value={value.blur} aria-label="Image blur" onChange={(e) => onChange({ ...value, blur: Number(e.target.value) })} className="w-full" /></Field>}
         </div>)}
         {value.type === "none" && <p className="text-xs text-gray-500">Keeps the background of the original recording or photo.</p>}

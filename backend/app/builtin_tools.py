@@ -17,7 +17,7 @@ from .models_features import PersonaTool
 from .models_templates import PersonaIntegration
 from .secretbox import encrypt  # noqa: F401  (re-exported for routers)
 
-INTERNAL = "mirage-internal://"
+INTERNAL = "vocalface-internal://"
 
 CAPTURE_LEAD = {
     "name": "capture_lead",

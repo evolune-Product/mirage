@@ -12,7 +12,7 @@ web-check:
 models:          ## download the speaker-verification model (26 MB, Apache-2.0)
 	curl -L -o models/wespeaker_resnet34_lm.onnx https://huggingface.co/Wespeaker/wespeaker-voxceleb-resnet34-LM/resolve/main/voxceleb_resnet34_LM.onnx
 check-prod:      ## refuse to start if production config is unsafe
-	cd backend && MIRAGE_ENV=production .venv/bin/python -c "from app import settings; e=settings.validate_production(); print(e or 'ok'); raise SystemExit(1 if e else 0)"
+	cd backend && VOCALFACE_ENV=production .venv/bin/python -c "from app import settings; e=settings.validate_production(); print(e or 'ok'); raise SystemExit(1 if e else 0)"
 up:
 	docker compose -f infra/docker-compose.yml up -d --build
 down:

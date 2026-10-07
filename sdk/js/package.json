@@ -1,7 +1,7 @@
 {
-  "name": "@mirage/sdk",
+  "name": "@vocalface/sdk",
   "version": "0.1.0",
-  "description": "TypeScript fetch client for the Mirage CVI API (zero runtime deps)",
+  "description": "TypeScript fetch client for the VocalFace CVI API (zero runtime deps)",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

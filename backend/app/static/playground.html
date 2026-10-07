@@ -1,15 +1,15 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Mirage Playground</title>
-<link rel="stylesheet" href="/static/mirage-client.css?v=2">
+<title>VocalFace Playground</title>
+<link rel="stylesheet" href="/static/vocalface-client.css?v=2">
 </head><body>
-<!-- audio capture (AudioWorklet, ScriptProcessor fallback), reconnect and video live in /static/mirage-client.js -->
-<h2>Mirage voice playground</h2>
+<!-- audio capture (AudioWorklet, ScriptProcessor fallback), reconnect and video live in /static/vocalface-client.js -->
+<h2>VocalFace voice playground</h2>
 <div class="row"><input id="key" placeholder="API key (mk_...)" autocomplete="off"></div>
 <div class="row"><input id="cid" placeholder="Conversation id (c_...)" autocomplete="off"></div>
-<div id="mirage"></div>
-<script src="/static/mirage-client.js?v=2"></script>
-<script src="/static/mirage-ui.js?v=2"></script>
+<div id="vocalface"></div>
+<script src="/static/vocalface-client.js?v=2"></script>
+<script src="/static/vocalface-ui.js?v=2"></script>
 <script>
 const $=id=>document.getElementById(id);
 let stored='';try{stored=localStorage.mk||''}catch(e){}
@@ -19,11 +19,11 @@ const q=new URLSearchParams(location.search);
 $('key').value=q.get('api_key')||stored; $('cid').value=q.get('cid')||'';
 if(q.has('api_key')){try{history.replaceState(null,'',location.pathname+'?cid='+encodeURIComponent($('cid').value))}catch(e){}}
 if(window.parent!==window){
-  addEventListener('message',e=>{ if(e.source===window.parent&&e.data&&e.data.type==='mirage-key'&&typeof e.data.key==='string'){$('key').value=e.data.key} });
-  try{window.parent.postMessage({type:'mirage-playground-ready'},'*')}catch(e){}  // carries no secret
+  addEventListener('message',e=>{ if(e.source===window.parent&&e.data&&e.data.type==='vocalface-key'&&typeof e.data.key==='string'){$('key').value=e.data.key} });
+  try{window.parent.postMessage({type:'vocalface-playground-ready'},'*')}catch(e){}  // carries no secret
 }
 const proto=location.protocol==='https:'?'wss':'ws';
-const client=new MirageClient({
+const client=new VocalFaceClient({
   wsUrl:async()=>{
     const r=await fetch('/v1/realtime/ticket',{method:'POST',headers:{'x-api-key':$('key').value,'content-type':'application/json'},body:JSON.stringify({conversation_id:$('cid').value})});
     if(!r.ok){const x=new Error(r.status===401?'This API key is not valid.':r.status===404?'Conversation not found for this key.':'Could not get a connection ticket ('+r.status+')');x.userMessage=x.message;throw x}
@@ -32,7 +32,7 @@ const client=new MirageClient({
   prepare:async()=>{try{localStorage.mk=$('key').value}catch(e){}}
 });
 window.__client=client;
-MirageUI.mount($('mirage'),client,{mode:'playground',startLabel:'Start',linkButton:'Copy guest link',
+VocalFaceUI.mount($('vocalface'),client,{mode:'playground',startLabel:'Start',linkButton:'Copy guest link',
   getLink:async()=>{
     const h={'x-api-key':$('key').value,'content-type':'application/json'};
     const c=await fetch('/v1/conversations',{headers:h});

@@ -21,10 +21,10 @@ sys.stdout = sys.stderr
 
 import numpy as np  # noqa: E402
 
-REPO = os.environ.get("MIRAGE_CLONE_REPO", "mlx-community/chatterbox-4bit")
-EXAGGERATION = float(os.environ.get("MIRAGE_CLONE_EXAGGERATION", "0.3"))
-CFG = float(os.environ.get("MIRAGE_CLONE_CFG", "0.5"))
-TEMP = float(os.environ.get("MIRAGE_CLONE_TEMPERATURE", "0.8"))
+REPO = os.environ.get("VOCALFACE_CLONE_REPO", "mlx-community/chatterbox-4bit")
+EXAGGERATION = float(os.environ.get("VOCALFACE_CLONE_EXAGGERATION", "0.3"))
+CFG = float(os.environ.get("VOCALFACE_CLONE_CFG", "0.5"))
+TEMP = float(os.environ.get("VOCALFACE_CLONE_TEMPERATURE", "0.8"))
 
 
 def send(rid: int, kind: int, payload: bytes = b"") -> None:

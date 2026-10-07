@@ -102,4 +102,4 @@ async def preview_voice(rid: str, body: PreviewIn, acc: Account = Depends(curren
     with wave.open(buf, "wb") as w:
         w.setnchannels(1); w.setsampwidth(2); w.setframerate(SAMPLE_RATE); w.writeframes(pcm)
     await asyncio.to_thread(service.audit_use, rid, "preview")
-    return Response(buf.getvalue(), media_type="audio/wav", headers={"X-Mirage-Synthetic-Voice": "cloned"})
+    return Response(buf.getvalue(), media_type="audio/wav", headers={"X-VocalFace-Synthetic-Voice": "cloned"})

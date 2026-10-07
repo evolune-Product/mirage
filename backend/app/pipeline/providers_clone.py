@@ -16,9 +16,9 @@ import numpy as np
 from ..voice_clone import service
 from ..voice_clone.sidecar import SAMPLE_RATE, CloneUnavailable, default_sidecar
 
-log = logging.getLogger("mirage.voice_clone")
-BREAKER_FAILS = int(os.environ.get("MIRAGE_CLONE_BREAKER_FAILS", "3"))
-BREAKER_COOLDOWN_S = float(os.environ.get("MIRAGE_CLONE_BREAKER_COOLDOWN_S", "60"))
+log = logging.getLogger("vocalface.voice_clone")
+BREAKER_FAILS = int(os.environ.get("VOCALFACE_CLONE_BREAKER_FAILS", "3"))
+BREAKER_COOLDOWN_S = float(os.environ.get("VOCALFACE_CLONE_BREAKER_COOLDOWN_S", "60"))
 
 
 class _Breaker:
@@ -212,6 +212,6 @@ def resolve_persona_voice(persona) -> str:
 
 def wrap_tts(tts):
     """Provider-selection hook for session._make_tts: adds clone routing in front of the Kokoro engine."""
-    if os.environ.get("MIRAGE_VOICE_CLONE", "1") == "0" or isinstance(tts, CloneRoutingTTS):
+    if os.environ.get("VOCALFACE_VOICE_CLONE", "1") == "0" or isinstance(tts, CloneRoutingTTS):
         return tts
     return CloneRoutingTTS(tts)

@@ -9,12 +9,12 @@ a:focus-visible,button:focus-visible,summary:focus-visible,input:focus-visible{o
 @layer components{
   /* legacy dashboard primitives (restyled) */
   .btn{@apply inline-flex items-center justify-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-medium text-ink transition hover:bg-cream disabled:opacity-50}
-  .btn-grad{@apply inline-flex items-center justify-center gap-2 rounded-full bg-mirage-gradient px-5 py-2.5 text-sm font-semibold text-white shadow-[0_8px_30px_-8px_rgba(255,77,141,.6)] transition hover:brightness-110 hover:shadow-[0_8px_40px_-6px_rgba(255,77,141,.8)] disabled:opacity-50}
+  .btn-grad{@apply inline-flex items-center justify-center gap-2 rounded-full bg-vocalface-gradient px-5 py-2.5 text-sm font-semibold text-white shadow-[0_8px_30px_-8px_rgba(255,77,141,.6)] transition hover:brightness-110 hover:shadow-[0_8px_40px_-6px_rgba(255,77,141,.8)] disabled:opacity-50}
   .btn-ghost{@apply inline-flex items-center justify-center gap-2 rounded-full border border-white/15 px-5 py-2.5 text-sm text-gray-200 transition hover:bg-white/5}
-  .input{@apply w-full rounded-xl border border-white/10 bg-ink-2 px-3.5 py-2.5 text-sm outline-none transition placeholder:text-gray-500 focus:border-mirage-rose/70 focus:ring-2 focus:ring-mirage-rose/20}
+  .input{@apply w-full rounded-xl border border-white/10 bg-ink-2 px-3.5 py-2.5 text-sm outline-none transition placeholder:text-gray-500 focus:border-vocalface-rose/70 focus:ring-2 focus:ring-vocalface-rose/20}
   .card{@apply rounded-2xl border border-white/10 bg-ink-2/80 p-5 backdrop-blur}
   .label{@apply mb-1.5 block text-xs font-medium uppercase tracking-wider text-gray-400}
-  .eyebrow{@apply font-mono text-xs uppercase tracking-[0.2em] text-mirage-amber}
+  .eyebrow{@apply font-mono text-xs uppercase tracking-[0.2em] text-vocalface-amber}
   .glass{@apply border border-white/10 bg-white/[0.04] backdrop-blur-xl}
-  .text-grad{@apply bg-mirage-gradient bg-clip-text text-transparent}
+  .text-grad{@apply bg-vocalface-gradient bg-clip-text text-transparent}
 }

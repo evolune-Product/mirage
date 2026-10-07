@@ -167,7 +167,7 @@ async def translate_text(text: str, src: str, dst: str) -> str:
     import os
 
     names = {**{k: v["name"] for k, v in languages.LANGUAGES.items()}, **languages.STT_ONLY}
-    backend = lb.make_backend("", model=os.environ.get("MIRAGE_TRANSLATE_MODEL", "qwen3:8b"))
+    backend = lb.make_backend("", model=os.environ.get("VOCALFACE_TRANSLATE_MODEL", "qwen3:8b"))
     backend.num_predict = 600
     prompt = (f"Translate the following video script from {names.get(src, src)} to {names.get(dst, dst)}. Keep the meaning, "
               f"tone and length; keep names unchanged. Output ONLY the translation, no quotes or notes.\n\n{text}")

@@ -1,7 +1,7 @@
 """Central env-driven configuration for safety/infra. Values are read lazily (each call) so tests and
 operators can change the environment without re-importing. Secrets are never logged: use `redact()`.
 
-MIRAGE_ENV=production switches the safe defaults on (no unsigned files, no typed-phrase consent, ...).
+VOCALFACE_ENV=production switches the safe defaults on (no unsigned files, no typed-phrase consent, ...).
 """
 import os
 import secrets
@@ -23,7 +23,7 @@ def _int(name: str, default: int) -> int:
 
 
 def is_production() -> bool:
-    return os.getenv("MIRAGE_ENV", "dev").strip().lower() in ("prod", "production")
+    return os.getenv("VOCALFACE_ENV", "dev").strip().lower() in ("prod", "production")
 
 
 def data_dir() -> Path:
@@ -36,15 +36,15 @@ _dev_secret: bytes | None = None
 
 
 def secret_key() -> bytes:
-    """HMAC key for signed file URLs. Production requires MIRAGE_SECRET_KEY (>=16 chars); dev falls back to a
+    """HMAC key for signed file URLs. Production requires VOCALFACE_SECRET_KEY (>=16 chars); dev falls back to a
     random key persisted in <data>/.secret_key so URLs survive restarts."""
-    k = os.getenv("MIRAGE_SECRET_KEY", "")
+    k = os.getenv("VOCALFACE_SECRET_KEY", "")
     if k:
         if is_production() and len(k) < 16:
-            raise RuntimeError("MIRAGE_SECRET_KEY must be at least 16 characters in production")
+            raise RuntimeError("VOCALFACE_SECRET_KEY must be at least 16 characters in production")
         return k.encode()
     if is_production():
-        raise RuntimeError("MIRAGE_SECRET_KEY is required when MIRAGE_ENV=production")
+        raise RuntimeError("VOCALFACE_SECRET_KEY is required when VOCALFACE_ENV=production")
     global _dev_secret
     if _dev_secret is None:
         p = data_dir() / ".secret_key"
@@ -70,35 +70,35 @@ def validate_production() -> list[str]:
         secret_key()
     except RuntimeError as e:
         errs.append(str(e))
-    if os.getenv("MIRAGE_CORS_ORIGINS", "").strip() in ("", "*"):
-        errs.append("MIRAGE_CORS_ORIGINS must list your dashboard origin(s), not '*' or empty")
+    if os.getenv("VOCALFACE_CORS_ORIGINS", "").strip() in ("", "*"):
+        errs.append("VOCALFACE_CORS_ORIGINS must list your dashboard origin(s), not '*' or empty")
     return errs
 
 
 # ---- feature flags (dev-friendly default, locked down in production) ----
 def allow_public_files() -> bool:
     """Unsigned /v1/files/* (legacy, guessable-id). Default on in dev, off in production."""
-    return _flag("MIRAGE_ALLOW_PUBLIC_FILES", not is_production())
+    return _flag("VOCALFACE_ALLOW_PUBLIC_FILES", not is_production())
 
 
 def allow_typed_consent() -> bool:
     """Old typed-phrase consent path (POST /consent without audio verification)."""
-    return _flag("MIRAGE_ALLOW_TYPED_CONSENT", not is_production())
+    return _flag("VOCALFACE_ALLOW_TYPED_CONSENT", not is_production())
 
 
 def allow_key_in_url() -> bool:
-    """Legacy `?api_key=` on the WebSocket URL (leaks into proxy logs/history). Off unless MIRAGE_ALLOW_KEY_IN_URL=1; clients use
+    """Legacy `?api_key=` on the WebSocket URL (leaks into proxy logs/history). Off unless VOCALFACE_ALLOW_KEY_IN_URL=1; clients use
     POST /v1/realtime/ticket instead."""
-    return _flag("MIRAGE_ALLOW_KEY_IN_URL", False)
+    return _flag("VOCALFACE_ALLOW_KEY_IN_URL", False)
 
 
 def signed_url_ttl() -> int:
-    return _int("MIRAGE_SIGNED_URL_TTL", 3600)
+    return _int("VOCALFACE_SIGNED_URL_TTL", 3600)
 
 
 def voice_match_mode() -> str:
     """enforce | warn | off. Default: enforce in production, warn in dev."""
-    m = os.getenv("MIRAGE_CONSENT_VOICE_MATCH", "").strip().lower()
+    m = os.getenv("VOCALFACE_CONSENT_VOICE_MATCH", "").strip().lower()
     if m in ("enforce", "warn", "off"):
         return m
     return "enforce" if is_production() else "warn"
@@ -106,25 +106,25 @@ def voice_match_mode() -> str:
 
 def voice_match_threshold() -> float:
     try:
-        return float(os.getenv("MIRAGE_VOICE_MATCH_THRESHOLD", "0.50"))
+        return float(os.getenv("VOCALFACE_VOICE_MATCH_THRESHOLD", "0.50"))
     except ValueError:
         return 0.50
 
 
 def ratelimit_enabled() -> bool:
-    return _flag("MIRAGE_RATE_LIMIT", True)
+    return _flag("VOCALFACE_RATE_LIMIT", True)
 
 
 def trust_proxy() -> bool:
-    return _flag("MIRAGE_TRUST_PROXY", False)
+    return _flag("VOCALFACE_TRUST_PROXY", False)
 
 
 def max_body_bytes() -> int:
-    return _int("MIRAGE_MAX_BODY_BYTES", 2 * 1024 * 1024)
+    return _int("VOCALFACE_MAX_BODY_BYTES", 2 * 1024 * 1024)
 
 
 def max_upload_bytes() -> int:
-    return _int("MIRAGE_MAX_UPLOAD_BYTES", 25 * 1024 * 1024)
+    return _int("VOCALFACE_MAX_UPLOAD_BYTES", 25 * 1024 * 1024)
 
 
 def redact(s: str) -> str:

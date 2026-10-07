@@ -1,4 +1,4 @@
-# Self-hosting Mirage
+# Self-hosting VocalFace
 
 ## 1. API server
 ```
@@ -6,14 +6,14 @@ cd backend
 python3 -m venv .venv && .venv/bin/pip install fastapi sqlmodel uvicorn httpx   # no requirements.txt exists yet
 .venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
-Storage is SQLite (`backend/mirage.db`, relative to the working directory). Run exactly one process per DB file unless you move to Postgres (db.py would need an engine URL change). The rate limiter is in-process, so it is per worker.
+Storage is SQLite (`backend/vocalface.db`, relative to the working directory). Run exactly one process per DB file unless you move to Postgres (db.py would need an engine URL change). The rate limiter is in-process, so it is per worker.
 Put it behind HTTPS (Caddy/nginx); the playground uses `wss` automatically on https.
 
 ## 2. Ollama (LLM, optional moderation classifier)
 ```
 ollama serve &  ollama pull llama3.2
 export OLLAMA_URL=http://localhost:11434
-export MIRAGE_MODERATION_OLLAMA_MODEL=llama3.2   # optional
+export VOCALFACE_MODERATION_OLLAMA_MODEL=llama3.2   # optional
 ```
 
 ## 3. Worker (replica training / video render)

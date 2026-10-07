@@ -108,8 +108,8 @@ def test_prometheus_and_capacity_report():
     try:
         run(a.admit("c1", True)); run(a.admit("c2", False))
         txt = "\n".join(admission.prometheus_lines())
-        assert 'mirage_conversations_live{kind="face"} 1' in txt and 'mirage_conversations_live{kind="voice"} 1' in txt
-        assert 'mirage_conversations_limit{kind="total"} 3' in txt and "mirage_process_open_fds" in txt
+        assert 'vocalface_conversations_live{kind="face"} 1' in txt and 'vocalface_conversations_live{kind="voice"} 1' in txt
+        assert 'vocalface_conversations_limit{kind="total"} 3' in txt and "vocalface_process_open_fds" in txt
         rep = admission.capacity_report()
         assert rep["current"] == 2 and rep["limit"] == 3 and rep["accepting"] and "process" in rep
     finally:
@@ -214,7 +214,7 @@ def test_health_capacity_and_deep_and_metrics(env):
         assert r.status_code == 503 and r.json()["current"] == 1 and r.json()["accepting"] is False
         deep = c.get("/health/deep").json()["checks"]["capacity"]
         assert deep["current"] == 1 and deep["limit"] == 1 and "process" in deep
-        assert 'mirage_conversations_live{kind="voice"} 1' in c.get("/metrics").text
+        assert 'vocalface_conversations_live{kind="voice"} 1' in c.get("/metrics").text
     assert c.get("/health/capacity").status_code == 200
 
 

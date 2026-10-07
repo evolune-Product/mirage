@@ -1,12 +1,12 @@
-# Feature parity: Tavus, HeyGen, Synthesia, D-ID, Simli, Hedra vs Mirage
+# Feature parity: Tavus, HeyGen, Synthesia, D-ID, Simli, Hedra vs VocalFace
 
-Written Oct 3 2026. Competitor columns come from their public docs / marketing pages as fetched that night (Tavus `docs.tavus.io/llms.txt` index, HeyGen `developers.heygen.com`, Synthesia features page, D-ID `docs.d-id.com`, simli.com, hedra.com). Anything marked "?" was not confirmed by a page I could read, it is not a claim that the feature does not exist. Mirage status is `have` (built and verified), `partial` (built, with a stated gap), `missing`.
+Written Oct 3 2026. Competitor columns come from their public docs / marketing pages as fetched that night (Tavus `docs.tavus.io/llms.txt` index, HeyGen `developers.heygen.com`, Synthesia features page, D-ID `docs.d-id.com`, simli.com, hedra.com). Anything marked "?" was not confirmed by a page I could read, it is not a claim that the feature does not exist. VocalFace status is `have` (built and verified), `partial` (built, with a stated gap), `missing`.
 
-Legend for Mirage "verified": **unit** = automated tests with fakes, **live** = exercised with the real local stack (Whisper, Kokoro, Ollama qwen3:8b, a real Chromium with fake mic) on Oct 3 2026.
+Legend for VocalFace "verified": **unit** = automated tests with fakes, **live** = exercised with the real local stack (Whisper, Kokoro, Ollama qwen3:8b, a real Chromium with fake mic) on Oct 3 2026.
 
 ## Real-time conversation (CVI)
 
-| Feature | Tavus | HeyGen | Synthesia | D-ID | Simli | Hedra | Mirage | Notes |
+| Feature | Tavus | HeyGen | Synthesia | D-ID | Simli | Hedra | VocalFace | Notes |
 |---|---|---|---|---|---|---|---|---|
 | Real-time face-to-face agent | CVI/PALs (Phoenix face, <1 s) | interactive avatar (?) | Interactive Avatars API | Agents | <300 ms speech-to-video (video stage only) | real-time avatars | partial | Works end to end with Wav2Lip lips; 2.0-2.5 s to first moving lips; mouth quality blurry at close range (see ROADMAP) |
 | Voice-only conversation | yes (audio-only) | ? | ? | ? | n/a | ? | have (live) | The default path; ~1.4 s to first audio with the 1B model |
@@ -37,7 +37,7 @@ Legend for Mirage "verified": **unit** = automated tests with fakes, **live** = 
 
 ## Replicas, avatars, video generation
 
-| Feature | Tavus | HeyGen | Synthesia | D-ID | Hedra | Mirage | Notes |
+| Feature | Tavus | HeyGen | Synthesia | D-ID | Hedra | VocalFace | Notes |
 |---|---|---|---|---|---|---|---|
 | Replica from a training video | yes | yes | personal avatars | instant avatars | ? | have (live) | consent gate; SoulX-FlashHead (videos, photo idle) / Wav2Lip (live, dev only) |
 | Replica from an image | yes | yes | yes | yes (photo) | yes | missing | |
@@ -55,7 +55,7 @@ Legend for Mirage "verified": **unit** = automated tests with fakes, **live** = 
 
 ## Platform / enterprise
 
-| Feature | Tavus | HeyGen | Synthesia | D-ID | Mirage | Notes |
+| Feature | Tavus | HeyGen | Synthesia | D-ID | VocalFace | Notes |
 |---|---|---|---|---|---|---|
 | API keys, multiple, revocable | yes | yes | yes | yes | have (unit) | hashed storage, per-key last-used, legacy key kept |
 | Usage / analytics API | yes | yes | yes | yes | have (unit) | conversations + minutes per day, first-audio latency, top personas, video counts |

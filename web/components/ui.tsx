@@ -19,7 +19,7 @@ export const toast = {
 };
 export function Toaster() {
   const list = useSyncExternalStore((cb) => { subs.add(cb); return () => { subs.delete(cb); }; }, () => toasts, () => toasts);
-  const ico = { error: <AlertTriangle size={16} className="text-mirage-rose" />, success: <CheckCircle2 size={16} className="text-mirage-mint" />, info: <Info size={16} className="text-mirage-cyan" /> };
+  const ico = { error: <AlertTriangle size={16} className="text-vocalface-rose" />, success: <CheckCircle2 size={16} className="text-vocalface-mint" />, info: <Info size={16} className="text-vocalface-cyan" /> };
   return (
     <div className="pointer-events-none fixed bottom-4 right-4 z-[100] flex w-[calc(100vw-2rem)] max-w-sm flex-col gap-2">
       <AnimatePresence>
@@ -37,15 +37,15 @@ export function Toaster() {
 
 /* ---------- primitives ---------- */
 const BADGE: Record<string, string> = {
-  ready: "text-mirage-mint bg-mirage-mint/10 ring-mirage-mint/25", active: "text-mirage-mint bg-mirage-mint/10 ring-mirage-mint/25", completed: "text-mirage-mint bg-mirage-mint/10 ring-mirage-mint/25",
+  ready: "text-vocalface-mint bg-vocalface-mint/10 ring-vocalface-mint/25", active: "text-vocalface-mint bg-vocalface-mint/10 ring-vocalface-mint/25", completed: "text-vocalface-mint bg-vocalface-mint/10 ring-vocalface-mint/25",
   ended: "text-gray-300 bg-white/5 ring-white/10",
-  error: "text-mirage-rose bg-mirage-rose/10 ring-mirage-rose/25",
-  training: "text-mirage-cyan bg-mirage-cyan/10 ring-mirage-cyan/25", rendering: "text-mirage-cyan bg-mirage-cyan/10 ring-mirage-cyan/25",
-  delivered: "text-mirage-mint bg-mirage-mint/10 ring-mirage-mint/25", failed: "text-mirage-rose bg-mirage-rose/10 ring-mirage-rose/25", revoked: "text-gray-400 bg-white/5 ring-white/10", pending: "text-mirage-amber bg-mirage-amber/10 ring-mirage-amber/25",
-  queued: "text-mirage-violet bg-mirage-violet/15 ring-mirage-violet/30",
+  error: "text-vocalface-rose bg-vocalface-rose/10 ring-vocalface-rose/25",
+  training: "text-vocalface-cyan bg-vocalface-cyan/10 ring-vocalface-cyan/25", rendering: "text-vocalface-cyan bg-vocalface-cyan/10 ring-vocalface-cyan/25",
+  delivered: "text-vocalface-mint bg-vocalface-mint/10 ring-vocalface-mint/25", failed: "text-vocalface-rose bg-vocalface-rose/10 ring-vocalface-rose/25", revoked: "text-gray-400 bg-white/5 ring-white/10", pending: "text-vocalface-amber bg-vocalface-amber/10 ring-vocalface-amber/25",
+  queued: "text-vocalface-violet bg-vocalface-violet/15 ring-vocalface-violet/30",
 };
 export function Badge({ s }: { s: string }) {
-  const c = BADGE[s] || "text-mirage-amber bg-mirage-amber/10 ring-mirage-amber/25";
+  const c = BADGE[s] || "text-vocalface-amber bg-vocalface-amber/10 ring-vocalface-amber/25";
   const pulse = ["training", "rendering", "queued", "active"].includes(s);
   return (
     <span className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${c}`}>
@@ -65,7 +65,7 @@ export function CopyButton({ text, label = "Copy", className = "" }: { text: str
   return (
     <button type="button" className={`inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs text-gray-300 transition hover:bg-white/10 hover:text-white ${className}`}
       onClick={async () => { try { await navigator.clipboard.writeText(text); } catch {} setOk(true); toast.success("Copied to clipboard"); setTimeout(() => setOk(false), 1500); }}>
-      {ok ? <Check size={13} className="text-mirage-mint" /> : <Copy size={13} />}{ok ? "Copied" : label}
+      {ok ? <Check size={13} className="text-vocalface-mint" /> : <Copy size={13} />}{ok ? "Copied" : label}
     </button>
   );
 }
@@ -155,7 +155,7 @@ export function Shell({ title, subtitle, action, children }: { title: string; su
 }
 
 /* credits refresh signal */
-export const refreshCredits = () => { try { window.dispatchEvent(new Event("mirage:credits")); } catch {} };
+export const refreshCredits = () => { try { window.dispatchEvent(new Event("vocalface:credits")); } catch {} };
 
 
 /* ---------- shared form / layout helpers ---------- */
@@ -168,7 +168,7 @@ export function Tabs<T extends string>({ tabs, value, onChange }: { tabs: { id: 
         <button key={t.id} role="tab" type="button" aria-selected={value === t.id} onClick={() => onChange(t.id)}
           className={`relative flex shrink-0 items-center gap-1.5 px-3 pb-2.5 pt-1 text-sm transition ${value === t.id ? "text-white" : "text-gray-500 hover:text-gray-200"}`}>
           {t.label}{t.badge !== undefined && t.badge !== 0 && <span className="rounded-full bg-white/10 px-1.5 text-[10px] text-gray-300">{t.badge}</span>}
-          {value === t.id && <motion.span layoutId="tabline" className="absolute inset-x-2 -bottom-px h-0.5 rounded bg-mirage-gradient" />}
+          {value === t.id && <motion.span layoutId="tabline" className="absolute inset-x-2 -bottom-px h-0.5 rounded bg-vocalface-gradient" />}
         </button>
       ))}
     </div>
@@ -191,7 +191,7 @@ export function Toggle({ checked, onChange, label, hint }: { checked: boolean; o
   return (
     <label className="flex cursor-pointer items-start gap-3">
       <button type="button" role="switch" aria-checked={checked} aria-label={label} onClick={() => onChange(!checked)}
-        className={`relative mt-0.5 h-5 w-9 shrink-0 rounded-full transition ${checked ? "bg-mirage-gradient" : "bg-white/15"}`}>
+        className={`relative mt-0.5 h-5 w-9 shrink-0 rounded-full transition ${checked ? "bg-vocalface-gradient" : "bg-white/15"}`}>
         <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all ${checked ? "left-[18px]" : "left-0.5"}`} />
       </button>
       <span className="text-sm text-gray-200">{label}{hint && <span className="block text-xs text-gray-500">{hint}</span>}</span>
@@ -214,7 +214,7 @@ export function ConfirmDialog({ open, title, body, confirmLabel = "Confirm", typ
         <div className="flex justify-end gap-2">
           <button type="button" className="btn-ghost" onClick={onClose}>Cancel</button>
           <button type="button" disabled={!ok || busy} onClick={async () => { setBusy(true); try { await onConfirm(); } finally { setBusy(false); } }}
-            className={`inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition disabled:opacity-40 ${danger ? "bg-mirage-rose text-white hover:brightness-110" : "bg-white text-ink"}`}>
+            className={`inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition disabled:opacity-40 ${danger ? "bg-vocalface-rose text-white hover:brightness-110" : "bg-white text-ink"}`}>
             {busy && <Spinner />}{confirmLabel}
           </button>
         </div>
@@ -226,8 +226,8 @@ export function ConfirmDialog({ open, title, body, confirmLabel = "Confirm", typ
 /** A secret that is shown exactly once (API key, webhook signing secret). */
 export function SecretOnce({ title, secret, note, onDone }: { title: string; secret: string; note: string; onDone: () => void }) {
   return (
-    <div className="rounded-2xl border border-mirage-amber/30 bg-mirage-amber/[0.06] p-4" role="alert">
-      <p className="flex items-center gap-2 text-sm font-medium text-mirage-amber"><AlertTriangle size={15} />{title}</p>
+    <div className="rounded-2xl border border-vocalface-amber/30 bg-vocalface-amber/[0.06] p-4" role="alert">
+      <p className="flex items-center gap-2 text-sm font-medium text-vocalface-amber"><AlertTriangle size={15} />{title}</p>
       <p className="mt-1 text-xs text-gray-400">{note}</p>
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <code data-testid="secret-once" className="min-w-0 flex-1 basis-full break-all rounded-lg bg-black/40 px-3 py-2 font-mono text-xs text-gray-100 sm:basis-0">{secret}</code>

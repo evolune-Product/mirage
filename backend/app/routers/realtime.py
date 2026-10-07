@@ -73,7 +73,7 @@ def playground():
 @router.websocket("/conversations/{cid}/stream")
 async def stream(ws: WebSocket, cid: str, api_key: str = "", ticket: str = "", db: DBSession = Depends(get_session)):
     """Auth: `?ticket=` (single-use, from POST /v1/realtime/ticket) is the supported way. `?api_key=` still works only with
-    MIRAGE_ALLOW_KEY_IN_URL=1 (the key would otherwise land in proxy/CDN logs and browser history)."""
+    VOCALFACE_ALLOW_KEY_IN_URL=1 (the key would otherwise land in proxy/CDN logs and browser history)."""
     ip = client_ip(ws.scope)
     if not wsguard.connect_allowed(ip):
         await ws.close(code=wsguard.CLOSE_RATE, reason="too many connection attempts")

@@ -3,7 +3,7 @@
   sr       Real-ESRGAN general-x4v3 (SRVGGNetCompact, 4.9 MB, torch, runs on MPS/CUDA/CPU): 96 -> 384 px
   gfpgan   GFPGAN 1.4 (ONNX, 340 MB, onnxruntime CoreML/CUDA/CPU): face restoration at 512 px
 
-Weights are downloaded on first use into $MIRAGE_FACE_MODELS (default workers/models)."""
+Weights are downloaded on first use into $VOCALFACE_FACE_MODELS (default workers/models)."""
 from __future__ import annotations
 
 import os
@@ -14,7 +14,7 @@ import cv2
 import numpy as np
 
 HERE = Path(__file__).resolve().parent
-MODELS = Path(os.environ.get("MIRAGE_FACE_MODELS", HERE / "models"))
+MODELS = Path(os.environ.get("VOCALFACE_FACE_MODELS", HERE / "models"))
 URLS = {
     "realesr-general-x4v3.pth": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.5.0/realesr-general-x4v3.pth",
     "gfpgan_1.4.onnx": "https://github.com/facefusion/facefusion-assets/releases/download/models-3.0.0/gfpgan_1.4.onnx",

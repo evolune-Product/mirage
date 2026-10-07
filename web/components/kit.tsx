@@ -5,7 +5,7 @@ import { Upload } from "lucide-react";
 
 export function Progress({ pct, label, tone = "grad", className = "" }: { pct: number; label?: ReactNode; tone?: "grad" | "mint" | "rose"; className?: string }) {
   const p = Math.max(0, Math.min(100, pct));
-  const c = tone === "mint" ? "bg-mirage-mint" : tone === "rose" ? "bg-mirage-rose" : "bg-mirage-gradient";
+  const c = tone === "mint" ? "bg-vocalface-mint" : tone === "rose" ? "bg-vocalface-rose" : "bg-vocalface-gradient";
   return (
     <div className={className}>
       <div role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(p)} className="h-1.5 overflow-hidden rounded-full bg-white/10">
@@ -26,7 +26,7 @@ export function Segmented<T extends string | number>({ value, onChange, options,
         const on = o.id === value;
         return (
           <button key={String(o.id)} type="button" role="radio" aria-checked={on} title={o.hint} onClick={() => onChange(o.id)}
-            className={`rounded-full border transition ${size === "sm" ? "px-2.5 py-1 text-xs" : "px-3.5 py-1.5 text-sm"} ${on ? "border-mirage-violet/60 bg-mirage-violet/20 text-white" : "border-white/10 text-gray-400 hover:border-white/25 hover:text-white"}`}>
+            className={`rounded-full border transition ${size === "sm" ? "px-2.5 py-1 text-xs" : "px-3.5 py-1.5 text-sm"} ${on ? "border-vocalface-violet/60 bg-vocalface-violet/20 text-white" : "border-white/10 text-gray-400 hover:border-white/25 hover:text-white"}`}>
             {o.label}
           </button>
         );
@@ -43,7 +43,7 @@ export function FileDrop({ accept, onFile, label, hint, busy, name }: { accept: 
       <button type="button" disabled={busy} aria-label={label}
         onClick={() => ref.current?.click()} onDragOver={(e) => { e.preventDefault(); setOver(true); }} onDragLeave={() => setOver(false)}
         onDrop={(e) => { e.preventDefault(); setOver(false); const f = e.dataTransfer.files?.[0]; if (f) onFile(f); }}
-        className={`flex w-full flex-col items-center gap-1 rounded-xl border border-dashed px-4 py-5 text-sm transition ${over ? "border-mirage-violet bg-mirage-violet/10" : "border-white/20 bg-white/[0.02] hover:bg-white/[0.05]"} disabled:opacity-50`}>
+        className={`flex w-full flex-col items-center gap-1 rounded-xl border border-dashed px-4 py-5 text-sm transition ${over ? "border-vocalface-violet bg-vocalface-violet/10" : "border-white/20 bg-white/[0.02] hover:bg-white/[0.05]"} disabled:opacity-50`}>
         <Upload size={18} className="text-gray-400" /><span className="text-gray-200">{name || label}</span>{hint && <span className="text-xs text-gray-500">{hint}</span>}
       </button>
       <input ref={ref} type="file" accept={accept} className="hidden" data-testid="file-input" aria-hidden tabIndex={-1}
@@ -54,7 +54,7 @@ export function FileDrop({ accept, onFile, label, hint, busy, name }: { accept: 
 
 /** Plain-language callout. tone: info (cyan) | warn (amber) | bad (rose) | ok (mint). */
 export function Callout({ tone = "info", title, children }: { tone?: "info" | "warn" | "bad" | "ok"; title?: ReactNode; children: ReactNode }) {
-  const t = { info: "border-mirage-cyan/25 bg-mirage-cyan/[0.06] text-mirage-cyan", warn: "border-mirage-amber/30 bg-mirage-amber/[0.06] text-mirage-amber", bad: "border-mirage-rose/30 bg-mirage-rose/[0.07] text-mirage-rose", ok: "border-mirage-mint/25 bg-mirage-mint/[0.06] text-mirage-mint" }[tone];
+  const t = { info: "border-vocalface-cyan/25 bg-vocalface-cyan/[0.06] text-vocalface-cyan", warn: "border-vocalface-amber/30 bg-vocalface-amber/[0.06] text-vocalface-amber", bad: "border-vocalface-rose/30 bg-vocalface-rose/[0.07] text-vocalface-rose", ok: "border-vocalface-mint/25 bg-vocalface-mint/[0.06] text-vocalface-mint" }[tone];
   return (
     <div className={`rounded-xl border p-3.5 text-xs leading-relaxed ${t.split(" ").slice(0, 2).join(" ")}`} role={tone === "bad" ? "alert" : undefined}>
       {title && <p className={`mb-1 font-medium ${t.split(" ")[2]}`}>{title}</p>}

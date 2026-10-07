@@ -11,7 +11,7 @@ import re
 from . import settings, signing
 from .safety import limiter
 
-# name -> (limit, window_seconds). Override with MIRAGE_RL_<NAME>="limit/window", e.g. MIRAGE_RL_VIDEO=5/60
+# name -> (limit, window_seconds). Override with VOCALFACE_RL_<NAME>="limit/window", e.g. VOCALFACE_RL_VIDEO=5/60
 DEFAULTS = {
     "IP": (600, 60),          # every request, per client IP (DoS guard)
     "KEY": (240, 60),         # every authenticated request, per API key
@@ -52,8 +52,8 @@ def page_csp(host: str, ancestors: str | None = "'none'") -> str:
 
 
 def dashboard_origins() -> str:
-    """Origins allowed to embed the playground (the dashboard): 'self' + MIRAGE_CORS_ORIGINS (explicit, never '*')."""
-    o = [x.strip() for x in os.getenv("MIRAGE_CORS_ORIGINS", "http://localhost:3000").split(",") if x.strip() and x.strip() != "*"]
+    """Origins allowed to embed the playground (the dashboard): 'self' + VOCALFACE_CORS_ORIGINS (explicit, never '*')."""
+    o = [x.strip() for x in os.getenv("VOCALFACE_CORS_ORIGINS", "http://localhost:3000").split(",") if x.strip() and x.strip() != "*"]
     return " ".join(["'self'"] + [x for x in o if re.fullmatch(r"https?://[A-Za-z0-9.\-:\[\]]+", x)])
 
 
@@ -61,7 +61,7 @@ NO_CSP = ("/docs", "/redoc", "/openapi.json", "/v1/playground", "/static")
 
 
 def rule(name: str) -> tuple[int, int]:
-    raw = os.getenv(f"MIRAGE_RL_{name}", "")
+    raw = os.getenv(f"VOCALFACE_RL_{name}", "")
     try:
         lim, win = raw.split("/")
         return int(lim), int(win)

@@ -3,7 +3,7 @@
   .venv/bin/python scripts_perception_client.py --base http://localhost:8290 --image shot.png --source screen \
       --question "What do you see on my screen?" [--llm ollama/llama3.2:1b] [--no-optin] [--frames 5 --interval 2]
 
-Needs the API up (isolated instance recommended), Ollama with a VLM (MIRAGE_VLM_MODEL, default moondream) and the LLM.
+Needs the API up (isolated instance recommended), Ollama with a VLM (VOCALFACE_VLM_MODEL, default moondream) and the LLM.
 This is also the reference implementation of the client message contract (docs/overnight/intelligence.md):
   {"type":"perception","enabled":true}  then  {"type":"frame","source":"camera|screen","jpeg_b64":"..."}
 """

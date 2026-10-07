@@ -1,12 +1,12 @@
-/*! Mirage widget v2 - one script tag, no API key. https://github.com/ (docs/WIDGET.md)
+/*! VocalFace widget v2 - one script tag, no API key. https://github.com/ (docs/WIDGET.md)
  * <script src="https://API/widget.js" data-token="sh_..." data-label="Talk to us" data-color="#6d5efc"
  *         data-position="bottom-right" data-greeting="Questions? Ask our AI" data-language="en" async></script> */
 (function () {
   "use strict";
   var s = document.currentScript;
-  if (!s || window.__mirageWidget) return;
+  if (!s || window.__vocalfaceWidget) return;
   var token = s.getAttribute("data-token");
-  if (!token) { console.error("[mirage] data-token is required"); return; }
+  if (!token) { console.error("[vocalface] data-token is required"); return; }
   var host = (s.getAttribute("data-host") || new URL(s.src, location.href).origin).replace(/\/$/, "");
   var label = s.getAttribute("data-label") || "Talk to us";
   var color = /^#[0-9a-f]{6}$/i.test(s.getAttribute("data-color") || "") ? s.getAttribute("data-color") : "#6d5efc";
@@ -17,7 +17,7 @@
   var fg = (rgb[0] * 299 + rgb[1] * 587 + rgb[2] * 114) / 1000 > 150 ? "#111" : "#fff";
   var side = left ? "left" : "right";
   var h = document.createElement("div");
-  h.setAttribute("data-mirage-widget", "");
+  h.setAttribute("data-vocalface-widget", "");
   var r = h.attachShadow({ mode: "open" });
   r.innerHTML =
     "<style>*{box-sizing:border-box}:host{all:initial}" +
@@ -47,12 +47,12 @@
   panel.setAttribute("aria-label", label);
   fr.title = label + " (AI conversation)";
   var shown = false;
-  try { shown = sessionStorage.getItem("mirage-tip") === "1"; } catch (e) {}
+  try { shown = sessionStorage.getItem("vocalface-tip") === "1"; } catch (e) {}
   if (teaser && !shown) {
     $(".t span").textContent = teaser;
     setTimeout(function () { if (!panel.classList.contains("o")) tip.hidden = false; }, 1500);
   }
-  function hideTip() { tip.hidden = true; try { sessionStorage.setItem("mirage-tip", "1"); } catch (e) {} }
+  function hideTip() { tip.hidden = true; try { sessionStorage.setItem("vocalface-tip", "1"); } catch (e) {} }
   tip.querySelector("button").onclick = hideTip;
   var inerted = [];
   function open() {
@@ -79,9 +79,9 @@
     else if (e.key === "Tab" && panel.classList.contains("o") && r.activeElement === close) { e.preventDefault(); (e.shiftKey ? sent[1] : fr).focus(); }
   }, true);
   window.addEventListener("message", function (e) {
-    if (e.source === fr.contentWindow && e.data && e.data.mirage === "widget" && e.data.type === "close") shut();
+    if (e.source === fr.contentWindow && e.data && e.data.vocalface === "widget" && e.data.type === "close") shut();
   });
-  window.__mirageWidget = { open: open, close: shut, element: h };
+  window.__vocalfaceWidget = { open: open, close: shut, element: h };
   (document.body ? Promise.resolve() : new Promise(function (ok) { document.addEventListener("DOMContentLoaded", ok); }))
     .then(function () { document.body.appendChild(h); });
 })();

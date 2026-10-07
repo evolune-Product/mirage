@@ -16,9 +16,9 @@ from app.pipeline.session import Providers
 def _limits(monkeypatch):
     from app import safety
 
-    monkeypatch.setenv("MIRAGE_RL_SIGNUP", "1000/60")
-    monkeypatch.setenv("MIRAGE_RL_IP", "100000/60")
-    monkeypatch.setenv("MIRAGE_RL_KEY", "100000/60")
+    monkeypatch.setenv("VOCALFACE_RL_SIGNUP", "1000/60")
+    monkeypatch.setenv("VOCALFACE_RL_IP", "100000/60")
+    monkeypatch.setenv("VOCALFACE_RL_KEY", "100000/60")
     safety.limiter.reset()
     yield
     safety.limiter.reset()
@@ -85,7 +85,7 @@ def test_url_validation_and_isolation(env, fetcher):
 def test_url_fetch_is_ssrf_guarded(monkeypatch):
     from app import netguard
 
-    monkeypatch.setenv("MIRAGE_BLOCK_PRIVATE_URLS", "1")
+    monkeypatch.setenv("VOCALFACE_BLOCK_PRIVATE_URLS", "1")
     assert netguard.blocking()
     with pytest.raises(ValueError, match="private|loopback"):
         gap_knowledge.fetch_document("http://127.0.0.1:9/secret")

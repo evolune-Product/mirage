@@ -25,8 +25,8 @@ treat as broken in this setup, not a quality verdict. Hindi "correct" misses are
 
 Recommendation: voice default stays llama3.2:1b only for latency-critical demos (~0.5 s to first sentence). For any persona with knowledge/guardrails use
 **llama3.2:3b** (best quality per latency, +0.3 s). Tool-calling personas: **qwen3:8b** (1.0 tools; 1B/3B call tools for small talk). Set
-`MIRAGE_JUDGE_MODEL=llama3.2:3b` (judge 1.00 vs 0.75 for 1B; objective judging is off the voice path). mistral-small 24b is too slow for live voice
-(4.8 s) - batch/judge/text only. Set `MIRAGE_OLLAMA_NUM_CTX=4096`: Ollama reports 32768 ctx by default, which is why 1B shows 4.1 GB (not re-measured). I did NOT change
+`VOCALFACE_JUDGE_MODEL=llama3.2:3b` (judge 1.00 vs 0.75 for 1B; objective judging is off the voice path). mistral-small 24b is too slow for live voice
+(4.8 s) - batch/judge/text only. Set `VOCALFACE_OLLAMA_NUM_CTX=4096`: Ollama reports 32768 ctx by default, which is why 1B shows 4.1 GB (not re-measured). I did NOT change
 the persona default in db.py/session.py (not my files).
 
 ### What the evals found and what changed (llama3.2:1b, same data)
@@ -44,7 +44,7 @@ Ablation on 1B (QA / OOS refusal): no reminder 1.00/0.33; hard reminder 0.86/1.0
 - Section-aware chunks carrying their heading path: h@1 0.86 -> 0.88 (questions), 0.76 -> 0.83 (paraphrases). Chunk 400-500 chars beats 800+ (h@1 0.74 -> 0.86).
 - Plain BM25 got stop-word removal + stemming (h@1 0.86 -> 0.91 on questions, but only 0.35-0.5 on paraphrases).
 - 50/50 RRF hybrid HURT paraphrases (h@3 0.93 -> 0.69). Shipped: dense + small normalised BM25 bonus (weight 0.04): questions h@1 0.93, paraphrases h@1 ~0.79 (vs 0.83 dense-only: a wash; kept for exact terms such as error codes).
-- BGE query-instruction prefix: no difference measured. Relative-score filter (`MIRAGE_RETRIEVAL_REL=0.12`) keeps 98.6% of gold chunks with 1.8 instead of 3 excerpts.
+- BGE query-instruction prefix: no difference measured. Relative-score filter (`VOCALFACE_RETRIEVAL_REL=0.12`) keeps 98.6% of gold chunks with 1.8 instead of 3 excerpts.
 - NOT measured: bge-base, nomic, arctic, multilingual MiniLM, cross-encoder rerank. Hugging Face downloads stalled at 0 bytes all night (Ollama registry worked), so only bge-small + BM25 ran
   (`retrieval_eval.py` skips unavailable models; rerun later). Known weakness: cross-lingual retrieval (Hindi queries over English docs) is poor with bge-small; a multilingual embedder is the next fix.
   fastembed caches in `$TMPDIR/fastembed_cache` (OS can wipe it): set `FASTEMBED_CACHE_PATH` in production.
@@ -86,7 +86,7 @@ Reference client + test: `backend/scripts_perception_client.py`.
 ## Not done / not verified
 - Browser-side capture UI (client agent's files); only the Python reference client was tested.
 - Embedders/rerankers other than bge-small (HF download stall); multilingual retrieval unsolved.
-- Persona default model and MIRAGE_JUDGE_MODEL default not changed in code (recommendations only).
+- Persona default model and VOCALFACE_JUDGE_MODEL default not changed in code (recommendations only).
 - Perception frames stored with `store_frames` are not removed by the data-deletion endpoint; no per-conversation retention timer.
 - qwen3:4b results unreliable; qwen2.5vl:7b not evaluated; no real webcam test (a still photo was sent); live voice latency impact measured with n=2.
 - Citations are numbered excerpts in the prompt only; they are not emitted as a client event.

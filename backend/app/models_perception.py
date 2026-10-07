@@ -16,6 +16,6 @@ class PerceptionConfig(SQLModel, table=True):
     camera: bool = True
     screen: bool = True
     store_frames: bool = False  # default: frames live in RAM only, never on disk
-    vlm_model: str = ""  # "" = MIRAGE_VLM_MODEL (default moondream)
+    vlm_model: str = ""  # "" = VOCALFACE_VLM_MODEL (default moondream)
     interval_s: float = 3.0  # min seconds between analysed frames per source
     updated_at: Optional[datetime] = Field(default_factory=now)

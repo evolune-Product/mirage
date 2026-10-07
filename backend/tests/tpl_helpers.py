@@ -21,10 +21,10 @@ class FakeEmbedder:
 def _limits(monkeypatch):
     from app import safety
 
-    monkeypatch.setenv("MIRAGE_RL_SIGNUP", "1000/60")
-    monkeypatch.setenv("MIRAGE_RL_IP", "100000/60")
-    monkeypatch.setenv("MIRAGE_RL_KEY", "100000/60")
-    monkeypatch.setenv("MIRAGE_WEBHOOK_LOOP", "0")
+    monkeypatch.setenv("VOCALFACE_RL_SIGNUP", "1000/60")
+    monkeypatch.setenv("VOCALFACE_RL_IP", "100000/60")
+    monkeypatch.setenv("VOCALFACE_RL_KEY", "100000/60")
+    monkeypatch.setenv("VOCALFACE_WEBHOOK_LOOP", "0")
     safety.limiter.reset()
     lb.set_completer(None)
     lb.set_tool_post(None)

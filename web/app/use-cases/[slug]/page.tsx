@@ -11,7 +11,7 @@ export const dynamicParams = false;
 export const generateStaticParams = () => useCases.map((u) => ({ slug: u.slug }));
 export function generateMetadata({ params }: { params: { slug: string } }) {
   const u = findUseCase(params.slug); if (!u) return {};
-  return { title: `${u.name} - Mirage`, description: u.lead, alternates: { canonical: `/use-cases/${u.slug}` } };
+  return { title: `${u.name} - VocalFace`, description: u.lead, alternates: { canonical: `/use-cases/${u.slug}` } };
 }
 
 export default function UseCasePage({ params }: { params: { slug: string } }) {
@@ -20,7 +20,7 @@ export default function UseCasePage({ params }: { params: { slug: string } }) {
   return (
     <Shell>
       <section className="relative overflow-hidden pb-16 pt-14 md:pb-24 md:pt-20">
-        <div className="pointer-events-none absolute left-1/2 top-0 h-[420px] w-[800px] -translate-x-1/2 rounded-full bg-mirage-violet/20 blur-[120px]" />
+        <div className="pointer-events-none absolute left-1/2 top-0 h-[420px] w-[800px] -translate-x-1/2 rounded-full bg-vocalface-violet/20 blur-[120px]" />
         <div className="relative mx-auto grid w-full max-w-7xl items-center gap-12 px-5 lg:grid-cols-2 [&>*]:min-w-0">
           <Reveal>
             <Link href="/use-cases" className="text-sm text-gray-300 hover:text-white">&larr; All use cases</Link>
@@ -33,7 +33,7 @@ export default function UseCasePage({ params }: { params: { slug: string } }) {
         </div>
       </section>
       <section className="bg-ink-2 py-16 md:py-24"><div className="mx-auto w-full max-w-7xl px-5">
-        <div className="grid gap-4 md:grid-cols-3">{u.points.map(([t, d], i) => <Reveal key={t} delay={i * 0.07}><div className="card h-full"><Check className="text-mirage-mint" size={22} /><h2 className="mt-4 text-lg font-medium text-white">{t}</h2><p className="mt-2 text-sm text-gray-300">{d}</p></div></Reveal>)}</div>
+        <div className="grid gap-4 md:grid-cols-3">{u.points.map(([t, d], i) => <Reveal key={t} delay={i * 0.07}><div className="card h-full"><Check className="text-vocalface-mint" size={22} /><h2 className="mt-4 text-lg font-medium text-white">{t}</h2><p className="mt-2 text-sm text-gray-300">{d}</p></div></Reveal>)}</div>
       </div></section>
       <section className="bg-cream py-16 text-ink md:py-24"><div className="mx-auto w-full max-w-5xl px-5">
         <h2 className="font-display text-4xl md:text-5xl">Up and running in three steps</h2>
@@ -42,7 +42,7 @@ export default function UseCasePage({ params }: { params: { slug: string } }) {
       </div></section>
       <section className="bg-ink py-16"><div className="mx-auto w-full max-w-7xl px-5">
         <p className="font-mono text-xs uppercase tracking-widest text-gray-400">More use cases</p>
-        <div className="mt-5 grid gap-4 md:grid-cols-3">{others.map((o) => <Link key={o.slug} href={`/use-cases/${o.slug}`} className="card group transition hover:border-mirage-rose/50"><o.Icon className="text-mirage-amber" size={22} /><h3 className="mt-3 font-display text-2xl text-white">{o.name}</h3><p className="mt-1 text-sm text-gray-300">{o.short}</p></Link>)}</div>
+        <div className="mt-5 grid gap-4 md:grid-cols-3">{others.map((o) => <Link key={o.slug} href={`/use-cases/${o.slug}`} className="card group transition hover:border-vocalface-rose/50"><o.Icon className="text-vocalface-amber" size={22} /><h3 className="mt-3 font-display text-2xl text-white">{o.name}</h3><p className="mt-1 text-sm text-gray-300">{o.short}</p></Link>)}</div>
       </div></section>
       <FinalCTA />
     </Shell>

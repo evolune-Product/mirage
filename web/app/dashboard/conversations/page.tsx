@@ -62,16 +62,16 @@ export default function Conversations() {
       )}
       {ps && ps.length > 0 && (
         <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-gray-400" data-testid="conv-hints">
-          <span className="inline-flex items-center gap-1.5"><Headphones size={13} className="text-mirage-cyan" />Wear headphones: the agent&apos;s voice from speakers can be picked up by your mic and make it interrupt itself.</span>
+          <span className="inline-flex items-center gap-1.5"><Headphones size={13} className="text-vocalface-cyan" />Wear headphones: the agent&apos;s voice from speakers can be picked up by your mic and make it interrupt itself.</span>
           {perc && (percOn
-            ? <span className="inline-flex items-center gap-1.5 rounded-full bg-mirage-cyan/10 px-2.5 py-1 text-mirage-cyan" data-testid="perception-on"><Eye size={12} />Perception on: {[perc.camera && "camera", perc.screen && "screen share"].filter(Boolean).join(" and ") || "off"}. Press the camera or screen button in the window to opt in; frames are analysed live and not kept{perc.store_frames ? " (storing is enabled for this persona)" : ""}.</span>
+            ? <span className="inline-flex items-center gap-1.5 rounded-full bg-vocalface-cyan/10 px-2.5 py-1 text-vocalface-cyan" data-testid="perception-on"><Eye size={12} />Perception on: {[perc.camera && "camera", perc.screen && "screen share"].filter(Boolean).join(" and ") || "off"}. Press the camera or screen button in the window to opt in; frames are analysed live and not kept{perc.store_frames ? " (storing is enabled for this persona)" : ""}.</span>
             : <span className="inline-flex items-center gap-1.5 text-gray-500"><Eye size={12} />Perception off for this persona (enable it under Personas, Perception).</span>)}
         </div>)}
       <AnimatePresence>
         {cur && (
           <motion.div key={cur.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-6 overflow-hidden rounded-2xl border border-white/10 bg-ink-2 shadow-[0_30px_80px_-30px_rgba(124,92,255,.35)]">
             <div className="flex items-center justify-between gap-3 border-b border-white/10 bg-ink-3/60 px-4 py-2.5">
-              <div className="flex min-w-0 items-center gap-3"><span className="hidden gap-1.5 sm:flex"><i className="h-2.5 w-2.5 rounded-full bg-mirage-rose/70" /><i className="h-2.5 w-2.5 rounded-full bg-mirage-amber/70" /><i className="h-2.5 w-2.5 rounded-full bg-mirage-mint/70" /></span>
+              <div className="flex min-w-0 items-center gap-3"><span className="hidden gap-1.5 sm:flex"><i className="h-2.5 w-2.5 rounded-full bg-vocalface-rose/70" /><i className="h-2.5 w-2.5 rounded-full bg-vocalface-amber/70" /><i className="h-2.5 w-2.5 rounded-full bg-vocalface-mint/70" /></span>
                 <span className="truncate font-mono text-xs text-gray-400">{cur.id}</span><Badge s={cur.status} />{cur.status === "ended" && <span className="text-xs text-gray-500">{cur.seconds_used}s used</span>}</div>
               {cur.status !== "ended" && <button className="btn-ghost !px-3 !py-1.5 text-xs" onClick={end}><Square size={12} />End</button>}
             </div>

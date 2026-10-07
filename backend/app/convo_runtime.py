@@ -22,7 +22,7 @@ from .secretbox import decrypt
 from . import models_gap  # noqa: F401  (registers tables)
 
 _ensured: set[int] = set()
-log = logging.getLogger("mirage.runtime")
+log = logging.getLogger("vocalface.runtime")
 
 
 def ensure() -> None:
@@ -160,10 +160,10 @@ class ConversationRuntime:
         return lb.make_backend(self.persona_llm, c.llm_base_url if c else "", c.llm_model if c else "", self.api_key)
 
     def judge_backend(self):
-        """Objective judging uses MIRAGE_JUDGE_MODEL (local Ollama) when set and no custom LLM is configured."""
+        """Objective judging uses VOCALFACE_JUDGE_MODEL (local Ollama) when set and no custom LLM is configured."""
         import os
 
-        m = os.environ.get("MIRAGE_JUDGE_MODEL")
+        m = os.environ.get("VOCALFACE_JUDGE_MODEL")
         if m and not (self.cfg and self.cfg.llm_base_url):
             return lb.OllamaBackend(m, num_predict=300)
         return self.backend()
@@ -549,7 +549,7 @@ def reap_idle(grace_s: Optional[float] = None) -> list[str]:
     from .db import Account, Conversation
 
     ensure()
-    grace = grace_s if grace_s is not None else float(os.environ.get("MIRAGE_END_GRACE_S", "30"))
+    grace = grace_s if grace_s is not None else float(os.environ.get("VOCALFACE_END_GRACE_S", "30"))
     now, ended = datetime.now(timezone.utc), []
     with DB(db.engine) as s:
         for c in s.exec(select(Conversation).where(Conversation.status == "active")).all():

@@ -17,7 +17,7 @@ Status: DONE for Chatterbox (MIT) on MLX; end-to-end verified through the real A
 Everything runs through `mlx-audio` 0.5.7 in its own venv `.venv-clone` (python 3.11, created like `.venv-tts`; not committed, see `backend/scripts_setup_clone.sh`).
 
 ## Environment notes
-* Downloads from Hugging Face ran at ~0.1-0.5 MB/s tonight (shared network); the default `hf` xet downloader stalled at 0 bytes, so the Chatterbox 4-bit weights (607 MB) were fetched with parallel `curl -r` ranges into `models/chatterbox-4bit` (git-ignored) and loaded from that local path (`MIRAGE_CLONE_REPO=<dir>`). On a normal connection `mlx-community/chatterbox-4bit` downloads automatically on first start.
+* Downloads from Hugging Face ran at ~0.1-0.5 MB/s tonight (shared network); the default `hf` xet downloader stalled at 0 bytes, so the Chatterbox 4-bit weights (607 MB) were fetched with parallel `curl -r` ranges into `models/chatterbox-4bit` (git-ignored) and loaded from that local path (`VOCALFACE_CLONE_REPO=<dir>`). On a normal connection `mlx-community/chatterbox-4bit` downloads automatically on first start.
 * The `mlx-community/chatterbox-4bit` checkpoint is the MULTILINGUAL Chatterbox (config `multilingual: true`, 23 languages incl. es and hi); the fp16 repo (2.6 GB) was not downloaded (bandwidth).
 
 ## Design (what was built)
@@ -31,7 +31,7 @@ Everything runs through `mlx-audio` 0.5.7 in its own venv `.venv-clone` (python 
 ## Baselines measured (WeSpeaker cosine vs the owner's 19.6 s reference picked from the founder video)
 * Same person, other segments of the same video: 0.911 and 0.913 (the ceiling a perfect clone could reach).
 * Kokoro preset voices saying a 2-sentence reply: af_heart -0.036, am_michael -0.034, am_adam -0.063, bm_george -0.171, af_nova 0.025 (the floor: a non-cloned voice scores about 0).
-* Consent-verification threshold is 0.50; the clone acceptance threshold used here is 0.30 (`MIRAGE_CLONE_MIN_SIMILARITY`).
+* Consent-verification threshold is 0.50; the clone acceptance threshold used here is 0.30 (`VOCALFACE_CLONE_MIN_SIMILARITY`).
 * Reference picker on the founder video: window 38.4-57.5 s, 19.6 s, SNR 23 dB with the gentle denoise (21 dB without), 0 clipped samples, Whisper reads it as one coherent monologue.
 
 ## Results (M1 Pro, shared and loaded: load average 4-9, so timings are pessimistic and noisy; Chatterbox 4-bit multilingual MLX)
@@ -74,7 +74,7 @@ Chatterbox 4-bit MLX is the multilingual checkpoint (23 languages). Verified by 
 * Pocket TTS, OpenVoice v2 and Qwen3-TTS were NOT evaluated (network speed), only Chatterbox.
 * Hindi intelligibility; fr/de/other languages; the fp16 checkpoint (2.6 GB) was not compared with 4-bit.
 * Production consent path (`asr-phrase+voice-match`) not exercised with a real human recording; dashboard UI for voices not built (API + SDK only).
-* The sidecar crashed once with "sidecar exited" during the multi-language eval run (Hindi step) and did not repeat; `MIRAGE_CLONE_LOG=<file>` captures its stderr if it recurs. Circuit breaker and Kokoro fallback cover it.
+* The sidecar crashed once with "sidecar exited" during the multi-language eval run (Hindi step) and did not repeat; `VOCALFACE_CLONE_LOG=<file>` captures its stderr if it recurs. Circuit breaker and Kokoro fallback cover it.
 * `.venv-clone` and `models/chatterbox-4bit` are git-ignored; `backend/scripts_setup_clone.sh` documents the setup. HF weights downloaded by hand via curl ranges because the xet downloader stalled; `mlx-audio` additionally fetches `mlx-community/S3TokenizerV2` (495 MB) into the HF cache.
 
 ## Licences (final)

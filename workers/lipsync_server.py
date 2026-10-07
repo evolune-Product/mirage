@@ -10,9 +10,9 @@ POST /prepare/{replica_id}         warm base clip + model (cold ~5-10 s, then ca
 POST /invalidate/{replica_id}      drop the cached base (called by the backend after a listening clip upload)
 GET  /health                       device, engine, models, perf stats, per-replica base info
 
-Env: MIRAGE_DATA, MIRAGE_LIPSYNC_DEVICE=auto|cuda|mps|cpu, MIRAGE_LIPSYNC_ENGINE=auto|viseme|musetalk|wav2lip,
-     MIRAGE_COMMERCIAL_ONLY=1 (refuse research-licensed engines/weights, see engines/ and docs/LICENSES.md), MIRAGE_JPEG_Q,
-     MIRAGE_IDLE_SECONDS, MIRAGE_FACE_TRACK=1|0 (mediapipe tracking), MIRAGE_LOG_LEVEL.
+Env: VOCALFACE_DATA, VOCALFACE_LIPSYNC_DEVICE=auto|cuda|mps|cpu, VOCALFACE_LIPSYNC_ENGINE=auto|viseme|musetalk|wav2lip,
+     VOCALFACE_COMMERCIAL_ONLY=1 (refuse research-licensed engines/weights, see engines/ and docs/LICENSES.md), VOCALFACE_JPEG_Q,
+     VOCALFACE_IDLE_SECONDS, VOCALFACE_FACE_TRACK=1|0 (mediapipe tracking), VOCALFACE_LOG_LEVEL.
 
 The base video is the replica's listening clip when present (else the calmest window of the source video, found with
 face-landmark jaw-open scores). Only the lower face is replaced, so head motion and blinking come from real footage.
@@ -43,25 +43,25 @@ import engines as eng_registry  # noqa: E402
 import face_render as fr  # noqa: E402
 import facelib as fl  # noqa: E402
 
-logging.basicConfig(level=os.environ.get("MIRAGE_LOG_LEVEL", "INFO"), format="%(asctime)s %(name)s %(message)s")
-log = logging.getLogger("mirage.lipsync")
+logging.basicConfig(level=os.environ.get("VOCALFACE_LOG_LEVEL", "INFO"), format="%(asctime)s %(name)s %(message)s")
+log = logging.getLogger("vocalface.lipsync")
 
-DATA = Path(os.environ.get("MIRAGE_DATA", HERE.parent / "data"))
+DATA = Path(os.environ.get("VOCALFACE_DATA", HERE.parent / "data"))
 DEVICE = fr.pick_device()
 COMMERCIAL_ONLY = eng_registry.commercial_only()
 ENGINE_ERROR = None   # set when the requested engine is refused (commercial-only) or nothing usable exists
 try:
     ENGINE_NAME = eng_registry.resolve()
 except (eng_registry.CommercialOnlyError, eng_registry.EngineUnavailable, KeyError) as _e:
-    ENGINE_NAME, ENGINE_ERROR = os.environ.get("MIRAGE_LIPSYNC_ENGINE", "auto").lower(), str(_e)
-    logging.getLogger("mirage.lipsync").error("lip-sync engine refused: %s", _e)
+    ENGINE_NAME, ENGINE_ERROR = os.environ.get("VOCALFACE_LIPSYNC_ENGINE", "auto").lower(), str(_e)
+    logging.getLogger("vocalface.lipsync").error("lip-sync engine refused: %s", _e)
 FPS = fr.FPS
-JPEG_Q = int(os.environ.get("MIRAGE_JPEG_Q", "80"))
+JPEG_Q = int(os.environ.get("VOCALFACE_JPEG_Q", "80"))
 FADE_FRAMES = 5          # soft mouth entry/exit so speaking segments do not pop against the idle loop
 CONTINUOUS_S = 1.2       # a request starting within this long after the previous one ended counts as continuous speech
-SHARPEN = float(os.environ.get("MIRAGE_SHARPEN", "0.6"))
+SHARPEN = float(os.environ.get("VOCALFACE_SHARPEN", "0.6"))
 
-app = FastAPI(title="Mirage lipsync")
+app = FastAPI(title="VocalFace lipsync")
 _lock = threading.Lock()  # one GPU inference at a time
 _engine = None
 _tracker = None
@@ -76,7 +76,7 @@ def tracker():
     global _tracker, _tracker_tried
     if not _tracker_tried:
         _tracker_tried = True
-        if os.environ.get("MIRAGE_FACE_TRACK", "1") != "0":
+        if os.environ.get("VOCALFACE_FACE_TRACK", "1") != "0":
             try:
                 t0 = time.time()
                 _tracker = fl.FaceTracker()
@@ -170,7 +170,7 @@ def jpeg(f) -> str:
 @app.on_event("startup")
 def _preload():
     """Load + warm the model in the background so the first conversation does not wait for it."""
-    if os.environ.get("MIRAGE_LIPSYNC_PRELOAD", "1") == "0":
+    if os.environ.get("VOCALFACE_LIPSYNC_PRELOAD", "1") == "0":
         return
 
     def go():

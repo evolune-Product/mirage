@@ -56,7 +56,7 @@ def test_warns_when_behind(tmp_path, caplog):
     migrate.upgrade(e)
     with e.begin() as c:
         c.execute(text("update alembic_version set version_num='0000'"))
-    caplog.set_level(logging.WARNING, logger="mirage.migrate")
+    caplog.set_level(logging.WARNING, logger="vocalface.migrate")
     st = migrate.warn_if_behind(e)
     assert st["state"] == "behind"
     assert "SCHEMA IS BEHIND" in caplog.text

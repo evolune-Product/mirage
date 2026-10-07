@@ -110,7 +110,7 @@ class Embedder(Protocol):
     def embed(self, texts: list[str]) -> np.ndarray: ...  # (n, d) L2-normalised float32
 
 
-EMBED_MODEL = os.environ.get("MIRAGE_EMBED_MODEL", "BAAI/bge-small-en-v1.5")
+EMBED_MODEL = os.environ.get("VOCALFACE_EMBED_MODEL", "BAAI/bge-small-en-v1.5")
 
 
 class FastEmbedder:
@@ -204,10 +204,10 @@ def bm25_scores(query: str, docs: list[str], k1: float = 1.5, b: float = 0.75) -
 
 # ---------------- ranking ----------------
 
-CHUNK_CHARS = int(os.environ.get("MIRAGE_CHUNK_CHARS", "500"))  # evals/retrieval_eval.py: 400-500 beats 800+ on h@1 and MRR
-CHUNK_OVERLAP = int(os.environ.get("MIRAGE_CHUNK_OVERLAP", "60"))
-RETRIEVAL_MODE = os.environ.get("MIRAGE_RETRIEVAL", "fuse")  # fuse (dense + small BM25 bonus) | dense | bm25
-BM25_WEIGHT = float(os.environ.get("MIRAGE_BM25_WEIGHT", "0.04"))
+CHUNK_CHARS = int(os.environ.get("VOCALFACE_CHUNK_CHARS", "500"))  # evals/retrieval_eval.py: 400-500 beats 800+ on h@1 and MRR
+CHUNK_OVERLAP = int(os.environ.get("VOCALFACE_CHUNK_OVERLAP", "60"))
+RETRIEVAL_MODE = os.environ.get("VOCALFACE_RETRIEVAL", "fuse")  # fuse (dense + small BM25 bonus) | dense | bm25
+BM25_WEIGHT = float(os.environ.get("VOCALFACE_BM25_WEIGHT", "0.04"))
 
 
 def _embed_query(emb, query: str) -> np.ndarray:
@@ -335,7 +335,7 @@ GROUNDING_RULES = (
     "Say the key fact first, in plain words, in the user's language. Do not read out excerpt numbers, headings or the word 'document'; headings in the excerpts are only labels.")
 
 
-REL_KEEP = float(os.environ.get("MIRAGE_RETRIEVAL_REL", "0.12"))
+REL_KEEP = float(os.environ.get("VOCALFACE_RETRIEVAL_REL", "0.12"))
 
 
 def select_hits(hits: list[dict], rel: float | None = None) -> list[dict]:

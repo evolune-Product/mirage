@@ -1,6 +1,6 @@
 """Reversible encryption for stored secrets (custom-LLM api keys, tool secrets).
 
-Key: MIRAGE_SECRET_KEY env, else a random key persisted in $MIRAGE_DATA/secret.key (0600).
+Key: VOCALFACE_SECRET_KEY env, else a random key persisted in $VOCALFACE_DATA/secret.key (0600).
 Uses Fernet (cryptography) when installed; otherwise an encrypt-then-MAC construction built from
 stdlib HMAC-SHA256 (CTR-style keystream + MAC). Ciphertexts are tagged ("f1:" / "h1:") so both decode.
 """
@@ -20,11 +20,11 @@ def _master() -> bytes:
     global _key_cache
     if _key_cache:
         return _key_cache
-    env = os.environ.get("MIRAGE_SECRET_KEY")
+    env = os.environ.get("VOCALFACE_SECRET_KEY")
     if env:
         _key_cache = hashlib.sha256(env.encode()).digest()
         return _key_cache
-    data_dir = Path(os.environ.get("MIRAGE_DATA", Path(__file__).resolve().parents[1] / "data"))
+    data_dir = Path(os.environ.get("VOCALFACE_DATA", Path(__file__).resolve().parents[1] / "data"))
     p = data_dir / "secret.key"
     if p.exists():
         raw = p.read_bytes()

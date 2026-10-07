@@ -1,13 +1,13 @@
 """Minimal .env loader (no dependency): fills variables that are NOT already set in the environment.
-Looks at $MIRAGE_ENV_FILE, then ./.env, then <repo>/.env. Secrets are never printed."""
+Looks at $VOCALFACE_ENV_FILE, then ./.env, then <repo>/.env. Secrets are never printed."""
 import os
 from pathlib import Path
 
 
 def load() -> None:
-    if os.environ.get("MIRAGE_LOAD_DOTENV") == "0":
+    if os.environ.get("VOCALFACE_LOAD_DOTENV") == "0":
         return
-    cands = [os.environ.get("MIRAGE_ENV_FILE", ""), ".env", str(Path(__file__).resolve().parents[2] / ".env")]
+    cands = [os.environ.get("VOCALFACE_ENV_FILE", ""), ".env", str(Path(__file__).resolve().parents[2] / ".env")]
     for c in cands:
         p = Path(c) if c else None
         if not p or not p.is_file():

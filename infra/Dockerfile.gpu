@@ -6,7 +6,7 @@
 # Mount model weights: workers/Wav2Lip/checkpoints/wav2lip.pth, workers/LivePortrait pretrained_weights, models/.
 FROM pytorch/pytorch:2.4.1-cuda12.1-cudnn9-runtime
 
-ENV PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1 MIRAGE_DATA=/data MIRAGE_LIPSYNC_DEVICE=cuda
+ENV PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1 VOCALFACE_DATA=/data VOCALFACE_LIPSYNC_DEVICE=cuda
 RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg libsndfile1 libgl1 libglib2.0-0 espeak-ng curl \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /app

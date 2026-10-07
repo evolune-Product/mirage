@@ -1,6 +1,6 @@
 """Compare the energy gate with Silero VAD on noise rejection and speech-onset / barge-in latency.
 
-  cd backend && .venv/bin/python scripts_vad_eval.py          (needs /tmp/mirage_bench_cache/q*.pcm from scripts_latency.py)
+  cd backend && .venv/bin/python scripts_vad_eval.py          (needs /tmp/vocalface_bench_cache/q*.pcm from scripts_latency.py)
 
 Scenarios (all 16 kHz int16, fed as 20 ms frames exactly like Session does):
   noise    60 s of keyboard clicks / fan hiss / hum / loud hiss / music-like chord: false 'speech' frames and false
@@ -19,7 +19,7 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from app.pipeline.turn_taking import EnergyVAD, SileroVAD, TurnTaker  # noqa: E402
 
-CACHE = Path("/tmp/mirage_bench_cache")
+CACHE = Path("/tmp/vocalface_bench_cache")
 FR = 640
 rng = np.random.default_rng(7)
 SR = 16000

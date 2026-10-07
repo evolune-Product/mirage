@@ -1,7 +1,7 @@
-/* Mirage browser client, shared by playground.html and guest.html.
+/* VocalFace browser client, shared by playground.html and guest.html.
  *
- *   const c = new MirageClient({ wsUrl: async () => 'ws://...', prepare: async () => {...} });   // transport + audio + video
- *   MirageUI.mount(document.getElementById('mirage'), c, { mode: 'playground' | 'guest', ... });  // controls + transcript
+ *   const c = new VocalFaceClient({ wsUrl: async () => 'ws://...', prepare: async () => {...} });   // transport + audio + video
+ *   VocalFaceUI.mount(document.getElementById('vocalface'), c, { mode: 'playground' | 'guest', ... });  // controls + transcript
  *
  * Protocol additions are documented in docs/overnight/realtime-client.md. A server that does not know `hello` simply
  * ignores it and keeps speaking the original protocol (raw PCM, base64 JPEG in JSON); this client handles both.
@@ -72,7 +72,7 @@ registerProcessor('pcm16', P);`;
 const rms16 = (i16) => { let s = 0; for (let i = 0; i < i16.length; i++) s += i16[i] * i16[i]; return Math.sqrt(s / Math.max(1, i16.length)) / 32768; };
 const isMobile = () => /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Mac/.test(navigator.platform));
 
-class MirageClient {
+class VocalFaceClient {
   constructor(o) {
     this.o = o || {};
     this.h = {};
@@ -567,7 +567,7 @@ class MirageClient {
   }
 }
 
-window.MirageClient = MirageClient;
-window.MirageMsg = MSG;
-window.MirageVersion = VERSION;
+window.VocalFaceClient = VocalFaceClient;
+window.VocalFaceMsg = MSG;
+window.VocalFaceVersion = VERSION;
 })();

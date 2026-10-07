@@ -269,7 +269,7 @@ class VisemeEngine(LipsyncEngine):
         check_allowed("viseme")
         import os
 
-        self.hmax = float(os.environ.get("MIRAGE_VISEME_GAIN", "0.27"))
+        self.hmax = float(os.environ.get("VOCALFACE_VISEME_GAIN", "0.27"))
         return self
 
     def warmup(self):

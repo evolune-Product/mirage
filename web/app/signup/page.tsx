@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, KeyRound, Loader2, Mail, ShieldCheck, Sparkles } from "lucide-react";
 import { API_URL, api, setKey } from "@/lib/api";
 
-/** Optional proof of work (only when the server sets MIRAGE_SIGNUP_POW_BITS): find a nonce so sha256(challenge:nonce) has `bits` leading zero bits. */
+/** Optional proof of work (only when the server sets VOCALFACE_SIGNUP_POW_BITS): find a nonce so sha256(challenge:nonce) has `bits` leading zero bits. */
 async function solvePow(): Promise<{ pow_challenge?: string; pow_nonce?: string }> {
   const ch = await fetch(`${API_URL}/v1/signup/challenge`).then((r) => r.json()).catch(() => ({ bits: 0 }));
   if (!ch.bits) return {};
@@ -58,7 +58,7 @@ export default function Signup() {
                 <div className="relative"><Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500" />
                   <input id="email" className="input !pl-10" type="email" autoComplete="email" placeholder="you@company.com" required value={email} onChange={(e) => { setEmail(e.target.value); setErr(""); }} /></div>
                 <input type="text" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" value={hp} onChange={(e) => setHp(e.target.value)} style={{ position: "absolute", left: "-9999px", width: 1, height: 1, opacity: 0 }} />
-                {err && <p className="mt-2 text-xs text-mirage-rose">{err}</p>}
+                {err && <p className="mt-2 text-xs text-vocalface-rose">{err}</p>}
                 <button className="btn-grad mt-5 w-full !py-3" disabled={busy}>{busy ? <><Loader2 size={16} className="animate-spin" />Creating your key...</> : <>Sign up<ArrowRight size={16} /></>}</button>
               </motion.form>
             ) : (
@@ -66,13 +66,13 @@ export default function Signup() {
                 <label className="label" htmlFor="key">API key</label>
                 <div className="relative"><KeyRound size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500" />
                   <input id="key" className="input !pl-10 font-mono" placeholder="mk_..." value={pasted} onChange={(e) => { setPasted(e.target.value); setErr(""); }} autoComplete="off" spellCheck={false} /></div>
-                {err && <p className="mt-2 text-xs text-mirage-rose">{err}</p>}
+                {err && <p className="mt-2 text-xs text-vocalface-rose">{err}</p>}
                 <button className="btn-grad mt-5 w-full !py-3" disabled={busy}>{busy ? <><Loader2 size={16} className="animate-spin" />Checking...</> : <>Continue to dashboard<ArrowRight size={16} /></>}</button>
               </motion.form>
             )}
           </AnimatePresence>
           <button className="mt-5 text-left text-sm text-gray-400 hover:text-white" onClick={() => { setMode(mode === "new" ? "have" : "new"); setErr(""); }}>
-            {mode === "new" ? <>Already have a key? <span className="text-mirage-rose underline-offset-4 hover:underline">Paste it here</span></> : <>No key yet? <span className="text-mirage-rose underline-offset-4 hover:underline">Get one free</span></>}
+            {mode === "new" ? <>Already have a key? <span className="text-vocalface-rose underline-offset-4 hover:underline">Paste it here</span></> : <>No key yet? <span className="text-vocalface-rose underline-offset-4 hover:underline">Get one free</span></>}
           </button>
           <div className="mt-10 flex flex-wrap gap-x-6 gap-y-2 text-xs text-gray-500">
             <span className="inline-flex items-center gap-1.5"><ShieldCheck size={14} />Consent-first replicas</span>

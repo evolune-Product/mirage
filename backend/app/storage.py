@@ -1,14 +1,14 @@
 """Object storage abstraction for replica faces, rendered videos, consent recordings and listening clips.
 
-Model: the API/worker/lip-sync processes keep using a *local working directory* (MIRAGE_DATA) exactly as before; the
-Storage layer is the durable home of those files. Keys are the POSIX path relative to MIRAGE_DATA, so
+Model: the API/worker/lip-sync processes keep using a *local working directory* (VOCALFACE_DATA) exactly as before; the
+Storage layer is the durable home of those files. Keys are the POSIX path relative to VOCALFACE_DATA, so
 `replicas/r_ab12/face.png`, `videos/v_cd34.mp4`, `consent/r_ab12/cns_x.webm`, `replicas/r_ab12/listening.mp4`.
 
-  local (default)  MIRAGE_STORAGE=local  - the data dir IS the store. publish() is a no-op: current behaviour and paths unchanged.
-  s3               MIRAGE_STORAGE=s3     - S3-compatible (AWS, R2, MinIO, B2). boto3 is optional (pip install boto3).
-                   MIRAGE_S3_BUCKET (required), MIRAGE_S3_PREFIX, MIRAGE_S3_ENDPOINT, MIRAGE_S3_REGION,
+  local (default)  VOCALFACE_STORAGE=local  - the data dir IS the store. publish() is a no-op: current behaviour and paths unchanged.
+  s3               VOCALFACE_STORAGE=s3     - S3-compatible (AWS, R2, MinIO, B2). boto3 is optional (pip install boto3).
+                   VOCALFACE_S3_BUCKET (required), VOCALFACE_S3_PREFIX, VOCALFACE_S3_ENDPOINT, VOCALFACE_S3_REGION,
                    standard AWS credentials via the usual env vars / instance role.
-                   MIRAGE_S3_REDIRECT=1 (default): file endpoints verify the Mirage signed URL first and then 307-redirect to
+                   VOCALFACE_S3_REDIRECT=1 (default): file endpoints verify the VocalFace signed URL first and then 307-redirect to
                    a short-lived presigned bucket URL; 0 streams the bytes through the API instead.
 
 Typical flow with s3: a worker (any machine) writes locally, then `publish(path)` uploads it; the API serves it with
@@ -25,7 +25,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Optional
 
-log = logging.getLogger("mirage.storage")
+log = logging.getLogger("vocalface.storage")
 
 _MEDIA = {".mp4": "video/mp4", ".png": "image/png", ".webm": "audio/webm", ".wav": "audio/wav", ".ogg": "audio/ogg",
           ".mp3": "audio/mpeg", ".m4a": "audio/mp4", ".json": "application/json"}
@@ -156,7 +156,7 @@ class S3Storage(Storage):
 
     def __init__(self, bucket: str, prefix: str = "", client=None, endpoint: str | None = None, region: str | None = None):
         if not bucket:
-            raise RuntimeError("MIRAGE_S3_BUCKET is required for MIRAGE_STORAGE=s3")
+            raise RuntimeError("VOCALFACE_S3_BUCKET is required for VOCALFACE_STORAGE=s3")
         self.bucket = bucket
         self.prefix = prefix.strip("/") + "/" if prefix.strip("/") else ""
         if client is None:
@@ -164,7 +164,7 @@ class S3Storage(Storage):
                 import boto3  # optional dependency
                 from botocore.config import Config
             except ImportError as e:
-                raise RuntimeError("MIRAGE_STORAGE=s3 needs boto3: pip install boto3") from e
+                raise RuntimeError("VOCALFACE_STORAGE=s3 needs boto3: pip install boto3") from e
             client = boto3.client("s3", endpoint_url=endpoint or None, region_name=region or None,
                                   config=Config(signature_version="s3v4", s3={"addressing_style": "path" if endpoint else "auto"}))
         self.c = client
@@ -246,16 +246,16 @@ def set_storage(s: Optional[Storage]) -> None:
 def get_storage() -> Storage:
     if _override is not None:
         return _override
-    kind = os.getenv("MIRAGE_STORAGE", "local").strip().lower() or "local"
-    cfg = (kind, os.getenv("MIRAGE_S3_BUCKET", ""), os.getenv("MIRAGE_S3_PREFIX", ""), os.getenv("MIRAGE_S3_ENDPOINT", ""),
-           os.getenv("MIRAGE_S3_REGION", ""))
+    kind = os.getenv("VOCALFACE_STORAGE", "local").strip().lower() or "local"
+    cfg = (kind, os.getenv("VOCALFACE_S3_BUCKET", ""), os.getenv("VOCALFACE_S3_PREFIX", ""), os.getenv("VOCALFACE_S3_ENDPOINT", ""),
+           os.getenv("VOCALFACE_S3_REGION", ""))
     if cfg not in _cache:
         if kind == "local":
             _cache[cfg] = LocalStorage()
         elif kind == "s3":
             _cache[cfg] = S3Storage(cfg[1], cfg[2], endpoint=cfg[3] or None, region=cfg[4] or None)
         else:
-            raise RuntimeError(f"unknown MIRAGE_STORAGE={kind!r} (use local or s3)")
+            raise RuntimeError(f"unknown VOCALFACE_STORAGE={kind!r} (use local or s3)")
     return _cache[cfg]
 
 
@@ -304,7 +304,7 @@ def remove(path: str | Path) -> int:
 
 def serve(path: str | Path, media_type: str, headers: Optional[dict] = None):
     """FastAPI response for a stored file: local file -> FileResponse; remote -> redirect to a short presigned URL
-    (or stream via a local cache copy when MIRAGE_S3_REDIRECT=0). Raises HTTP 404 when absent."""
+    (or stream via a local cache copy when VOCALFACE_S3_REDIRECT=0). Raises HTTP 404 when absent."""
     from fastapi import HTTPException
     from fastapi.responses import FileResponse, RedirectResponse
 
@@ -316,7 +316,7 @@ def serve(path: str | Path, media_type: str, headers: Optional[dict] = None):
         return FileResponse(p, media_type=media_type, headers=headers)
     if st.remote:
         key = key_for(p)
-        if os.getenv("MIRAGE_S3_REDIRECT", "1") != "0":
+        if os.getenv("VOCALFACE_S3_REDIRECT", "1") != "0":
             if not st.exists(key):
                 raise HTTPException(404, "not found")
             return RedirectResponse(st.presign(key, min(settings.signed_url_ttl(), 300), media_type), status_code=307,

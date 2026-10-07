@@ -60,7 +60,7 @@ def _owned_replica(s: Session, rid: str, acc: Account) -> Replica:
 
 def _notify_lipsync(rid: str) -> None:
     """Best effort: tell the lip-sync service to drop its cached base for this replica."""
-    url = os.environ.get("MIRAGE_LIPSYNC_URL", "http://localhost:8100").rstrip("/")
+    url = os.environ.get("VOCALFACE_LIPSYNC_URL", "http://localhost:8100").rstrip("/")
     try:
         httpx.post(f"{url}/invalidate/{rid}", timeout=1.5)
     except Exception:

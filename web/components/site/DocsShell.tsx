@@ -20,7 +20,7 @@ export default function DocsShell({ pages, index, active, toc, children }: { pag
         {q.trim().length >= 2 ? (
           <ul className="mt-4 space-y-1" aria-label="Search results">{res.length === 0 && <li className="text-sm text-gray-400">No matches.</li>}
             {res.map(({ s, pos }) => { const t = (s.text); const at = Math.max(0, t.toLowerCase().indexOf(q.trim().toLowerCase()) - 30);
-              return <li key={s.slug + s.id}><Link href={`/docs/${s.slug}#${s.id}`} onClick={() => setQ("")} className="block rounded-lg px-3 py-2 hover:bg-white/5"><span className="block text-sm text-white">{s.title}</span><span className="block text-[11px] text-mirage-amber">{s.page}</span><span className="block truncate text-xs text-gray-400">{pos >= 0 ? t.slice(at, at + 70) : ""}</span></Link></li>; })}</ul>
+              return <li key={s.slug + s.id}><Link href={`/docs/${s.slug}#${s.id}`} onClick={() => setQ("")} className="block rounded-lg px-3 py-2 hover:bg-white/5"><span className="block text-sm text-white">{s.title}</span><span className="block text-[11px] text-vocalface-amber">{s.page}</span><span className="block truncate text-xs text-gray-400">{pos >= 0 ? t.slice(at, at + 70) : ""}</span></Link></li>; })}</ul>
         ) : (
           <nav className="mt-6" aria-label="Docs"><p className="font-mono text-xs uppercase tracking-widest text-gray-400">Documentation</p>
             <ul className="mt-3 space-y-1">{[{ slug: "", title: "Overview" }, ...pages].map((p) => { const on = (p.slug || "overview") === active;

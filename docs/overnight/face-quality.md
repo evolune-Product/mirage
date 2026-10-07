@@ -47,7 +47,7 @@ workers/ (all new or rewritten, owned by me):
   landmark-shaped soft mouth mask clipped to the face oval, LAB colour match, gated sharpen, composite.
 * `face_render.py`: `prepare_base` (cache in `<replica>/base_v3/{frames,base.mp4,meta.json}`; listening clip preferred), per-frame model boxes (fixed size, smoothed centre),
   `Wav2LipEngine` (+warm-up), `speech_alpha` (generated mouth fades to the real closed mouth in silence), ping-pong cursor, `paste`.
-* `lipsync_server.py` rewritten: device `auto|cuda|mps|cpu` (`MIRAGE_LIPSYNC_DEVICE`), engine env, `/health` (device, torch, mps/cuda, tracker, load times, per-replica base info, rolling fps),
+* `lipsync_server.py` rewritten: device `auto|cuda|mps|cpu` (`VOCALFACE_LIPSYNC_DEVICE`), engine env, `/health` (device, torch, mps/cuda, tracker, load times, per-replica base info, rolling fps),
   per-request perf logging, `/prepare/{id}`, `/invalidate/{id}`, `?phase=` and `?fade_in=` on `/render`, startup preload, soft mouth entry when a reply starts. Falls back to a fixed Haar box
   if mediapipe is not importable (the shared `workers/.venv` does not have it, see below).
 * `render_offline.py` (offline generation, `--engine wav2lip|musetalk`, `--restore none|sr|gfpgan`, `--listening`), `musetalk_engine.py`, `restore.py`, `face_checks.py`
@@ -91,9 +91,9 @@ Verified through the real API: clip registered, lipsync `/idle` then served `lis
    Note: an early `pip install mediapipe` into `workers/.venv` briefly upgraded numpy/opencv there; I reverted it to numpy 1.26.4 / opencv 4.10 and verified imports (torch, librosa, scipy, cv2).
 
 ## Demo
-`/tmp/mirage_demo_face.mp4`: 17.2 s, 568x320, H.264 + AAC. Kokoro `af_heart` speech (14.8 s) with 1.2 s of silence either side, Wav2Lip + Real-ESRGAN (sharpen 0.4), tracked
+`/tmp/vocalface_demo_face.mp4`: 17.2 s, 568x320, H.264 + AAC. Kokoro `af_heart` speech (14.8 s) with 1.2 s of silence either side, Wav2Lip + Real-ESRGAN (sharpen 0.4), tracked
 overlay-free crop of the founder's own video (`SpendVeto_Founder_Video_1min.mp4`), 4 s calm base loop. Command:
-`MIRAGE_IDLE_SECONDS=4 .venv-face/bin/python workers/render_offline.py --source <video> --audio <wav> --out out.mp4 --restore sr --sharpen 0.4`.
+`VOCALFACE_IDLE_SECONDS=4 .venv-face/bin/python workers/render_offline.py --source <video> --audio <wav> --out out.mp4 --restore sr --sharpen 0.4`.
 
 ## Next steps
 1. Wire items 2-3 above into session.py/playground; ask the owner to record a 5 s closed-mouth listening clip (the biggest remaining realism gain: the base mouth is never fully shut).

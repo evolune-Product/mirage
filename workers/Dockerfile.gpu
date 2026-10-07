@@ -1,10 +1,10 @@
-# Mirage lip-sync service on an NVIDIA box (RunPod / Lambda / Vast / any docker host with the NVIDIA runtime).
+# VocalFace lip-sync service on an NVIDIA box (RunPod / Lambda / Vast / any docker host with the NVIDIA runtime).
 # NOT TESTED: written on an Apple-silicon Mac without CUDA. Expect to adjust the torch/CUDA versions.
 #
-#   docker build -f workers/Dockerfile.gpu -t mirage-lipsync .          (context = repo root)
-#   docker run --gpus all -p 8100:8100 -v mirage-data:/data mirage-lipsync
-#   # backend: MIRAGE_LIPSYNC_URL=http://<gpu-host>:8100
-#   # The service reads replica videos from $MIRAGE_DATA/replicas/<id>/ (source.mp4, listening.mp4): mount the same
+#   docker build -f workers/Dockerfile.gpu -t vocalface-lipsync .          (context = repo root)
+#   docker run --gpus all -p 8100:8100 -v vocalface-data:/data vocalface-lipsync
+#   # backend: VOCALFACE_LIPSYNC_URL=http://<gpu-host>:8100
+#   # The service reads replica videos from $VOCALFACE_DATA/replicas/<id>/ (source.mp4, listening.mp4): mount the same
 #   # volume the backend writes to, or rsync it (a shared network volume works).
 #
 # Weights are NOT baked in (Wav2Lip's checkpoints are research-licensed): put wav2lip_gan.pth in
@@ -12,8 +12,8 @@
 FROM nvidia/cuda:12.1.1-cudnn8-runtime-ubuntu22.04
 
 ENV DEBIAN_FRONTEND=noninteractive PYTHONUNBUFFERED=1 \
-    MIRAGE_DATA=/data MIRAGE_LIPSYNC_DEVICE=cuda MIRAGE_LIPSYNC_ENGINE=wav2lip \
-    MIRAGE_FACE_MODELS=/models
+    VOCALFACE_DATA=/data VOCALFACE_LIPSYNC_DEVICE=cuda VOCALFACE_LIPSYNC_ENGINE=wav2lip \
+    VOCALFACE_FACE_MODELS=/models
 RUN apt-get update && apt-get install -y --no-install-recommends \
       python3.11 python3.11-venv python3-pip ffmpeg libgl1 libglib2.0-0 curl ca-certificates git \
     && rm -rf /var/lib/apt/lists/*
@@ -28,7 +28,7 @@ RUN pip install --no-cache-dir torch torchvision --index-url https://download.py
 
 COPY workers/*.py ./
 COPY workers/Wav2Lip ./Wav2Lip
-# (optional MuseTalk quality engine: COPY workers/MuseTalk + models, then MIRAGE_LIPSYNC_ENGINE stays wav2lip for live)
+# (optional MuseTalk quality engine: COPY workers/MuseTalk + models, then VOCALFACE_LIPSYNC_ENGINE stays wav2lip for live)
 
 # pre-fetch the small models so the first request is not slow (mediapipe landmarker 3.7 MB)
 RUN mkdir -p /models /data && python -c "import facelib; facelib.landmarker_path()"

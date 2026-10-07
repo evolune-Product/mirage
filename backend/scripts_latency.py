@@ -14,8 +14,8 @@ All times are measured from the END of the user's last speech sample, so they ar
   first_audio  last speech sample -> first agent audio byte on the wire   <- headline (a)
   first_video  last speech sample -> first lip-synced frame on the wire   <- headline (b)
 
-Env knobs (so before/after runs are one command): MIRAGE_APP_ROOT (alternate code tree, e.g. a baseline copy),
-MIRAGE_LLM, MIRAGE_STT_MODEL, MIRAGE_END_OF_TURN_MS.
+Env knobs (so before/after runs are one command): VOCALFACE_APP_ROOT (alternate code tree, e.g. a baseline copy),
+VOCALFACE_LLM, VOCALFACE_STT_MODEL, VOCALFACE_END_OF_TURN_MS.
 """
 import argparse
 import asyncio
@@ -27,7 +27,7 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-root = os.environ.get("MIRAGE_APP_ROOT")
+root = os.environ.get("VOCALFACE_APP_ROOT")
 if root:  # alternate code tree (e.g. a pre-optimisation snapshot) wins over backend/app
     sys.path.insert(0, root)
 
@@ -50,11 +50,11 @@ QUESTIONS = [
     "Which languages do you support right now?",
     "Why should I choose this over a regular video call?",
 ]
-SYSTEM = ("You are a friendly sales rep for Mirage. Mirage Starter costs 19 dollars per month with 120 minutes; "
+SYSTEM = ("You are a friendly sales rep for VocalFace. VocalFace Starter costs 19 dollars per month with 120 minutes; "
           "Pro costs 79 dollars per month. Answer in one or two short sentences.\n\n"
           "You are speaking aloud in a live voice conversation. Reply in at most two short spoken sentences "
           "(under 35 words total). No markdown, lists or emojis.")
-CACHE = Path(os.environ.get("MIRAGE_BENCH_CACHE", "/tmp/mirage_bench_cache"))
+CACHE = Path(os.environ.get("VOCALFACE_BENCH_CACHE", "/tmp/vocalface_bench_cache"))
 
 
 def to16k(pcm24: bytes) -> bytes:
@@ -139,9 +139,9 @@ async def one_run(pcm16: bytes, base: Providers, lip, tail_s: float = 12.0) -> d
     async def sb(b):
         ev.setdefault("first_audio", time.monotonic())
 
-    kw = {"end_of_turn_ms": int(os.environ["MIRAGE_END_OF_TURN_MS"])} if os.environ.get("MIRAGE_END_OF_TURN_MS") else {}
+    kw = {"end_of_turn_ms": int(os.environ["VOCALFACE_END_OF_TURN_MS"])} if os.environ.get("VOCALFACE_END_OF_TURN_MS") else {}
     sess = Session(probe.providers, SYSTEM, "af_heart", sj, sb, lipsync=lip, **kw)
-    if hasattr(sess, "warmup") and not os.environ.get("MIRAGE_BENCH_NO_WARMUP"):
+    if hasattr(sess, "warmup") and not os.environ.get("VOCALFACE_BENCH_NO_WARMUP"):
         await sess.warmup()
     orig = sess._start_turn
 
@@ -211,7 +211,7 @@ async def main():
     ap.add_argument("--warm", type=int, default=1)
     a = ap.parse_args()
     t0 = time.time()
-    base = get_providers(os.environ.get("MIRAGE_LLM_SPEC", ""))
+    base = get_providers(os.environ.get("VOCALFACE_LLM_SPEC", ""))
     print(f"providers loaded {time.time() - t0:.1f}s  code={S.__file__}")
     lip = None
     if a.lipsync:

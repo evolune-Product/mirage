@@ -15,17 +15,17 @@ export function Hero() {
   return (
     <section className="relative overflow-hidden bg-ink pb-20 pt-12 md:pb-28 md:pt-20">
       <div className="pointer-events-none absolute inset-0 bg-grid-faint [background-size:56px_56px] [mask-image:radial-gradient(ellipse_at_50%_30%,black,transparent_70%)]" />
-      <div className="pointer-events-none absolute left-1/2 top-0 h-[520px] w-[900px] -translate-x-1/2 rounded-full bg-mirage-violet/20 blur-[120px]" />
+      <div className="pointer-events-none absolute left-1/2 top-0 h-[520px] w-[900px] -translate-x-1/2 rounded-full bg-vocalface-violet/20 blur-[120px]" />
       <div className="pointer-events-none absolute left-1/2 top-[40px] hidden h-[820px] w-[820px] -translate-x-1/2 opacity-70 md:block"><LazyOrb autoCycle className="h-full w-full" /></div>
       <div className={`${wrap} relative text-center`}>
-        <Reveal><span className="glass inline-flex items-center gap-2 rounded-full px-4 py-1.5 font-mono text-xs text-gray-300"><Sparkles size={12} className="text-mirage-amber" /> Open-core conversational video AI</span></Reveal>
+        <Reveal><span className="glass inline-flex items-center gap-2 rounded-full px-4 py-1.5 font-mono text-xs text-gray-300"><Sparkles size={12} className="text-vocalface-amber" /> Open-core conversational video AI</span></Reveal>
         <Reveal delay={0.08}><h1 className="mx-auto mt-6 max-w-4xl font-display text-[2.9rem] leading-[1] text-white sm:text-6xl md:text-7xl lg:text-[5.5rem]">Talk to an AI that <It>answers</It> in about a second.</h1></Reveal>
-        <Reveal delay={0.16}><p className="mx-auto mt-6 max-w-2xl text-base text-gray-300 md:text-lg">Mirage is the open-core platform for conversational video agents, consent-based replicas and generated video. Use the API, or self-host the whole voice stack for $0 per minute.</p></Reveal>
+        <Reveal delay={0.16}><p className="mx-auto mt-6 max-w-2xl text-base text-gray-300 md:text-lg">VocalFace is the open-core platform for conversational video agents, consent-based replicas and generated video. Use the API, or self-host the whole voice stack for $0 per minute.</p></Reveal>
         <Reveal delay={0.24}><div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row"><Link href="/signup" className="btn-grad px-7 py-3.5 text-base">Talk to a demo <ArrowRight size={16} /></Link><Link href="/#try" className="btn-ghost px-7 py-3.5 text-base">Try it below</Link></div><p className="mt-4 text-xs text-gray-400">Free plan includes 10 minutes. No card needed.</p></Reveal>
         <LazyOrb autoCycle density={1.6} className="mx-auto -mt-2 h-[380px] w-[120%] max-w-none -translate-x-[8%] sm:h-[460px] md:hidden" />
         <div className="glass absolute left-0 top-[26%] hidden animate-float rounded-xl px-4 py-3 text-left xl:block"><p className="font-mono text-[10px] uppercase text-gray-400">time to first audio</p><p className="font-display text-3xl text-white">~1.4s</p></div>
         <div className="glass absolute right-0 top-[38%] hidden animate-float rounded-xl px-4 py-3 text-left [animation-delay:-2s] xl:block"><p className="font-mono text-[10px] uppercase text-gray-400">voice stack, self-hosted</p><p className="font-display text-3xl text-white">$0<span className="text-base text-gray-400">/min</span></p></div>
-        <div className="glass absolute left-[3%] top-[42%] hidden animate-float rounded-xl px-4 py-3 text-left [animation-delay:-4s] xl:block"><p className="flex items-center gap-1.5 font-mono text-[10px] uppercase text-mirage-mint"><ShieldCheck size={12} /> consent verified</p><p className="text-sm text-gray-200">Revocable, audit-logged</p></div>
+        <div className="glass absolute left-[3%] top-[42%] hidden animate-float rounded-xl px-4 py-3 text-left [animation-delay:-4s] xl:block"><p className="flex items-center gap-1.5 font-mono text-[10px] uppercase text-vocalface-mint"><ShieldCheck size={12} /> consent verified</p><p className="text-sm text-gray-200">Revocable, audit-logged</p></div>
         <div className="h-8 md:h-24" />
         <Reveal y={50}><ConversationMock className="mx-auto -mt-4 max-w-4xl text-left md:-mt-10" /></Reveal>
       </div>
@@ -38,7 +38,7 @@ export function Marquee() {
   return (
     <section aria-label="Capabilities" className="overflow-hidden border-y border-white/10 bg-ink-2 py-5">
       <div className="flex w-max animate-marquee gap-12 whitespace-nowrap font-mono text-sm uppercase tracking-widest text-gray-400">
-        {[...items, ...items].map((t, i) => <span key={i} className="flex items-center gap-12">{t}<span className="text-mirage-rose">&#10022;</span></span>)}
+        {[...items, ...items].map((t, i) => <span key={i} className="flex items-center gap-12">{t}<span className="text-vocalface-rose">&#10022;</span></span>)}
       </div>
     </section>
   );
@@ -51,7 +51,7 @@ function Feature({ eyebrow, title, body, bullets, mock, flip, light }: { eyebrow
         <p className={`eyebrow ${light ? "!text-[#c2410c]" : ""}`}>{eyebrow}</p>
         <div className="mt-3"><H2 light={light}>{title}</H2></div>
         <p className={`mt-5 max-w-xl text-base md:text-lg ${light ? "text-black/70" : "text-gray-300"}`}>{body}</p>
-        <ul className="mt-6 space-y-3">{bullets.map((b) => <li key={b} className={`flex gap-3 text-sm md:text-base ${light ? "text-black/80" : "text-gray-200"}`}><Check size={18} className="mt-0.5 shrink-0 text-mirage-rose" />{b}</li>)}</ul>
+        <ul className="mt-6 space-y-3">{bullets.map((b) => <li key={b} className={`flex gap-3 text-sm md:text-base ${light ? "text-black/80" : "text-gray-200"}`}><Check size={18} className="mt-0.5 shrink-0 text-vocalface-rose" />{b}</li>)}</ul>
       </Reveal>
       <Reveal delay={0.1} y={40}>{mock}</Reveal>
     </div>
@@ -70,7 +70,7 @@ export function Features() {
           bullets={["Spoken phrase verification before training", "Revocable consent with an audit trail", "Lip-sync is approximate today and improving"]} mock={<ConsentMock />} />
       </div></section>
       <section className="bg-ink py-20 md:py-32"><div className={wrap}>
-        <Feature eyebrow="Knowledge" title={<>Answers grounded in <It>your</It> documents</>} body="Attach text and documents to a persona. Mirage chunks and indexes them, then retrieves the relevant passages while the agent is answering."
+        <Feature eyebrow="Knowledge" title={<>Answers grounded in <It>your</It> documents</>} body="Attach text and documents to a persona. VocalFace chunks and indexes them, then retrieves the relevant passages while the agent is answering."
           bullets={["Upload docs, FAQs and policies", "Retrieval at answer time, not stuffed prompts", "System prompt, voice and replica in one reusable persona"]} mock={<KnowledgeMock />} />
       </div></section>
       <section className="bg-cream py-20 text-ink md:py-32"><div className={wrap}>
@@ -78,21 +78,21 @@ export function Features() {
           bullets={["POST /v1/videos with replica_id and script", "Runs through background workers", "Live real-time face rendering needs an NVIDIA GPU worker and is coming soon"]}
           mock={<div className="rounded-2xl bg-ink p-6 text-white shadow-2xl"><p className="eyebrow">POST /v1/videos</p><pre className="mt-3 overflow-x-auto font-mono text-[12px] leading-relaxed text-gray-200"><code>{`{ "replica_id": "rep_8f21c0",
   "script": "Welcome to the team." }`}</code></pre>
-            <div className="mt-5 space-y-2">{[["queued", "w-full bg-white/30"], ["rendering", "w-3/4 bg-mirage-violet"], ["done", "w-1/2 bg-mirage-mint"]].map(([s, c]) => <div key={s} className="flex items-center gap-3 font-mono text-[11px] text-gray-400"><span className="w-20">{s}</span><span className={`h-2 rounded-full ${c}`} /></div>)}</div></div>} />
+            <div className="mt-5 space-y-2">{[["queued", "w-full bg-white/30"], ["rendering", "w-3/4 bg-vocalface-violet"], ["done", "w-1/2 bg-vocalface-mint"]].map(([s, c]) => <div key={s} className="flex items-center gap-3 font-mono text-[11px] text-gray-400"><span className="w-20">{s}</span><span className={`h-2 rounded-full ${c}`} /></div>)}</div></div>} />
       </div></section>
     </div>
   );
 }
 
 export function Pipeline() {
-  const steps = [[Headphones, "Listen", "faster-whisper", "~0.3s", "text-mirage-cyan"], [Cpu, "Think", "Ollama LLM", "~0.2s first token", "text-mirage-violet"], [Database, "Recall", "Knowledge retrieval", "per answer", "text-mirage-amber"], [Video, "Speak", "Kokoro TTS", "streams audio", "text-mirage-rose"]] as const;
+  const steps = [[Headphones, "Listen", "faster-whisper", "~0.3s", "text-vocalface-cyan"], [Cpu, "Think", "Ollama LLM", "~0.2s first token", "text-vocalface-violet"], [Database, "Recall", "Knowledge retrieval", "per answer", "text-vocalface-amber"], [Video, "Speak", "Kokoro TTS", "streams audio", "text-vocalface-rose"]] as const;
   return (
     <section id="how" className="relative overflow-hidden bg-ink-2 py-20 md:py-32">
       <div className={wrap}>
         <Reveal><div className="mx-auto max-w-3xl text-center"><p className="eyebrow">The pipeline</p><div className="mt-3"><H2>Models working <It>in sync</It></H2></div><p className="mt-5 text-gray-300 md:text-lg">Four stages hand off in a stream, so the agent starts speaking before the full answer exists. Every stage is swappable.</p></div></Reveal>
         <div className="mt-14 grid gap-4 md:grid-cols-4">
           {steps.map(([Icon, t, s, m, c], i) => (
-            <Reveal key={t} delay={i * 0.08}><div className="card relative h-full"><Icon className={c} size={26} /><p className="mt-5 font-display text-3xl text-white">{t}</p><p className="mt-1 text-sm text-gray-300">{s}</p><p className="mt-4 font-mono text-xs text-gray-400">{m}</p>{i < 3 && <ArrowRight className="absolute -right-3 top-1/2 z-10 hidden -translate-y-1/2 text-mirage-rose md:block" size={18} />}</div></Reveal>
+            <Reveal key={t} delay={i * 0.08}><div className="card relative h-full"><Icon className={c} size={26} /><p className="mt-5 font-display text-3xl text-white">{t}</p><p className="mt-1 text-sm text-gray-300">{s}</p><p className="mt-4 font-mono text-xs text-gray-400">{m}</p>{i < 3 && <ArrowRight className="absolute -right-3 top-1/2 z-10 hidden -translate-y-1/2 text-vocalface-rose md:block" size={18} />}</div></Reveal>
           ))}
         </div>
         <div className="mt-12 grid items-center gap-10 lg:grid-cols-2 [&>*]:min-w-0">
@@ -111,8 +111,8 @@ export function UseCases() {
       <Reveal><div className="max-w-3xl"><p className="eyebrow !text-[#c2410c]">Use cases</p><div className="mt-3"><H2 light>Built for the places people <It>talk</It> to software</H2></div></div></Reveal>
       <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {useCases.map((u, i) => (
-          <Reveal key={u.slug} delay={(i % 3) * 0.08}><Link href={`/use-cases/${u.slug}`} className="group block h-full rounded-3xl border border-black/10 bg-white p-7 transition duration-300 hover:-translate-y-1.5 hover:shadow-[0_24px_60px_-24px_rgba(124,92,255,.5)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-mirage-violet">
-            <span className="grid h-12 w-12 place-items-center rounded-2xl bg-mirage-gradient text-white"><u.Icon size={22} /></span><h3 className="mt-6 font-display text-3xl">{u.name}</h3><p className="mt-2 text-black/70">{u.short}</p>
+          <Reveal key={u.slug} delay={(i % 3) * 0.08}><Link href={`/use-cases/${u.slug}`} className="group block h-full rounded-3xl border border-black/10 bg-white p-7 transition duration-300 hover:-translate-y-1.5 hover:shadow-[0_24px_60px_-24px_rgba(124,92,255,.5)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-vocalface-violet">
+            <span className="grid h-12 w-12 place-items-center rounded-2xl bg-vocalface-gradient text-white"><u.Icon size={22} /></span><h3 className="mt-6 font-display text-3xl">{u.name}</h3><p className="mt-2 text-black/70">{u.short}</p>
             <p className="mt-5 flex items-center gap-1 text-sm font-medium text-black/70 transition group-hover:text-[#c2185b]">See how <ArrowRight size={14} className="transition group-hover:translate-x-1" /></p></Link></Reveal>
         ))}
       </div>
@@ -125,7 +125,7 @@ export function Trust() {
   return (
     <section className="bg-ink py-20 md:py-28"><div className={wrap}>
       <Reveal><div className="max-w-3xl"><p className="eyebrow">Safety and honesty</p><div className="mt-3"><H2>Likeness is personal. <It>Treat it that way.</It></H2></div></div></Reveal>
-      <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{items.map(([I, t, d], i) => <Reveal key={t} delay={i * 0.07}><div className="card h-full transition hover:border-mirage-rose/50"><I className="text-mirage-amber" size={24} /><h3 className="mt-4 text-lg font-medium text-white">{t}</h3><p className="mt-2 text-sm text-gray-300">{d}</p></div></Reveal>)}</div>
+      <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{items.map(([I, t, d], i) => <Reveal key={t} delay={i * 0.07}><div className="card h-full transition hover:border-vocalface-rose/50"><I className="text-vocalface-amber" size={24} /><h3 className="mt-4 text-lg font-medium text-white">{t}</h3><p className="mt-2 text-sm text-gray-300">{d}</p></div></Reveal>)}</div>
     </div></section>
   );
 }
@@ -136,8 +136,8 @@ export function Developers() {
     <section id="developers" className="bg-ink-2 py-20 md:py-32"><div className={`${wrap} grid items-center gap-12 lg:grid-cols-2 [&>*]:min-w-0`}>
       <Reveal><p className="eyebrow">For developers</p><div className="mt-3"><H2>Four calls from nothing to a <It>talking agent</It></H2></div>
         <p className="mt-5 text-gray-300 md:text-lg">Authenticate with an x-api-key header. Create a replica, a persona, then start a conversation and connect to its stream.</p>
-        <ol className="mt-6 space-y-2 font-mono text-sm text-gray-200">{["POST /v1/replicas", "POST /v1/personas", "POST /v1/conversations", "WS   /v1/conversations/{id}/stream?api_key="].map((s, i) => <li key={s} className="flex gap-3"><span className="text-mirage-rose">{i + 1}</span><span className="break-all">{s}</span></li>)}</ol>
-        <div className="mt-8 grid gap-3 sm:grid-cols-2">{pts.map(([I, t, d]) => <div key={t} className="flex gap-3 rounded-xl border border-white/10 p-4"><I size={20} className="mt-0.5 shrink-0 text-mirage-cyan" /><div><p className="text-sm font-medium text-white">{t}</p><p className="text-xs text-gray-400">{d}</p></div></div>)}</div>
+        <ol className="mt-6 space-y-2 font-mono text-sm text-gray-200">{["POST /v1/replicas", "POST /v1/personas", "POST /v1/conversations", "WS   /v1/conversations/{id}/stream?api_key="].map((s, i) => <li key={s} className="flex gap-3"><span className="text-vocalface-rose">{i + 1}</span><span className="break-all">{s}</span></li>)}</ol>
+        <div className="mt-8 grid gap-3 sm:grid-cols-2">{pts.map(([I, t, d]) => <div key={t} className="flex gap-3 rounded-xl border border-white/10 p-4"><I size={20} className="mt-0.5 shrink-0 text-vocalface-cyan" /><div><p className="text-sm font-medium text-white">{t}</p><p className="text-xs text-gray-400">{d}</p></div></div>)}</div>
         <div className="mt-8 flex flex-wrap gap-3"><Link href="/dashboard/keys" className="btn-grad">Get an API key <ArrowRight size={16} /></Link><Link href="/docs" className="btn-ghost">Read the docs</Link></div></Reveal>
       <Reveal delay={0.1} y={40}><CodeMock /></Reveal>
     </div></section>
@@ -148,9 +148,9 @@ const rows: [string, string, string][] = [["Open-core, self-hostable", "yes", "r
 export function Compare() {
   return (
     <section className="bg-cream py-20 text-ink md:py-32"><div className="mx-auto w-full max-w-4xl px-5">
-      <Reveal><div className="text-center"><p className="eyebrow !text-[#c2410c]">Comparison</p><div className="mt-3"><H2 light>Mirage vs typical <It>hosted</It> platforms</H2></div></div></Reveal>
+      <Reveal><div className="text-center"><p className="eyebrow !text-[#c2410c]">Comparison</p><div className="mt-3"><H2 light>VocalFace vs typical <It>hosted</It> platforms</H2></div></div></Reveal>
       <Reveal delay={0.1}><div className="mt-12 overflow-hidden rounded-3xl border border-black/10 bg-white shadow-xl"><div className="overflow-x-auto"><table className="w-full min-w-[560px] text-left text-sm">
-        <thead><tr className="bg-ink text-white"><th className="p-4 font-medium">&nbsp;</th><th className="p-4 font-display text-xl">Mirage</th><th className="p-4 font-medium text-gray-300">Typical hosted avatar platforms</th></tr></thead>
+        <thead><tr className="bg-ink text-white"><th className="p-4 font-medium">&nbsp;</th><th className="p-4 font-display text-xl">VocalFace</th><th className="p-4 font-medium text-gray-300">Typical hosted avatar platforms</th></tr></thead>
         <tbody>{rows.map(([a, b, c]) => <tr key={a} className="border-t border-black/10"><td className="p-4 font-medium">{a}</td><td className="p-4"><span className="flex items-center gap-2 font-medium text-ink">{b.startsWith("yes") || b.startsWith("$0") ? <Check size={16} className="text-emerald-600" /> : <Minus size={16} className="text-amber-600" />}{b}</span></td><td className="p-4 text-black/70">{c}</td></tr>)}</tbody></table></div></div>
       <p className="mt-4 text-xs text-black/60">The right-hand column is a general characterization, not a statement about any one vendor. Competitor features and pricing change; please verify current claims with each vendor. We list real-time face rendering and lip-sync as areas where hosted platforms are ahead today.</p></Reveal>
     </div></section>
@@ -169,11 +169,11 @@ export function Pricing({ light = false }: { light?: boolean }) {
       <Reveal><div className="mx-auto max-w-3xl text-center"><p className="eyebrow">Pricing</p><div className="mt-3"><H2>Pay for minutes, <It>not mystery</It></H2></div><p className="mt-5 text-gray-300 md:text-lg">Start free. Upgrade when you ship. Or self-host and pay nothing to us.</p></div></Reveal>
       <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
         {plans.map((p, i) => (
-          <Reveal key={p.n} delay={i * 0.07} className="h-full"><div className={`relative flex h-full flex-col rounded-3xl border ${p.hot ? "border-transparent bg-mirage-gradient p-[1px]" : "border-white/10 bg-ink-2 p-7"}`}>
+          <Reveal key={p.n} delay={i * 0.07} className="h-full"><div className={`relative flex h-full flex-col rounded-3xl border ${p.hot ? "border-transparent bg-vocalface-gradient p-[1px]" : "border-white/10 bg-ink-2 p-7"}`}>
             <div className={`flex h-full flex-col ${p.hot ? "rounded-[23px] bg-ink-2 p-7" : ""}`}>
-              {p.hot && <span className="absolute -top-3 left-7 rounded-full bg-mirage-gradient px-3 py-1 text-[11px] font-semibold text-white">Most popular</span>}
+              {p.hot && <span className="absolute -top-3 left-7 rounded-full bg-vocalface-gradient px-3 py-1 text-[11px] font-semibold text-white">Most popular</span>}
               <h3 className="font-display text-3xl text-white">{p.n}</h3><p className="mt-3"><span className="font-display text-5xl text-white">{p.p}</span><span className="text-gray-400">{p.per}</span></p><p className="mt-2 text-sm text-gray-300">{p.d}</p>
-              <ul className="mt-6 flex-1 space-y-3">{p.l.map((x) => <li key={x} className="flex gap-2.5 text-sm text-gray-200"><Check size={16} className="mt-0.5 shrink-0 text-mirage-mint" />{x}</li>)}</ul>
+              <ul className="mt-6 flex-1 space-y-3">{p.l.map((x) => <li key={x} className="flex gap-2.5 text-sm text-gray-200"><Check size={16} className="mt-0.5 shrink-0 text-vocalface-mint" />{x}</li>)}</ul>
               <Link href={p.href} className={`${p.hot ? "btn-grad" : "btn-ghost"} mt-8`}>{p.cta}</Link></div></div></Reveal>
         ))}
       </div>
@@ -203,11 +203,11 @@ export function FAQ() {
 }
 
 export function Roadmap() {
-  const cols = [["Ships today", "text-mirage-mint", ["REST API, Python and JS SDKs", "Real-time voice conversations", "Consent-gated replicas", "Knowledge retrieval", "Offline video generation", "Embed widget, self-hosting"]], ["Coming soon", "text-mirage-amber", ["Live real-time face rendering on NVIDIA GPU workers", "Tighter lip-sync", "More voices and languages"]]] as const;
+  const cols = [["Ships today", "text-vocalface-mint", ["REST API, Python and JS SDKs", "Real-time voice conversations", "Consent-gated replicas", "Knowledge retrieval", "Offline video generation", "Embed widget, self-hosting"]], ["Coming soon", "text-vocalface-amber", ["Live real-time face rendering on NVIDIA GPU workers", "Tighter lip-sync", "More voices and languages"]]] as const;
   return (
     <section id="roadmap" className="bg-ink pb-20 md:pb-28"><div className="mx-auto w-full max-w-5xl px-5">
       <Reveal><div className="text-center"><p className="eyebrow">Roadmap</p><div className="mt-3"><H2>What ships, and what <It>doesn&apos;t yet</It></H2></div></div></Reveal>
-      <div className="mt-12 grid gap-5 md:grid-cols-2">{cols.map(([t, c, l]) => <Reveal key={t}><div className="card h-full !p-7"><h3 className={`font-display text-3xl ${c}`}>{t}</h3><ul className="mt-5 space-y-3">{l.map((x) => <li key={x} className="flex gap-3 text-gray-200">{t === "Ships today" ? <Check size={18} className="mt-0.5 shrink-0 text-mirage-mint" /> : <Sparkles size={18} className="mt-0.5 shrink-0 text-mirage-amber" />}{x}</li>)}</ul></div></Reveal>)}</div>
+      <div className="mt-12 grid gap-5 md:grid-cols-2">{cols.map(([t, c, l]) => <Reveal key={t}><div className="card h-full !p-7"><h3 className={`font-display text-3xl ${c}`}>{t}</h3><ul className="mt-5 space-y-3">{l.map((x) => <li key={x} className="flex gap-3 text-gray-200">{t === "Ships today" ? <Check size={18} className="mt-0.5 shrink-0 text-vocalface-mint" /> : <Sparkles size={18} className="mt-0.5 shrink-0 text-vocalface-amber" />}{x}</li>)}</ul></div></Reveal>)}</div>
     </div></section>
   );
 }
@@ -235,10 +235,10 @@ export function Footer() {
   return (
     <footer className="border-t border-white/10 bg-ink-2 pb-10 pt-16"><div className={wrap}>
       <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.4fr_repeat(4,1fr)]">
-        <div><Link href="/" aria-label="Mirage home"><Logo className="text-white" /></Link><p className="mt-3 max-w-xs text-sm text-gray-400">Open-core conversational video AI. Self-host it or use the API.</p></div>
+        <div><Link href="/" aria-label="VocalFace home"><Logo className="text-white" /></Link><p className="mt-3 max-w-xs text-sm text-gray-400">Open-core conversational video AI. Self-host it or use the API.</p></div>
         {cols.map(([t, l]) => <nav key={t} aria-label={t}><p className="font-mono text-xs uppercase tracking-widest text-gray-400">{t}</p><ul className="mt-4 space-y-2.5">{l.map(([a, h]) => <li key={a}><Link href={h} className="text-sm text-gray-300 hover:text-white">{a}</Link></li>)}</ul></nav>)}
       </div>
-      <div className="mt-14 flex flex-col justify-between gap-3 border-t border-white/10 pt-6 text-xs text-gray-400 sm:flex-row"><p>&copy; 2026 Mirage. All rights reserved.</p><p>Replicas require the explicit, revocable consent of the person depicted.</p></div>
+      <div className="mt-14 flex flex-col justify-between gap-3 border-t border-white/10 pt-6 text-xs text-gray-400 sm:flex-row"><p>&copy; 2026 VocalFace. All rights reserved.</p><p>Replicas require the explicit, revocable consent of the person depicted.</p></div>
     </div></footer>
   );
 }

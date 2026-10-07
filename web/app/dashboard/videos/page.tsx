@@ -117,19 +117,19 @@ export default function Videos() {
               {mode === "translate" && (
                 <div><label className="label">Languages</label>
                   <div className="flex flex-wrap gap-1.5" role="group" aria-label="Target languages">{langs.map((l) => { const on = pick.includes(l.code);
-                    return <button type="button" key={l.code} aria-pressed={on} onClick={() => setPick(on ? pick.filter((x) => x !== l.code) : [...pick, l.code])} className={`rounded-full border px-2.5 py-1 text-xs transition ${on ? "border-mirage-violet/50 bg-mirage-violet/15 text-white" : "border-white/10 text-gray-400 hover:text-white"}`}>{l.name}</button>; })}</div>
+                    return <button type="button" key={l.code} aria-pressed={on} onClick={() => setPick(on ? pick.filter((x) => x !== l.code) : [...pick, l.code])} className={`rounded-full border px-2.5 py-1 text-xs transition ${on ? "border-vocalface-violet/50 bg-vocalface-violet/15 text-white" : "border-white/10 text-gray-400 hover:text-white"}`}>{l.name}</button>; })}</div>
                   <label className="mt-3 flex cursor-pointer items-center gap-2 text-xs text-gray-400"><input type="checkbox" checked={orig} onChange={(e) => setOrig(e.target.checked)} />Also render the original</label>
                   <p className="mt-2 text-xs text-gray-500">Each variant is translated by an LLM and re-rendered with that language&apos;s voice. It is not a time-aligned dub.</p>
                 </div>)}
             </div>
             <div>
               <ScriptEditor script={script} setScript={setScript} info={sceneInfo} err={sceneErr} placeholder={mode === "bulk" ? "Hi {{first_name}}, thanks for signing up to {{company}}..." : "Hi, I'm... Today I want to show you... (use {{first_name}} for personalisation; leave a blank line to start a new scene)"} />
-              {vars.length > 0 && <p className="mt-2 flex flex-wrap items-center gap-1.5 text-xs text-gray-400"><Wand2 size={12} className="text-mirage-amber" />Variables:{vars.map((v) => <code key={v} className="rounded bg-mirage-amber/10 px-1.5 py-0.5 font-mono text-mirage-amber">{`{{${v}}}`}</code>)}</p>}
+              {vars.length > 0 && <p className="mt-2 flex flex-wrap items-center gap-1.5 text-xs text-gray-400"><Wand2 size={12} className="text-vocalface-amber" />Variables:{vars.map((v) => <code key={v} className="rounded bg-vocalface-amber/10 px-1.5 py-0.5 font-mono text-vocalface-amber">{`{{${v}}}`}</code>)}</p>}
             </div>
           </div>
           <div className="mt-4">
             <button type="button" aria-expanded={studio} onClick={() => setStudio(!studio)} className="flex w-full items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-left text-sm hover:bg-white/[0.06]" data-testid="studio-toggle">
-              <SlidersHorizontal size={15} className="text-mirage-amber" /><span className="font-medium">Studio options</span>
+              <SlidersHorizontal size={15} className="text-vocalface-amber" /><span className="font-medium">Studio options</span>
               <span className="min-w-0 flex-1 truncate text-xs text-gray-500">{studioOn ? `${o.format}, ${o.resolution}p${o.captions !== "off" ? `, ${o.captions} captions` : ""}${o.bg.type !== "none" ? `, ${o.bg.type} background` : ""}${o.logo ? ", logo" : ""}${o.voice !== "default" ? `, voice ${o.voice === "clone" ? "clone" : o.voice}` : ""}${nScenes > 1 && o.scenes === "paragraphs" ? `, ${nScenes} scenes` : ""}` : "Captions, aspect ratio, background, logo, voice, scenes"}</span>
               <ChevronDown size={15} className={`text-gray-500 transition ${studio ? "rotate-180" : ""}`} /></button>
             {studio && <CreativePanel o={o} set={setO} faceSrc={face || undefined} voices={voices} sceneCount={Math.max(1, nScenes)} />}
@@ -146,13 +146,13 @@ export default function Videos() {
           {mode === "bulk" && (
             <div className="mt-4">
               <div className="mb-1.5 flex items-center justify-between"><label className="label !mb-0">Rows (CSV with a header line, or a JSON array)</label>
-                <button type="button" className="text-xs text-mirage-cyan hover:underline" onClick={() => setCsv(JSON.stringify([{ first_name: "Ravi", company: "Acme" }, { first_name: "Maya", company: "Globex" }], null, 1))}>Insert example</button></div>
+                <button type="button" className="text-xs text-vocalface-cyan hover:underline" onClick={() => setCsv(JSON.stringify([{ first_name: "Ravi", company: "Acme" }, { first_name: "Maya", company: "Globex" }], null, 1))}>Insert example</button></div>
               <textarea className="input h-32 font-mono text-xs" aria-label="Rows" spellCheck={false} placeholder={"first_name,company\nRavi,Acme\nMaya,Globex"} value={csv} onChange={(e) => setCsv(e.target.value)} />
               <div className="mt-2 text-xs" data-testid="bulk-summary">
-                {parsed.error ? <p className="text-mirage-rose">{parsed.error}</p> : parsed.rows.length === 0 ? <p className="text-gray-500">No rows yet.</p> : (<>
-                  <p className={parsed.rows.length > 200 ? "text-mirage-rose" : "text-mirage-mint"}>{parsed.rows.length} {parsed.rows.length === 1 ? "video" : "videos"} will be generated{parsed.rows.length > 200 ? " (limit is 200 per batch)" : ""}.</p>
-                  {missingRows.length > 0 && <p className="mt-1 text-mirage-rose">{missingRows.length} rows are missing a value: {missingRows.slice(0, 3).map((m) => `row ${m.i + 1} (${m.miss.join(", ")})`).join("; ")}{missingRows.length > 3 ? "..." : ""}</p>}
-                  {script && !bulkVars.length && <p className="mt-1 text-mirage-amber">The template has no {"{{variables}}"}, so every video will be identical.</p>}
+                {parsed.error ? <p className="text-vocalface-rose">{parsed.error}</p> : parsed.rows.length === 0 ? <p className="text-gray-500">No rows yet.</p> : (<>
+                  <p className={parsed.rows.length > 200 ? "text-vocalface-rose" : "text-vocalface-mint"}>{parsed.rows.length} {parsed.rows.length === 1 ? "video" : "videos"} will be generated{parsed.rows.length > 200 ? " (limit is 200 per batch)" : ""}.</p>
+                  {missingRows.length > 0 && <p className="mt-1 text-vocalface-rose">{missingRows.length} rows are missing a value: {missingRows.slice(0, 3).map((m) => `row ${m.i + 1} (${m.miss.join(", ")})`).join("; ")}{missingRows.length > 3 ? "..." : ""}</p>}
+                  {script && !bulkVars.length && <p className="mt-1 text-vocalface-amber">The template has no {"{{variables}}"}, so every video will be identical.</p>}
                   {!missingRows.length && bulkVars.length > 0 && <p className="mt-1 truncate text-gray-400">First row: {script.replace(/\{\{\s*([A-Za-z_]\w*)\s*\}\}/g, (_, v) => parsed.rows[0]?.[v] ?? "")}</p>}
                 </>)}
               </div>
@@ -171,12 +171,12 @@ export default function Videos() {
                 <button className="flex w-full flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 text-left hover:bg-white/[0.04]" aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : b.id)}>
                   <span className="grid h-8 w-8 place-items-center rounded-lg bg-white/5 text-gray-400">{b.kind === "translate" ? <Languages size={15} /> : <Layers size={15} />}</span>
                   <div className="min-w-0 flex-1 basis-40"><p className="text-sm capitalize">{b.kind} batch - {b.total} videos</p><p className="truncate font-mono text-[11px] text-gray-500">{b.id} - {fmtDate(b.created_at)}</p></div>
-                  <div className="w-32"><div className="h-1.5 overflow-hidden rounded-full bg-white/10"><div className="h-full bg-mirage-gradient" style={{ width: (done / Math.max(1, b.total)) * 100 + "%" }} /></div><p className="mt-1 text-[11px] text-gray-500">{done}/{b.total} ready{err ? `, ${err} failed` : ""}</p></div>
+                  <div className="w-32"><div className="h-1.5 overflow-hidden rounded-full bg-white/10"><div className="h-full bg-vocalface-gradient" style={{ width: (done / Math.max(1, b.total)) * 100 + "%" }} /></div><p className="mt-1 text-[11px] text-gray-500">{done}/{b.total} ready{err ? `, ${err} failed` : ""}</p></div>
                   <Badge s={b.completed ? (err ? "error" : "completed") : (b.counts.queued ?? 0) === b.total ? "queued" : "rendering"} /><ChevronDown size={15} className={`text-gray-500 transition ${isOpen ? "rotate-180" : ""}`} />
                 </button>
                 {isOpen && <ul className="space-y-1.5 border-t border-white/5 px-4 py-3">{(b.items ?? []).map((it) => (
                   <li key={it.video_id} className="flex items-center gap-3 text-xs"><span className="w-14 shrink-0 font-mono text-gray-500">{b.kind === "translate" ? (it.language || "orig") : `#${it.row_index + 1}`}</span><span className="min-w-0 flex-1 truncate text-gray-300">{it.script}</span><Badge s={it.status} />
-                    {it.output_url && <a className="text-mirage-cyan hover:underline" href={fileUrl(it.output_url)} target="_blank" rel="noreferrer">open</a>}</li>))}
+                    {it.output_url && <a className="text-vocalface-cyan hover:underline" href={fileUrl(it.output_url)} target="_blank" rel="noreferrer">open</a>}</li>))}
                   {!b.items && <li className="text-xs text-gray-500">Loading...</li>}</ul>}
               </div>);
           })}
@@ -190,7 +190,7 @@ export default function Videos() {
         <div className="grid gap-4 md:grid-cols-2">
           {vids.map((v, i) => { const it = info[v.id];
             return <VideoCard key={v.id} v={v} i={i} rname={rname(v.replica_id)} extra={it ? <div className="flex flex-wrap gap-1.5 text-[11px]"><span className="rounded-full bg-white/5 px-2 py-0.5 text-gray-300">{it.language ? `language: ${it.language}` : `batch row ${it.row_index + 1}`}</span>
-              {Object.entries(it.variables).slice(0, 3).map(([k, val]) => <span key={k} className="rounded-full bg-mirage-amber/10 px-2 py-0.5 font-mono text-mirage-amber">{k}={val}</span>)}</div> : null} />;
+              {Object.entries(it.variables).slice(0, 3).map(([k, val]) => <span key={k} className="rounded-full bg-vocalface-amber/10 px-2 py-0.5 font-mono text-vocalface-amber">{k}={val}</span>)}</div> : null} />;
           })}
         </div>
       )}

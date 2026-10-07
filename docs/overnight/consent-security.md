@@ -10,8 +10,8 @@ reference faces (photo replica: the photo; video replica: 1 fps frames of the fi
 the face to the voice that is matched from the same clip). Passive liveness on the same frames. Then the face video is DROPPED:
 stored evidence = audio-only copy + sha256 of the original upload + scores (`facebinding` table, `models_sec.py`). Reference
 embeddings are cached encrypted (secretbox) in `consent/<rid>/ref_face_*.enc`, removed on consent revoke and replica/account delete.
-`MIRAGE_CONSENT_FACE_MATCH=enforce|warn|off` (default enforce in production, warn in dev); `MIRAGE_CONSENT_LIVENESS` same;
-`MIRAGE_FACE_MATCH_THRESHOLD` (0.45). Production also re-checks at the worker gate (`safety.require_consent` needs a `match` binding).
+`VOCALFACE_CONSENT_FACE_MATCH=enforce|warn|off` (default enforce in production, warn in dev); `VOCALFACE_CONSENT_LIVENESS` same;
+`VOCALFACE_FACE_MATCH_THRESHOLD` (0.45). Production also re-checks at the worker gate (`safety.require_consent` needs a `match` binding).
 Typed consent stays dev-only and never creates a binding (so production refuses it twice).
 Failure codes: `face_no_video`, `face_no_face`, `face_mismatch`, `face_no_reference`, `face_unavailable` (503, fail closed), `liveness_failed`.
 
@@ -52,7 +52,7 @@ they claim). Voice-A over face-B splicing: the same clip is used for ASR, voice 
 * **SSRF** (`netguard.py`). One httpx transport for all user-supplied URLs: resolve once, refuse non-global addresses (loopback,
   RFC1918, link-local/metadata 169.254.169.254, CGNAT, ULA, multicast, reserved, unspecified, IPv4-mapped/6to4 forms), pin the connection
   to the validated IP (Host header + TLS SNI/cert kept) so DNS rebinding cannot swap it, redirects re-checked per hop (relative redirects
-  too), http(s) only. Default ON in production (`MIRAGE_BLOCK_PRIVATE_URLS` explicit 1/0 wins; dev keeps localhost). Wired into:
+  too), http(s) only. Default ON in production (`VOCALFACE_BLOCK_PRIVATE_URLS` explicit 1/0 wins; dev keeps localhost). Wired into:
   consent-time training video/photo fetch (`consent_verify.fetch_train_video`), worker + listening-clip downloads (`jobs.fetch_video`, also
   no local paths in production), webhook creation + delivery, job callback URL, tool webhooks, custom-LLM base_url, creative asset URL
   (through fetch_train_video), photo_url at creation. Not guarded on purpose: operator-configured internal services (Ollama, lip-sync, LiveKit).

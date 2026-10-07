@@ -34,10 +34,10 @@ function WorkspaceChip({ onNav }: { onNav: () => void }) {
   const [name, setName] = useState<string | null>(null); const [id, setId] = useState("");
   useEffect(() => {
     const f = () => { const w = getWorkspace(); setId(w); if (!w) { setName(null); return; } api<Workspace[]>("/v1/workspaces").then((l) => { const m = l.find((x) => x.id === w); if (m) setName(`${m.name} (${m.role})`); else { setWorkspace(""); setId(""); } }).catch(() => {}); };
-    f(); window.addEventListener("mirage:workspace", f); return () => window.removeEventListener("mirage:workspace", f);
+    f(); window.addEventListener("vocalface:workspace", f); return () => window.removeEventListener("vocalface:workspace", f);
   }, []);
   return (
-    <Link href="/dashboard/team" onClick={onNav} data-testid="ws-chip" className={`mx-3 mb-3 flex items-center gap-2 rounded-lg border px-3 py-2 text-xs transition ${id ? "border-mirage-mint/30 bg-mirage-mint/[0.06] text-mirage-mint" : "border-white/10 text-gray-400 hover:bg-white/5 hover:text-white"}`}>
+    <Link href="/dashboard/team" onClick={onNav} data-testid="ws-chip" className={`mx-3 mb-3 flex items-center gap-2 rounded-lg border px-3 py-2 text-xs transition ${id ? "border-vocalface-mint/30 bg-vocalface-mint/[0.06] text-vocalface-mint" : "border-white/10 text-gray-400 hover:bg-white/5 hover:text-white"}`}>
       <Users size={13} /><span className="min-w-0 flex-1 truncate">{id ? name ?? "Workspace" : "Personal account"}</span><span className="text-gray-500">switch</span>
     </Link>
   );
@@ -62,8 +62,8 @@ function Sidebar({ path, credits, onNav, signOut }: { path: string; credits: Sta
                 return (
                   <Link key={href} href={href} onClick={onNav} className={`group relative flex items-center gap-3 rounded-lg px-3 py-1.5 text-sm transition ${on ? "text-white" : "text-gray-400 hover:bg-white/5 hover:text-white"}`}>
                     {on && <motion.span layoutId="navbg" className="absolute inset-0 rounded-lg bg-white/[0.08] ring-1 ring-white/10" />}
-                    {on && <span className="absolute -left-3 top-2 bottom-2 w-0.5 rounded bg-mirage-gradient" />}
-                    <I size={16} className={`relative ${on ? "text-mirage-rose" : ""}`} /><span className="relative">{label}</span>
+                    {on && <span className="absolute -left-3 top-2 bottom-2 w-0.5 rounded bg-vocalface-gradient" />}
+                    <I size={16} className={`relative ${on ? "text-vocalface-rose" : ""}`} /><span className="relative">{label}</span>
                   </Link>
                 );
               })}
@@ -74,11 +74,11 @@ function Sidebar({ path, credits, onNav, signOut }: { path: string; credits: Sta
       <div className="m-3 space-y-3 rounded-xl border border-white/10 bg-ink-3/70 p-3.5">
         <div className="flex items-center justify-between">
           <span className="text-xs text-gray-400">Credits</span>
-          <span className="rounded-full bg-mirage-gradient px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">{credits?.plan.name ?? "..."}</span>
+          <span className="rounded-full bg-vocalface-gradient px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">{credits?.plan.name ?? "..."}</span>
         </div>
         <div>
           <p className="font-mono text-lg leading-none">{credits ? `${Math.floor(secs / 60)}m ${secs % 60}s` : "--"}</p>
-          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10"><motion.div className={`h-full rounded-full ${low ? "bg-mirage-rose" : "bg-mirage-gradient"}`} initial={{ width: 0 }} animate={{ width: pct + "%" }} transition={{ duration: 0.8 }} /></div>
+          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10"><motion.div className={`h-full rounded-full ${low ? "bg-vocalface-rose" : "bg-vocalface-gradient"}`} initial={{ width: 0 }} animate={{ width: pct + "%" }} transition={{ duration: 0.8 }} /></div>
         </div>
         <Link href="/dashboard/billing" onClick={onNav} className="block text-xs text-gray-400 hover:text-white">{low ? "Running low - top up" : "Manage billing"} &rarr;</Link>
       </div>
@@ -94,8 +94,8 @@ export default function DashLayout({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!ok) return;
     const load = () => api<Status>("/v1/billing/status").then(setCredits).catch(() => {});
-    load(); const t = setInterval(load, 30000); window.addEventListener("mirage:credits", load);
-    return () => { clearInterval(t); window.removeEventListener("mirage:credits", load); };
+    load(); const t = setInterval(load, 30000); window.addEventListener("vocalface:credits", load);
+    return () => { clearInterval(t); window.removeEventListener("vocalface:credits", load); };
   }, [ok]);
   useEffect(() => setOpen(false), [path]);
   // Render the sidebar once only: the Logo's SVG gradient id is shared, so a hidden duplicate would break it.
@@ -103,7 +103,7 @@ export default function DashLayout({ children }: { children: ReactNode }) {
   useEffect(() => { const mq = window.matchMedia("(min-width: 768px)"); const f = () => setDesktop(mq.matches); f(); mq.addEventListener("change", f); return () => mq.removeEventListener("change", f); }, []);
   const signOut = () => { clearKey(); router.push("/"); };
   const current = nav.find((n) => n.href === path)?.label ?? "Dashboard";
-  if (!ok) return <div className="grid min-h-screen place-items-center bg-ink"><div className="h-8 w-8 animate-spin rounded-full border-2 border-white/10 border-t-mirage-rose" /></div>;
+  if (!ok) return <div className="grid min-h-screen place-items-center bg-ink"><div className="h-8 w-8 animate-spin rounded-full border-2 border-white/10 border-t-vocalface-rose" /></div>;
   return (
     <div className="min-h-screen bg-ink bg-[radial-gradient(60rem_30rem_at_80%_-10%,rgba(124,92,255,.10),transparent),radial-gradient(40rem_25rem_at_0%_0%,rgba(255,77,141,.07),transparent)]">
       {desktop && <aside className="fixed inset-y-0 left-0 z-30 w-64 border-r border-white/[0.07] bg-ink/80 backdrop-blur"><Sidebar path={path} credits={credits} onNav={() => {}} signOut={signOut} /></aside>}

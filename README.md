@@ -1,4 +1,4 @@
-# Mirage
+# VocalFace
 
 Open-core conversational video AI: talk face to face with an AI agent, make digital-twin replicas, and generate talking-head videos through an API. Built on free and open-source parts (faster-whisper, Ollama, Kokoro, Chatterbox, SoulX-FlashHead) so it can run on one machine.
 
@@ -26,7 +26,7 @@ make e2e                  # full browser end-to-end suite
 Needs Python 3.11, Node 20, ffmpeg and Ollama (`llama3.2:3b`). Model files are not in git; see `docs/DEPLOY.md`.
 
 ## Licences: read before selling anything
-Wav2Lip (live lip-sync) and LivePortrait/InsightFace (fallback photo avatars) use non-commercial weights. SoulX-FlashHead says Apache-2.0 in its README, not yet checked by counsel. Details and a commercial-only switch (`MIRAGE_COMMERCIAL_ONLY=1`): `docs/LICENSES.md`.
+Wav2Lip (live lip-sync) and LivePortrait/InsightFace (fallback photo avatars) use non-commercial weights. SoulX-FlashHead says Apache-2.0 in its README, not yet checked by counsel. Details and a commercial-only switch (`VOCALFACE_COMMERCIAL_ONLY=1`): `docs/LICENSES.md`.
 
 ## Honest limits
 - Real-time FlashHead needs an NVIDIA GPU. Not yet measured: `docs/GPU_RUNBOOK.md`.

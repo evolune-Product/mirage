@@ -43,20 +43,20 @@ export default function TryIt() {
       <div className="mx-auto w-full max-w-7xl px-5">
         <div className="mx-auto max-w-3xl text-center"><p className="eyebrow">Try it</p>
           <h2 className="mt-3 font-display text-4xl leading-[1.05] text-white sm:text-5xl md:text-6xl">Meet the agent&apos;s <em className="text-grad pr-1 italic">presence</em></h2>
-          <p className="mt-5 text-gray-300 md:text-lg">The orb is how Mirage shows what an agent is doing. Pick a question, or poke the states yourself.</p></div>
+          <p className="mt-5 text-gray-300 md:text-lg">The orb is how VocalFace shows what an agent is doing. Pick a question, or poke the states yourself.</p></div>
         <div ref={ref} className="mt-12 grid items-center gap-8 lg:grid-cols-2 [&>*]:min-w-0">
           <div className="glass relative rounded-3xl p-4">
             <LazyOrb state={orb} level={orb === "speaking" ? 0.45 : orb === "listening" ? 0.18 : 0} className="mx-auto h-[300px] w-full md:h-[380px]" />
             <div role="group" aria-label="Orb state" className="mt-2 flex flex-wrap justify-center gap-2">
-              {states.map(([s, l]) => <button key={s} aria-pressed={orb === s} onClick={() => setManual(s)} className={`rounded-full border px-4 py-1.5 text-sm transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-mirage-cyan ${orb === s ? "border-transparent bg-mirage-gradient text-white" : "border-white/15 text-gray-300 hover:bg-white/5"}`}>{l}</button>)}</div>
+              {states.map(([s, l]) => <button key={s} aria-pressed={orb === s} onClick={() => setManual(s)} className={`rounded-full border px-4 py-1.5 text-sm transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-vocalface-cyan ${orb === s ? "border-transparent bg-vocalface-gradient text-white" : "border-white/15 text-gray-300 hover:bg-white/5"}`}>{l}</button>)}</div>
           </div>
           <div>
             <p className="mb-3 font-mono text-xs uppercase tracking-widest text-gray-400">Ask something</p>
-            <div className="flex flex-wrap gap-2">{convos.map((x, i) => <button key={x.q} onClick={() => play(i)} className={`rounded-full border px-4 py-2 text-left text-sm transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-mirage-cyan ${pick === i ? "border-mirage-rose/60 bg-mirage-rose/10 text-white" : "border-white/15 text-gray-300 hover:bg-white/5"}`}>{x.q}</button>)}</div>
+            <div className="flex flex-wrap gap-2">{convos.map((x, i) => <button key={x.q} onClick={() => play(i)} className={`rounded-full border px-4 py-2 text-left text-sm transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-vocalface-cyan ${pick === i ? "border-vocalface-rose/60 bg-vocalface-rose/10 text-white" : "border-white/15 text-gray-300 hover:bg-white/5"}`}>{x.q}</button>)}</div>
             <div className="mt-5 min-h-[230px] space-y-3 rounded-3xl border border-white/10 bg-ink p-5" aria-live="polite">
               {qn > 0 && <div className="ml-auto max-w-[88%] rounded-2xl bg-white/10 px-4 py-2.5 text-sm text-gray-100">{c.q.slice(0, qn)}{phase === "typing" && <span className="ml-0.5 inline-block h-3.5 w-px translate-y-0.5 animate-pulse bg-white" />}</div>}
-              {phase === "thinking" && <div className="max-w-[88%] rounded-2xl bg-mirage-violet/25 px-4 py-3 text-sm text-gray-300" aria-label="Thinking"><span className="inline-flex gap-1"><i className="h-1.5 w-1.5 animate-pulse rounded-full bg-gray-300" /><i className="h-1.5 w-1.5 animate-pulse rounded-full bg-gray-300 [animation-delay:150ms]" /><i className="h-1.5 w-1.5 animate-pulse rounded-full bg-gray-300 [animation-delay:300ms]" /></span></div>}
-              {an > 0 && <div className="max-w-[88%] rounded-2xl bg-mirage-violet/25 px-4 py-2.5 text-sm text-gray-50">{c.a.slice(0, an)}</div>}
+              {phase === "thinking" && <div className="max-w-[88%] rounded-2xl bg-vocalface-violet/25 px-4 py-3 text-sm text-gray-300" aria-label="Thinking"><span className="inline-flex gap-1"><i className="h-1.5 w-1.5 animate-pulse rounded-full bg-gray-300" /><i className="h-1.5 w-1.5 animate-pulse rounded-full bg-gray-300 [animation-delay:150ms]" /><i className="h-1.5 w-1.5 animate-pulse rounded-full bg-gray-300 [animation-delay:300ms]" /></span></div>}
+              {an > 0 && <div className="max-w-[88%] rounded-2xl bg-vocalface-violet/25 px-4 py-2.5 text-sm text-gray-50">{c.a.slice(0, an)}</div>}
             </div>
             <p className="mt-3 text-xs text-gray-400">Simulated for illustration: no model is running in this box. The real thing runs in your dashboard.</p>
             <Link href="/signup" className="btn-grad mt-6 px-7 py-3.5 text-base"><Mic size={16} /> Talk to a demo <ArrowRight size={16} /></Link>

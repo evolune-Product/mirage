@@ -46,10 +46,10 @@ export default function UsagePanel({ onForbidden }: { onForbidden: () => void })
         </>) : [0, 1, 2].map((i) => <Skeleton key={i} className="h-28" />)}
       </div>
 
-      <Section title="Overage" icon={<Gauge size={16} className="text-mirage-amber" />} hint="When your minutes run out, keep going instead of stopping, billed per minute up to a monthly cap you set. Without it, conversations and videos stop at zero.">
+      <Section title="Overage" icon={<Gauge size={16} className="text-vocalface-amber" />} hint="When your minutes run out, keep going instead of stopping, billed per minute up to a monthly cap you set. Without it, conversations and videos stop at zero.">
         {!ov ? <Skeleton className="h-28" /> : !ov.available ? <Callout tone="warn" title="Not available on your plan">Overage is for paid plans. Buy a plan below, or top up minutes (they never expire).</Callout> : (
           <div className="card space-y-4 !p-4">
-            <Toggle checked={en} onChange={setEn} label="Allow usage beyond my included minutes" hint={`${usd(ov.rate_cents_per_min)} per extra minute. Mirage records and caps it; it is not charged to a card automatically yet.`} />
+            <Toggle checked={en} onChange={setEn} label="Allow usage beyond my included minutes" hint={`${usd(ov.rate_cents_per_min)} per extra minute. VocalFace records and caps it; it is not charged to a card automatically yet.`} />
             <div className="max-w-xs"><label className="label">Monthly spend cap (USD)</label><div className="relative"><span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span><input className="input !pl-7" type="number" min={1} step={1} inputMode="decimal" placeholder="e.g. 25" aria-label="Monthly spend cap" disabled={!en} value={cap} onChange={(e) => setCap(e.target.value)} /></div></div>
             {ov.enabled && ov.cap_cents ? <div><Progress pct={(ov.spent_cents / ov.cap_cents) * 100} tone={ov.spent_cents / ov.cap_cents > 0.9 ? "rose" : "grad"} label={`${usd(ov.spent_cents)} of ${usd(ov.cap_cents)} spent this month (${ov.period}); about ${mins(ov.headroom_seconds)} of headroom left`} /></div> : null}
             {err && <Callout tone="bad">{err}</Callout>}

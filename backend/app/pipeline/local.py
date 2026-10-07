@@ -26,11 +26,11 @@ class WhisperSTT:
     def __init__(self, size: str | None = None, cpu_threads: int | None = None):
         from faster_whisper import WhisperModel
 
-        size = size or os.environ.get("MIRAGE_STT_MODEL", "base.en")
+        size = size or os.environ.get("VOCALFACE_STT_MODEL", "base.en")
         self.size = size
-        threads = cpu_threads if cpu_threads is not None else int(os.environ.get("MIRAGE_STT_THREADS", "0"))
+        threads = cpu_threads if cpu_threads is not None else int(os.environ.get("VOCALFACE_STT_THREADS", "0"))
         self.model = WhisperModel(size, device="cpu", compute_type="int8", cpu_threads=threads)
-        self.vad_filter = os.environ.get("MIRAGE_STT_VAD_FILTER", "0") == "1"
+        self.vad_filter = os.environ.get("VOCALFACE_STT_VAD_FILTER", "0") == "1"
 
     def _run(self, audio: np.ndarray) -> str:
         segs, _ = self.model.transcribe(
@@ -62,7 +62,7 @@ class KokoroTTS:
     def __init__(self, model: str | None = None):
         from kokoro_onnx import Kokoro
 
-        model = model or os.environ.get("MIRAGE_KOKORO_MODEL", "kokoro-v1.0.onnx")
+        model = model or os.environ.get("VOCALFACE_KOKORO_MODEL", "kokoro-v1.0.onnx")
         self.k = Kokoro(str(MODELS / model), str(MODELS / "voices-v1.0.bin"))
         self._ph_lock = threading.Lock()  # espeak is not thread-safe
         self._be = None
@@ -117,9 +117,9 @@ class KokoroTTS:
 # ---------------------------------------------------------------------------------------------------------
 # LLM token stream -> speakable chunks
 # ---------------------------------------------------------------------------------------------------------
-FIRST_MIN_WORDS = int(os.environ.get("MIRAGE_FIRST_MIN_WORDS", "3"))  # earliest clause break for the 1st chunk
-FIRST_MAX_WORDS = int(os.environ.get("MIRAGE_FIRST_MAX_WORDS", "7"))  # force the 1st chunk out after this many words
-LATER_MAX_WORDS = int(os.environ.get("MIRAGE_LATER_MAX_WORDS", "22"))  # split run-on sentences at a clause
+FIRST_MIN_WORDS = int(os.environ.get("VOCALFACE_FIRST_MIN_WORDS", "3"))  # earliest clause break for the 1st chunk
+FIRST_MAX_WORDS = int(os.environ.get("VOCALFACE_FIRST_MAX_WORDS", "7"))  # force the 1st chunk out after this many words
+LATER_MAX_WORDS = int(os.environ.get("VOCALFACE_LATER_MAX_WORDS", "22"))  # split run-on sentences at a clause
 ABBREV = {"mr", "mrs", "ms", "dr", "st", "vs", "etc", "inc", "jr", "sr", "no", "e.g", "i.e", "approx", "mt"}
 _SENT = re.compile(r"""([.!?]+["')\]]*)\s+""")
 _CLAUSE = re.compile(r"([,;:—–])\s+|\s+[—–-]\s+")

@@ -23,16 +23,16 @@ import numpy as np
 import facelib as fl
 
 HERE = Path(__file__).resolve().parent
-log = logging.getLogger("mirage.face")
+log = logging.getLogger("vocalface.face")
 FPS = 25.0
 BASE_VERSION = 3  # bump when prepare_base output format/logic changes (invalidates caches)
-IDLE_SECONDS = float(os.environ.get("MIRAGE_IDLE_SECONDS", "3.0"))
+IDLE_SECONDS = float(os.environ.get("VOCALFACE_IDLE_SECONDS", "3.0"))
 
 
 def pick_device() -> str:
     import torch
 
-    want = (os.environ.get("MIRAGE_LIPSYNC_DEVICE") or "auto").lower()
+    want = (os.environ.get("VOCALFACE_LIPSYNC_DEVICE") or "auto").lower()
     if want != "auto":
         return want
     if torch.cuda.is_available():
@@ -161,7 +161,7 @@ def prepare_base(rdir: Path, tracker=None, force: bool = False, win_s: float | N
 
     use_listen = listen.exists()
     clip_src = listen if use_listen else src
-    max_s = 60 if use_listen else float(os.environ.get("MIRAGE_PREP_SECONDS", "40"))
+    max_s = 60 if use_listen else float(os.environ.get("VOCALFACE_PREP_SECONDS", "40"))
     pre_crop = fl.locate_face_region(clip_src, tracker) if tracker else None  # small facecam inset -> native-res pre-crop
     frames = fl.load_frames(clip_src, FPS, max_w=720, max_s=max_s, pre_crop=pre_crop)
     if len(frames) < 25:

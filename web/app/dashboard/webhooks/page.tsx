@@ -13,7 +13,7 @@ function EventPicker({ all, value, onChange }: { all: string[]; value: string[];
       <Toggle checked={every} onChange={(v) => onChange(v ? ["*"] : [])} label="All events" hint="Receive everything, including events added in future." />
       <div className={`mt-3 flex flex-wrap gap-1.5 ${every ? "pointer-events-none opacity-40" : ""}`} role="group" aria-label="Events">
         {all.map((e) => { const on = every || value.includes(e);
-          return <button type="button" key={e} aria-pressed={on} onClick={() => toggle(e)} className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 font-mono text-[11px] transition ${on ? "border-mirage-violet/50 bg-mirage-violet/15 text-white" : "border-white/10 text-gray-400 hover:text-white"}`}>{on && <Check size={11} />}{e}</button>; })}
+          return <button type="button" key={e} aria-pressed={on} onClick={() => toggle(e)} className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 font-mono text-[11px] transition ${on ? "border-vocalface-violet/50 bg-vocalface-violet/15 text-white" : "border-white/10 text-gray-400 hover:text-white"}`}>{on && <Check size={11} />}{e}</button>; })}
       </div>
     </div>
   );
@@ -46,7 +46,7 @@ function Deliveries({ hook }: { hook: Webhook | null }) {
                 <td className="px-3 py-2 font-mono">{d.attempts}/6</td>
                 <td className="px-3 py-2 font-mono">{d.last_status_code ?? "-"}</td>
                 <td className="whitespace-nowrap px-3 py-2 text-gray-400">{fmtDate(d.delivered_at || d.created_at)}</td>
-                <td className="px-3 py-2 text-right">{d.status !== "delivered" && <button className="inline-flex items-center gap-1 text-mirage-cyan hover:underline" disabled={busy === d.id} onClick={() => retry(d.id)}><RotateCw size={11} />Retry</button>}</td>
+                <td className="px-3 py-2 text-right">{d.status !== "delivered" && <button className="inline-flex items-center gap-1 text-vocalface-cyan hover:underline" disabled={busy === d.id} onClick={() => retry(d.id)}><RotateCw size={11} />Retry</button>}</td>
               </tr>))}</tbody>
           </table>
         </div>)}
@@ -72,7 +72,7 @@ export default function Webhooks() {
 
   return (
     <Shell title="Webhooks" subtitle="Get an HTTPS call when a conversation ends, an objective completes, a video is ready and more. Signed, retried, logged." action={newBtn}>
-      {secret && <div className="mb-6"><SecretOnce title="Copy your signing secret now" note="It verifies the Mirage-Signature header on every delivery. For security it is only shown this once; rotate it if you lose it." secret={secret.secret} onDone={() => setSecret(null)} /></div>}
+      {secret && <div className="mb-6"><SecretOnce title="Copy your signing secret now" note="It verifies the VocalFace-Signature header on every delivery. For security it is only shown this once; rotate it if you lose it." secret={secret.secret} onDone={() => setSecret(null)} /></div>}
       {list === null ? <SkeletonCards n={2} h="h-32" /> : list.length === 0 ? (
         <Empty kind="webhook" title="No webhook endpoints" hint="Add an endpoint and choose which events to receive. Each delivery is signed with HMAC-SHA256 and retried with backoff." action={newBtn} />
       ) : (
@@ -80,7 +80,7 @@ export default function Webhooks() {
           {list.map((w, i) => (
             <motion.div key={w.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }} className="card flex flex-col gap-3">
               <div className="flex items-start gap-3">
-                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/5 text-mirage-cyan"><WebhookIcon size={18} /></span>
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/5 text-vocalface-cyan"><WebhookIcon size={18} /></span>
                 <div className="min-w-0 flex-1"><p className="break-all text-sm font-medium">{w.url}</p><p className="truncate text-xs text-gray-500">{w.description || w.id}</p></div>
                 <Badge s={w.active ? "active" : "revoked"} />
               </div>
@@ -90,14 +90,14 @@ export default function Webhooks() {
                 <button className="btn !px-3.5 !py-1.5 text-xs" onClick={() => setSel(w)}>Deliveries</button>
                 <button className="btn-ghost !px-3 !py-1.5 text-xs" onClick={() => patch(w, { active: !w.active })}>{w.active ? "Pause" : "Resume"}</button>
                 <button className="btn-ghost !px-3 !py-1.5 text-xs" onClick={() => setRot(w)}><RotateCw size={12} />Rotate secret</button>
-                <button aria-label={`Delete ${w.url}`} className="btn-ghost !px-2.5 !py-1.5 text-xs hover:!text-mirage-rose" onClick={() => setDel(w)}><Trash2 size={13} /></button>
+                <button aria-label={`Delete ${w.url}`} className="btn-ghost !px-2.5 !py-1.5 text-xs hover:!text-vocalface-rose" onClick={() => setDel(w)}><Trash2 size={13} /></button>
               </div>
             </motion.div>))}
         </div>)}
 
       <Modal open={open} onClose={() => setOpen(false)} title="Add endpoint">
         <form onSubmit={create} className="space-y-4">
-          <Field label="Endpoint URL"><input className="input" type="url" required autoFocus placeholder="https://example.com/mirage/hook" value={f.url} onChange={(e) => setF({ ...f, url: e.target.value })} /></Field>
+          <Field label="Endpoint URL"><input className="input" type="url" required autoFocus placeholder="https://example.com/vocalface/hook" value={f.url} onChange={(e) => setF({ ...f, url: e.target.value })} /></Field>
           <Field label="Description (optional)"><input className="input" value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} /></Field>
           <div><label className="label">Events</label><EventPicker all={events} value={f.events} onChange={(v) => setF({ ...f, events: v })} /></div>
           <button className="btn-grad w-full" disabled={busy}>{busy && <Spinner />}Create endpoint</button>

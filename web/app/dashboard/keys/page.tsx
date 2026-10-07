@@ -57,15 +57,15 @@ function KeyManager() {
           <thead className="bg-white/[0.03] text-[10px] uppercase tracking-wider text-gray-500"><tr><th className="px-4 py-2.5">Name</th><th className="px-4 py-2.5">Key</th><th className="px-4 py-2.5">Created</th><th className="px-4 py-2.5">Last used</th><th /></tr></thead>
           <tbody>{active.map((k) => (
             <tr key={k.id} className="border-t border-white/5 bg-ink-2/60">
-              <td className="px-4 py-3">{k.name}{mine(k) && <span className="ml-2 rounded-full bg-mirage-violet/15 px-2 py-0.5 text-[10px] text-mirage-violet">this browser</span>}</td>
+              <td className="px-4 py-3">{k.name}{mine(k) && <span className="ml-2 rounded-full bg-vocalface-violet/15 px-2 py-0.5 text-[10px] text-vocalface-violet">this browser</span>}</td>
               <td className="px-4 py-3 font-mono text-xs text-gray-400">{k.prefix}...</td>
               <td className="whitespace-nowrap px-4 py-3 text-xs text-gray-400">{fmtDate(k.created_at)}</td>
               <td className="whitespace-nowrap px-4 py-3 text-xs text-gray-400">{k.last_used_at ? fmtDate(k.last_used_at) : "never"}</td>
-              <td className="px-4 py-3 text-right whitespace-nowrap">{k.legacy ? <button className="inline-flex items-center gap-1 text-xs text-mirage-cyan hover:underline" onClick={() => setRot(true)}><RotateCw size={12} />Rotate</button>
-                : <button aria-label={`Revoke ${k.name}`} className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-mirage-rose" onClick={() => setRev(k)}><Trash2 size={13} />Revoke</button>}</td>
+              <td className="px-4 py-3 text-right whitespace-nowrap">{k.legacy ? <button className="inline-flex items-center gap-1 text-xs text-vocalface-cyan hover:underline" onClick={() => setRot(true)}><RotateCw size={12} />Rotate</button>
+                : <button aria-label={`Revoke ${k.name}`} className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-vocalface-rose" onClick={() => setRev(k)}><Trash2 size={13} />Revoke</button>}</td>
             </tr>))}</tbody></table></div>)}
       {revoked.length > 0 && <p className="mt-3 flex flex-wrap items-center gap-2 text-xs text-gray-500">Revoked: {revoked.map((k) => <span key={k.id} className="inline-flex items-center gap-1.5">{k.name} <Badge s="revoked" /></span>)}</p>}
-      <ConfirmDialog open={!!rev} title="Revoke this key?" body={<>Requests using <b className="font-mono">{rev?.prefix}...</b> fail immediately, including open WebSocket sessions.{rev && mine(rev) && <b className="mt-2 block text-mirage-amber">This is the key this browser uses. You will be signed out of the dashboard.</b>}</>} confirmLabel="Revoke key" onClose={() => setRev(null)}
+      <ConfirmDialog open={!!rev} title="Revoke this key?" body={<>Requests using <b className="font-mono">{rev?.prefix}...</b> fail immediately, including open WebSocket sessions.{rev && mine(rev) && <b className="mt-2 block text-vocalface-amber">This is the key this browser uses. You will be signed out of the dashboard.</b>}</>} confirmLabel="Revoke key" onClose={() => setRev(null)}
         onConfirm={async () => { try { await api(`/v1/keys/${rev!.id}`, { method: "DELETE" }); toast.success("Key revoked."); setRev(null); load(); } catch (x) { toast.error(x); } }} />
       <ConfirmDialog open={rot} danger={false} title="Rotate the signup key?" body="The original key stops working immediately and a new one replaces it. This browser is updated automatically; update anywhere else you use it." confirmLabel="Rotate key" onClose={() => setRot(false)}
         onConfirm={async () => { try { const k = await api<{ key: string }>("/v1/keys/legacy/rotate", { method: "POST", body: {} }); setKey(k.key); setSecret({ title: "Your new signup key", value: k.key, note: "Saved in this browser. Copy it for any other place you use it." }); setRot(false); load(); } catch (x) { toast.error(x); } }} />
@@ -106,7 +106,7 @@ export default function Keys() {
           </div>
         ))}
       </div>
-      <p className="mt-6 text-sm text-gray-400">Other endpoints: GET /v1/replicas, /v1/personas, /v1/conversations, /v1/videos. Interactive docs at <a className="text-mirage-rose hover:underline" href={API_URL + "/docs"} target="_blank" rel="noreferrer">{API_URL}/docs</a>.</p>
+      <p className="mt-6 text-sm text-gray-400">Other endpoints: GET /v1/replicas, /v1/personas, /v1/conversations, /v1/videos. Interactive docs at <a className="text-vocalface-rose hover:underline" href={API_URL + "/docs"} target="_blank" rel="noreferrer">{API_URL}/docs</a>.</p>
     </Shell>
   );
 }

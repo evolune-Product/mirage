@@ -25,9 +25,9 @@ def env(tmp_path, monkeypatch):
     monkeypatch.setattr(db, "engine", create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool))
     SQLModel.metadata.create_all(db.engine)
     monkeypatch.setattr(jobs, "DATA_DIR", tmp_path)
-    monkeypatch.setenv("MIRAGE_SECRET_KEY", "test-secret-key-0123456789")
-    monkeypatch.setenv("MIRAGE_RL_SIGNUP", "1000/60")
-    monkeypatch.setenv("MIRAGE_CONSENT_VOICE_MATCH", "off")
+    monkeypatch.setenv("VOCALFACE_SECRET_KEY", "test-secret-key-0123456789")
+    monkeypatch.setenv("VOCALFACE_RL_SIGNUP", "1000/60")
+    monkeypatch.setenv("VOCALFACE_CONSENT_VOICE_MATCH", "off")
     safety.limiter.reset()
 
     def sess():
@@ -92,13 +92,13 @@ def test_liveness_judgement_thresholds():
 
 
 def test_mode_and_threshold_defaults(monkeypatch):
-    for k in ("MIRAGE_CONSENT_FACE_MATCH", "MIRAGE_CONSENT_LIVENESS", "MIRAGE_FACE_MATCH_THRESHOLD"):
+    for k in ("VOCALFACE_CONSENT_FACE_MATCH", "VOCALFACE_CONSENT_LIVENESS", "VOCALFACE_FACE_MATCH_THRESHOLD"):
         monkeypatch.delenv(k, raising=False)
-    monkeypatch.setenv("MIRAGE_ENV", "dev")
+    monkeypatch.setenv("VOCALFACE_ENV", "dev")
     assert facematch.mode() == "warn" and facematch.threshold() == 0.45
-    monkeypatch.setenv("MIRAGE_ENV", "production")
+    monkeypatch.setenv("VOCALFACE_ENV", "production")
     assert facematch.mode() == "enforce" and facematch.liveness_mode() == "enforce"
-    monkeypatch.setenv("MIRAGE_CONSENT_LIVENESS", "warn")
+    monkeypatch.setenv("VOCALFACE_CONSENT_LIVENESS", "warn")
     assert facematch.liveness_mode() == "warn"
 
 
@@ -121,7 +121,7 @@ GOOD = dict(face_status="match", face_score=0.8, frames_used=25, live_status="pa
 
 
 def test_enforce_accepts_match_stores_audio_only_and_scores(env, tmp_path, monkeypatch):
-    monkeypatch.setenv("MIRAGE_CONSENT_FACE_MATCH", "enforce")
+    monkeypatch.setenv("VOCALFACE_CONSENT_FACE_MATCH", "enforce")
     h = hdr(env); rid, ch = new_replica(env, h, photo=True)
     say_phrase(monkeypatch, ch); fake_verify(monkeypatch, **GOOD)
     media = tmp_path / "rec.mp4"; synth_av(media)
@@ -148,7 +148,7 @@ def test_enforce_accepts_match_stores_audio_only_and_scores(env, tmp_path, monke
     (dict(face_status="match", face_score=0.9, live_status="fail", live_reasons=["static image?"]), "liveness_failed", 422),
 ])
 def test_enforce_rejects_and_stores_nothing(env, tmp_path, monkeypatch, kw, code, status):
-    monkeypatch.setenv("MIRAGE_CONSENT_FACE_MATCH", "enforce")
+    monkeypatch.setenv("VOCALFACE_CONSENT_FACE_MATCH", "enforce")
     h = hdr(env); rid, ch = new_replica(env, h)
     say_phrase(monkeypatch, ch); fake_verify(monkeypatch, **kw)
     media = tmp_path / "rec.mp4"; synth_av(media)
@@ -163,7 +163,7 @@ def test_enforce_rejects_and_stores_nothing(env, tmp_path, monkeypatch, kw, code
 
 
 def test_missing_model_fails_closed_in_enforce(env, tmp_path, monkeypatch):
-    monkeypatch.setenv("MIRAGE_CONSENT_FACE_MATCH", "enforce")
+    monkeypatch.setenv("VOCALFACE_CONSENT_FACE_MATCH", "enforce")
     h = hdr(env); rid, ch = new_replica(env, h)
     say_phrase(monkeypatch, ch)
 
@@ -178,12 +178,12 @@ def test_missing_model_fails_closed_in_enforce(env, tmp_path, monkeypatch):
 def test_warn_mode_records_but_allows_and_off_skips(env, tmp_path, monkeypatch):
     h = hdr(env)
     media = tmp_path / "rec.mp4"; synth_av(media)
-    monkeypatch.setenv("MIRAGE_CONSENT_FACE_MATCH", "warn")
+    monkeypatch.setenv("VOCALFACE_CONSENT_FACE_MATCH", "warn")
     rid, ch = new_replica(env, h); say_phrase(monkeypatch, ch)
     fake_verify(monkeypatch, face_status="mismatch", face_score=0.1, live_status="fail", live_reasons=["x"])
     r = post(env, h, rid, ch, media)
     assert r.status_code == 200 and r.json()["face_status"] == "mismatch"  # visible, not blocking (dev)
-    monkeypatch.setenv("MIRAGE_CONSENT_FACE_MATCH", "off")
+    monkeypatch.setenv("VOCALFACE_CONSENT_FACE_MATCH", "off")
     rid, ch = new_replica(env, h); say_phrase(monkeypatch, ch)
 
     def never(*a, **k):
@@ -202,7 +202,7 @@ def test_audio_only_recording_dev_ok_production_rejected(env, tmp_path, monkeypa
         r = env.post(f"/v1/replicas/{rid}/consent/audio", headers=h, data={"challenge_id": ch["challenge_id"], "speaker_name": "B"},
                      files={"file": ("a.wav", f, "audio/wav")})
     assert r.status_code == 200 and r.json()["face_status"] == "no_video"
-    monkeypatch.setenv("MIRAGE_CONSENT_FACE_MATCH", "enforce")
+    monkeypatch.setenv("VOCALFACE_CONSENT_FACE_MATCH", "enforce")
     rid, ch = new_replica(env, h); say_phrase(monkeypatch, ch)
     with open(wav, "rb") as f:
         r = env.post(f"/v1/replicas/{rid}/consent/audio", headers=h, data={"challenge_id": ch["challenge_id"], "speaker_name": "B"},
@@ -217,10 +217,10 @@ def test_typed_consent_is_dev_only_and_has_no_face_binding(env, monkeypatch):
                                                       "audio_url": "x", "transcript": ch["phrase"]}, headers=h)
     assert r.status_code == 200 and r.json()["verified_by"].startswith("typed")
     safety.require_consent(rid)  # dev: fine
-    monkeypatch.setenv("MIRAGE_ENV", "production")
+    monkeypatch.setenv("VOCALFACE_ENV", "production")
     with pytest.raises(safety.ConsentRequired):
         safety.require_consent(rid)
-    monkeypatch.setenv("MIRAGE_ALLOW_TYPED_CONSENT", "0")
+    monkeypatch.setenv("VOCALFACE_ALLOW_TYPED_CONSENT", "0")
     assert env.post(f"/v1/replicas/{rid}/consent", json={"challenge_id": ch["challenge_id"], "speaker_name": "B",
                                                          "audio_url": "x", "transcript": ch["phrase"]}, headers=h).status_code == 403
 
@@ -229,7 +229,7 @@ def test_worker_gate_needs_a_matching_face_binding_in_production(env, tmp_path, 
     h = hdr(env); rid, ch = new_replica(env, h)
     say_phrase(monkeypatch, ch); fake_verify(monkeypatch, **GOOD)
     media = tmp_path / "rec.mp4"; synth_av(media)
-    monkeypatch.setenv("MIRAGE_ENV", "production")
+    monkeypatch.setenv("VOCALFACE_ENV", "production")
     assert post(env, h, rid, ch, media).status_code == 200
     safety.require_consent(rid)  # voice+phrase+face on file
     with Session(db.engine) as s:  # a consent whose face did not match must not unlock the replica
@@ -272,7 +272,7 @@ def real_clip(tmp, name, src, ss, t, audio=True):
 
 @pytest.mark.skipif(not REAL, reason="needs models/{yunet,sface}.onnx, workers/.venv-face and local footage")
 def test_real_same_person_passes_and_binds_to_a_photo(env, tmp_path, monkeypatch):
-    monkeypatch.setenv("MIRAGE_CONSENT_FACE_MATCH", "enforce")
+    monkeypatch.setenv("VOCALFACE_CONSENT_FACE_MATCH", "enforce")
     photo = tmp_path / "photo.png"
     ff("-ss", "50", "-i", str(FOUNDER), "-frames:v", "1", str(photo))
     h = hdr(env); rid, ch = new_replica(env, h, url=str(photo), photo=True)
@@ -286,7 +286,7 @@ def test_real_same_person_passes_and_binds_to_a_photo(env, tmp_path, monkeypatch
 
 @pytest.mark.skipif(not REAL, reason="needs models/{yunet,sface}.onnx, workers/.venv-face and local footage")
 def test_real_different_person_is_rejected(env, tmp_path, monkeypatch):
-    monkeypatch.setenv("MIRAGE_CONSENT_FACE_MATCH", "enforce")
+    monkeypatch.setenv("VOCALFACE_CONSENT_FACE_MATCH", "enforce")
     photo = tmp_path / "photo.png"
     ff("-ss", "50", "-i", str(FOUNDER), "-frames:v", "1", str(photo))
     h = hdr(env); rid, ch = new_replica(env, h, url=str(photo), photo=True)
@@ -301,7 +301,7 @@ def test_real_different_person_is_rejected(env, tmp_path, monkeypatch):
 @pytest.mark.parametrize("kind", ["still", "handheld"])
 def test_real_photo_held_to_camera_fails_liveness(env, tmp_path, monkeypatch, kind):
     """The right person's face, but a still image (or a hand-held one) instead of a live person."""
-    monkeypatch.setenv("MIRAGE_CONSENT_FACE_MATCH", "enforce")
+    monkeypatch.setenv("VOCALFACE_CONSENT_FACE_MATCH", "enforce")
     photo = tmp_path / "photo.png"
     ff("-ss", "50", "-i", str(FOUNDER), "-frames:v", "1", str(photo))
     h = hdr(env); rid, ch = new_replica(env, h, url=str(photo), photo=True)
@@ -319,7 +319,7 @@ def test_real_photo_held_to_camera_fails_liveness(env, tmp_path, monkeypatch, ki
 @pytest.mark.skipif(not REAL, reason="needs models/{yunet,sface}.onnx, workers/.venv-face and local footage")
 def test_real_training_video_replica_binds_face_to_video(env, tmp_path, monkeypatch):
     """Video replica: the consenting person's face is compared with the faces in the training video (face-voice tie)."""
-    monkeypatch.setenv("MIRAGE_CONSENT_FACE_MATCH", "enforce")
+    monkeypatch.setenv("VOCALFACE_CONSENT_FACE_MATCH", "enforce")
     h = hdr(env); rid, ch = new_replica(env, h, url=str(FOUNDER))
     say_phrase(monkeypatch, ch)
     assert post(env, h, rid, ch, real_clip(tmp_path, "other.mp4", OTHER, 0, 6, audio=False)).status_code == 422

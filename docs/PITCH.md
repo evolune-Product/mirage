@@ -1,4 +1,4 @@
-# Mirage: pitch draft (internal; numbers marked TODO must be filled with real data before sending)
+# VocalFace: pitch draft (internal; numbers marked TODO must be filled with real data before sending)
 
 ## One line
 Open-core platform for real-time conversational video agents and consent-based digital replicas: use our API, or self-host the whole stack.

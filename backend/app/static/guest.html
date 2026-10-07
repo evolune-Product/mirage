@@ -1,14 +1,14 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Talk to an AI agent</title>
-<link rel="stylesheet" href="/static/mirage-client.css?v=2">
+<link rel="stylesheet" href="/static/vocalface-client.css?v=2">
 </head><body>
-<!-- audio capture (AudioWorklet, ScriptProcessor fallback), reconnect and video live in /static/mirage-client.js -->
+<!-- audio capture (AudioWorklet, ScriptProcessor fallback), reconnect and video live in /static/vocalface-client.js -->
 <h2 id="title">Talk to an AI agent</h2>
 <div id="note" class="s"></div>
-<div id="mirage"></div>
-<script src="/static/mirage-client.js?v=2"></script>
-<script src="/static/mirage-ui.js?v=2"></script>
+<div id="vocalface"></div>
+<script src="/static/vocalface-client.js?v=2"></script>
+<script src="/static/vocalface-ui.js?v=2"></script>
 <script>
 const $=id=>document.getElementById(id);
 const TOKEN=decodeURIComponent(location.pathname.split('/').filter(Boolean).pop()||'');
@@ -16,7 +16,7 @@ let sess=null,deadline=0,timer=null,usable=true;
 const proto=location.protocol==='https:'?'wss':'ws';
 const FRIENDLY={402:'The host of this agent is out of credits right now. Please try again later.',429:'This link is busy or has reached its limit. Please try again in a few minutes.',404:'This link is not valid.',410:'This link has expired.'};
 function tick(){const left=Math.max(0,Math.round((deadline-Date.now())/1000));$('note').textContent='Time left: '+left+'s';if(left<=0)clearInterval(timer)}
-const client=new MirageClient({
+const client=new VocalFaceClient({
   wsUrl:()=>`${proto}://${location.host}${sess.ws_path}`,
   prepare:async()=>{
     if(sess&&client.reusable)return;            // reconnects reuse the same conversation (handled by the client)
@@ -27,7 +27,7 @@ const client=new MirageClient({
 });
 window.__client=client;
 client.on('ended',()=>clearInterval(timer));client.on('fatal',()=>clearInterval(timer));
-MirageUI.mount($('mirage'),client,{mode:'guest',startLabel:'Start conversation',linkButton:'Copy link',getLink:async()=>location.href});
+VocalFaceUI.mount($('vocalface'),client,{mode:'guest',startLabel:'Start conversation',linkButton:'Copy link',getLink:async()=>location.href});
 fetch('/v1/guest/'+encodeURIComponent(TOKEN)+'/info').then(r=>r.ok?r.json():Promise.reject(r.status)).then(i=>{
   if(i.persona_name)$('title').textContent='Talk to '+i.persona_name;
   $('note').textContent=i.available?('Up to '+i.max_seconds+' seconds per conversation. Uses your microphone.'):'This link has reached its usage limit.';

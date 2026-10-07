@@ -38,16 +38,16 @@ export default function ScriptEditor({ script, setScript, info, err, placeholder
         <ol className="space-y-2.5" data-testid="scene-list">
           {draft.map((s, i) => (
             <li key={i} className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
-              <div className="mb-1.5 flex items-center gap-2 text-xs text-gray-400"><span className="grid h-5 w-5 place-items-center rounded-full bg-mirage-gradient text-[10px] font-semibold text-white">{i + 1}</span>Scene {i + 1}<span className="font-mono text-gray-500">{s.length} chars, about {Math.round(s.length / 15)}s</span>
+              <div className="mb-1.5 flex items-center gap-2 text-xs text-gray-400"><span className="grid h-5 w-5 place-items-center rounded-full bg-vocalface-gradient text-[10px] font-semibold text-white">{i + 1}</span>Scene {i + 1}<span className="font-mono text-gray-500">{s.length} chars, about {Math.round(s.length / 15)}s</span>
                 <span className="ml-auto flex gap-1">
                   <button type="button" aria-label={`Move scene ${i + 1} up`} disabled={i === 0} className="rounded p-1 hover:bg-white/10 disabled:opacity-30" onClick={() => { const d = [...draft]; [d[i - 1], d[i]] = [d[i], d[i - 1]]; commit(d); }}><ArrowUp size={13} /></button>
                   <button type="button" aria-label={`Move scene ${i + 1} down`} disabled={i === draft.length - 1} className="rounded p-1 hover:bg-white/10 disabled:opacity-30" onClick={() => { const d = [...draft]; [d[i + 1], d[i]] = [d[i], d[i + 1]]; commit(d); }}><ArrowDown size={13} /></button>
-                  <button type="button" aria-label={`Delete scene ${i + 1}`} disabled={draft.length === 1} className="rounded p-1 hover:bg-mirage-rose/10 hover:text-mirage-rose disabled:opacity-30" onClick={() => commit(draft.filter((_, j) => j !== i))}><Trash2 size={13} /></button></span></div>
+                  <button type="button" aria-label={`Delete scene ${i + 1}`} disabled={draft.length === 1} className="rounded p-1 hover:bg-vocalface-rose/10 hover:text-vocalface-rose disabled:opacity-30" onClick={() => commit(draft.filter((_, j) => j !== i))}><Trash2 size={13} /></button></span></div>
               <textarea className="input h-20 text-sm" aria-label={`Scene ${i + 1} text`} value={s} onChange={(e) => { const d = [...draft]; d[i] = e.target.value; setDraft(d); setScript(d.map((x) => x.trim()).filter(Boolean).join("\n\n")); }} />
             </li>))}
           <li><button type="button" className="btn-ghost !px-3 !py-1.5 text-xs" disabled={draft.length >= 12} onClick={() => setDraft([...draft, ""])}><Plus size={13} />Add scene</button>{draft.length >= 12 && <span className="ml-2 text-xs text-gray-500">12 scenes is the maximum</span>}</li>
         </ol>)}
-      {err && <p className="mt-2 text-xs text-mirage-rose" role="alert" data-testid="scene-error">{err}</p>}
+      {err && <p className="mt-2 text-xs text-vocalface-rose" role="alert" data-testid="scene-error">{err}</p>}
     </div>
   );
 }

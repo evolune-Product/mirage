@@ -22,7 +22,7 @@ TAG_AUDIO, TAG_VIDEO = 1, 2
 
 # JPEG tiers: (quality, scale). Tier 0 forwards the lip-sync service's JPEGs untouched.
 TIERS = [(None, 1.0), (55, 1.0), (50, 0.75), (42, 0.6)]  # measured on 576x324 lip-sync frames: 32 / 17.5 / 10.3 / 6.5 KB
-DEFAULT_TIER = int(os.environ.get("MIRAGE_VIDEO_TIER", "1"))
+DEFAULT_TIER = int(os.environ.get("VOCALFACE_VIDEO_TIER", "1"))
 FPS_ASSUMED = 25.0
 HEARTBEAT_S = 5.0
 DEAD_AFTER_S = 20.0

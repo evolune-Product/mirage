@@ -19,9 +19,9 @@ from .test_realtime import FakeLLM, collect, env, speak  # noqa: F401
 @pytest.fixture(autouse=True)
 def _reset(monkeypatch):
     from app import safety
-    monkeypatch.setenv("MIRAGE_RL_SIGNUP", "1000/60")  # many signups per test; the limiter is global across the suite
-    monkeypatch.setenv("MIRAGE_RL_IP", "100000/60")
-    monkeypatch.setenv("MIRAGE_RL_KEY", "100000/60")
+    monkeypatch.setenv("VOCALFACE_RL_SIGNUP", "1000/60")  # many signups per test; the limiter is global across the suite
+    monkeypatch.setenv("VOCALFACE_RL_IP", "100000/60")
+    monkeypatch.setenv("VOCALFACE_RL_KEY", "100000/60")
     safety.limiter.reset()
     lb.set_completer(None)
     lb.set_tool_post(None)
@@ -167,12 +167,12 @@ def test_webhook_signature_roundtrip_retry_and_log(env):
     d = c.get(f"/v1/webhooks/{wh['id']}/deliveries", headers=H(key)).json()
     assert d[0]["status"] == "delivered" and d[0]["attempts"] == 2
     headers, body = calls[-1]
-    assert webhooks.verify(wh["secret"], body, headers["Mirage-Signature"])
-    assert not webhooks.verify("whsec_wrong", body, headers["Mirage-Signature"])
-    assert not webhooks.verify(wh["secret"], body + " ", headers["Mirage-Signature"])
+    assert webhooks.verify(wh["secret"], body, headers["VocalFace-Signature"])
+    assert not webhooks.verify("whsec_wrong", body, headers["VocalFace-Signature"])
+    assert not webhooks.verify(wh["secret"], body + " ", headers["VocalFace-Signature"])
     ev = json.loads(body)
     assert ev["type"] == "conversation.started" and ev["data"]["persona_id"] == pid
-    assert headers["Mirage-Event"] == "conversation.started"
+    assert headers["VocalFace-Event"] == "conversation.started"
 
 
 def test_webhook_gives_up_after_max_attempts_and_manual_retry(env):
@@ -409,7 +409,7 @@ def test_custom_openai_llm_with_tool_calling_and_signed_tool_webhook(env, http_s
     assert llm_reqs[0][2]["tools"][0]["function"]["name"] == "get_weather"
     tool_req = [l for l in _Handler.log if l[0] == "/tool"][0]
     assert tool_req[2]["arguments"] == {"city": "Paris"} and tool_req[2]["conversation_id"] == cc
-    sig = tool_req[1].get("Mirage-Signature") or tool_req[1].get("mirage-signature")
+    sig = tool_req[1].get("VocalFace-Signature") or tool_req[1].get("vocalface-signature")
     assert webhooks.verify("tool-secret", json.dumps(tool_req[2], separators=(",", ":")), sig)
     calls = c.get(f"/v1/conversations/{cc}/tool-calls", headers=H(key)).json()
     assert calls[0]["tool"] == "get_weather" and calls[0]["ok"] and "sunny" in calls[0]["result"]
@@ -800,7 +800,7 @@ def test_webhook_test_endpoint_delivers_signed_request_to_real_server(env):
     assert d["status"] == "delivered" and d["last_status_code"] == 204
     body, headers = got[0]
     assert json.loads(body)["type"] == "webhook.test"
-    assert webhooks.verify(wh["secret"], body, headers["Mirage-Signature"])
+    assert webhooks.verify(wh["secret"], body, headers["VocalFace-Signature"])
     # a dead receiver is recorded, not raised, and retried later
     wh2 = c.post("/v1/webhooks", json={"url": "http://127.0.0.1:1/x"}, headers=H(key)).json()
     d2 = c.post(f"/v1/webhooks/{wh2['id']}/test", headers=H(key)).json()
@@ -811,10 +811,10 @@ def test_sdk_feature_methods(env):
     import sys
     from pathlib import Path
     sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "sdk" / "python"))
-    from mirage_sdk import Mirage
+    from vocalface_sdk import VocalFace
 
     c, key, cid = env
-    m = Mirage(api_key=key, http_client=c)
+    m = VocalFace(api_key=key, http_client=c)
     pid = m.list_personas()[0]["id"]
     m.set_persona_config(pid, greeting="Hi", language="es", objectives=[{"name": "o", "description": "d"}])
     assert m.get_persona_config(pid)["language"] == "es"
@@ -824,7 +824,7 @@ def test_sdk_feature_methods(env):
     wh = m.create_webhook("http://x.test/h", ["conversation.ended"])
     body = '{"a":1}'
     sig = webhooks.sign(wh["secret"], body)
-    assert Mirage.verify_webhook(wh["secret"], body, sig) and not Mirage.verify_webhook("nope", body, sig)
+    assert VocalFace.verify_webhook(wh["secret"], body, sig) and not VocalFace.verify_webhook("nope", body, sig)
     assert m.list_webhooks()[0]["id"] == wh["id"] and m.webhook_deliveries(wh["id"]) == []
     m.delete_webhook(wh["id"])
     assert any(v["id"] == "ef_dora" for v in m.voices("es")["voices"])
@@ -845,7 +845,7 @@ def test_judge_backend_env_override(env, monkeypatch):
         conv = s.get(db.Conversation, cid); persona = s.get(db.Persona, conv.persona_id)
         rt = cr.ConversationRuntime.build(s, conv, persona)
     assert rt.judge_backend().model != "qwen3:8b"
-    monkeypatch.setenv("MIRAGE_JUDGE_MODEL", "qwen3:8b")
+    monkeypatch.setenv("VOCALFACE_JUDGE_MODEL", "qwen3:8b")
     assert rt.judge_backend().model == "qwen3:8b"
 
 

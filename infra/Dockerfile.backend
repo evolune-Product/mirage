@@ -1,8 +1,8 @@
-# Mirage API (FastAPI). Build from the repo root:  docker build -f infra/Dockerfile.backend -t mirage-backend .
+# VocalFace API (FastAPI). Build from the repo root:  docker build -f infra/Dockerfile.backend -t vocalface-backend .
 # UNTESTED: Docker is not installed on the dev machine this was written on.
 FROM python:3.12-slim
 
-ENV PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1 MIRAGE_DATA=/data MIRAGE_ENV=production
+ENV PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1 VOCALFACE_DATA=/data VOCALFACE_ENV=production
 RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg libsndfile1 espeak-ng curl \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
@@ -11,10 +11,10 @@ RUN pip install -r /app/backend/requirements.txt
 COPY backend /app/backend
 # models (kokoro, wespeaker) are mounted at /app/models by compose; see docs/DEPLOY.md for the download commands
 COPY workers /app/workers
-RUN useradd -m mirage && mkdir -p /data /app/models && chown -R mirage /data /app/models
-USER mirage
+RUN useradd -m vocalface && mkdir -p /data /app/models && chown -R vocalface /data /app/models
+USER vocalface
 WORKDIR /app/backend
 EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=40s CMD curl -fsS http://localhost:8000/health || exit 1
-# One process per SQLite file. For more workers move to Postgres (MIRAGE_DB_URL) and put the limiter on Redis.
+# One process per SQLite file. For more workers move to Postgres (VOCALFACE_DB_URL) and put the limiter on Redis.
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips", "*"]

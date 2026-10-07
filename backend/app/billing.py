@@ -44,7 +44,7 @@ TOPUPS = {"topup_60": (60, 1200), "topup_300": (300, 5000), "topup_1000": (1000,
 
 
 def usd_inr() -> float:
-    return float(os.getenv("MIRAGE_USD_INR", "85"))
+    return float(os.getenv("VOCALFACE_USD_INR", "85"))
 
 
 def resolve_sku(kind: str, sku: str) -> tuple[int, int, str]:
@@ -53,9 +53,9 @@ def resolve_sku(kind: str, sku: str) -> tuple[int, int, str]:
         p = PLANS[sku]
         if p.price_cents == 0:
             raise KeyError(sku)
-        return p.included_minutes * 60, p.price_cents, f"Mirage {p.name} plan (one month)"
+        return p.included_minutes * 60, p.price_cents, f"VocalFace {p.name} plan (one month)"
     mins, cents = TOPUPS[sku]
-    return mins * 60, cents, f"Mirage {mins} minute top-up"
+    return mins * 60, cents, f"VocalFace {mins} minute top-up"
 
 
 # ---------------- providers ----------------
@@ -470,7 +470,7 @@ def run_monthly_reset(session: Session, now: datetime | None = None) -> dict:
 
 
 async def reset_loop(interval: float = 3600.0) -> None:
-    """API-process background task (disable with MIRAGE_BILLING_LOOP=0). Idempotent, so extra processes are harmless."""
+    """API-process background task (disable with VOCALFACE_BILLING_LOOP=0). Idempotent, so extra processes are harmless."""
     import asyncio
 
     from . import db

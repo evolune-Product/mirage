@@ -11,7 +11,7 @@ type Plan = { id: string; name: string; price_cents: number; included_minutes: n
 type Topup = { sku: string; minutes: number; price_cents: number };
 type Entry = { id: string; kind: string; seconds: number; amount_cents: number; currency: string; note: string; created_at: string };
 const usd = (c: number) => `$${(c / 100).toFixed(c % 100 ? 2 : 0)}`;
-const KIND: Record<string, string> = { usage: "text-gray-300 bg-white/5", grant: "text-mirage-mint bg-mirage-mint/10", topup: "text-mirage-cyan bg-mirage-cyan/10", plan: "text-mirage-violet bg-mirage-violet/15", adjust: "text-mirage-amber bg-mirage-amber/10" };
+const KIND: Record<string, string> = { usage: "text-gray-300 bg-white/5", grant: "text-vocalface-mint bg-vocalface-mint/10", topup: "text-vocalface-cyan bg-vocalface-cyan/10", plan: "text-vocalface-violet bg-vocalface-violet/15", adjust: "text-vocalface-amber bg-vocalface-amber/10" };
 
 export default function Billing() {
   const [plans, setPlans] = useState<Plan[] | null>(null); const [topups, setTopups] = useState<Topup[]>([]);
@@ -45,12 +45,12 @@ export default function Billing() {
         {plans === null ? [0, 1, 2].map((i) => <Skeleton key={i} className="h-52" />) : paid.map((p, i) => {
           const cur = status?.plan.id === p.id; const pop = i === mid && paid.length > 2;
           return (
-            <motion.div key={p.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }} className={`card relative flex flex-col ${pop ? "!border-mirage-rose/50 shadow-[0_0_50px_-15px_rgba(255,77,141,.5)]" : ""}`}>
-              {pop && <span className="absolute -top-2.5 right-4 rounded-full bg-mirage-gradient px-2.5 py-0.5 text-[10px] font-semibold uppercase text-white">Popular</span>}
+            <motion.div key={p.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }} className={`card relative flex flex-col ${pop ? "!border-vocalface-rose/50 shadow-[0_0_50px_-15px_rgba(255,77,141,.5)]" : ""}`}>
+              {pop && <span className="absolute -top-2.5 right-4 rounded-full bg-vocalface-gradient px-2.5 py-0.5 text-[10px] font-semibold uppercase text-white">Popular</span>}
               <p className="font-medium">{p.name}</p>
               <p className="mt-2 font-display text-5xl">{usd(p.price_cents)}<span className="font-sans text-sm text-gray-400"> / month</span></p>
-              <p className="mt-3 flex items-center gap-2 text-sm text-gray-300"><Check size={14} className="text-mirage-mint" />{p.included_minutes} minutes included</p>
-              <p className="mt-1 flex items-center gap-2 text-sm text-gray-400"><Check size={14} className="text-mirage-mint" />then {usd(p.overage_cents_per_min)}/min</p>
+              <p className="mt-3 flex items-center gap-2 text-sm text-gray-300"><Check size={14} className="text-vocalface-mint" />{p.included_minutes} minutes included</p>
+              <p className="mt-1 flex items-center gap-2 text-sm text-gray-400"><Check size={14} className="text-vocalface-mint" />then {usd(p.overage_cents_per_min)}/min</p>
               <button className={`${pop ? "btn-grad" : "btn"} mt-5 w-full`} disabled={!!busy || cur} onClick={() => buy("plan", p.id)}>{busy === p.id && <Loader2 size={14} className="animate-spin" />}{cur ? "Current plan" : `Buy ${p.name}`}</button>
             </motion.div>
           );
@@ -77,7 +77,7 @@ export default function Billing() {
                 <td className="whitespace-nowrap px-4 py-2.5 text-gray-400">{new Date(e.created_at + (e.created_at.endsWith("Z") ? "" : "Z")).toLocaleString()}</td>
                 <td className="px-4 py-2.5"><span className={`rounded-full px-2 py-0.5 text-xs ${KIND[e.kind] || KIND.usage}`}>{e.kind}</span></td>
                 <td className="px-4 py-2.5 text-gray-400">{e.note || "-"}</td>
-                <td className={`px-4 py-2.5 text-right font-mono ${e.seconds > 0 ? "text-mirage-mint" : "text-gray-300"}`}>{e.seconds > 0 ? "+" : ""}{e.seconds}</td>
+                <td className={`px-4 py-2.5 text-right font-mono ${e.seconds > 0 ? "text-vocalface-mint" : "text-gray-300"}`}>{e.seconds > 0 ? "+" : ""}{e.seconds}</td>
               </tr>))}</tbody>
           </table>
         </div>

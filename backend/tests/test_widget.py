@@ -71,7 +71,7 @@ def test_script_and_frame_are_public_and_frameable(client):
     assert f.status_code == 200 and "x-frame-options" not in f.headers
     csp = f.headers["content-security-policy"]
     assert csp.startswith("frame-ancestors 'self'") and "https://example.com:*" in csp and "http://example.com:*" in csp
-    assert '"lang": "es"' in f.text and "--mw:#ff0000" in f.text and "MirageClient" in f.text
+    assert '"lang": "es"' in f.text and "--mw:#ff0000" in f.text and "VocalFaceClient" in f.text
     assert client.get(f"/widget/frame/{w['token']}?lang=fr").text.count('"lang": "fr"') == 1
     assert client.get(f"/widget/frame/{w['token']}?lang=zz").text.count('"lang": "es"') == 1  # bad override ignored
     # other pages keep clickjacking protection
@@ -142,8 +142,8 @@ def test_widget_js_and_sdk_copy_in_sync():
     from pathlib import Path
 
     root = Path(__file__).resolve().parents[2]
-    a = (root / "backend/app/templates/widget/mirage-widget.js").read_text()
-    b = (root / "sdk/embed/mirage-widget.js").read_text()
+    a = (root / "backend/app/templates/widget/vocalface-widget.js").read_text()
+    b = (root / "sdk/embed/vocalface-widget.js").read_text()
     assert a == b
 
 
@@ -174,7 +174,7 @@ def test_integrations_api_and_tools(client):
     assert ok and sent["url"].startswith("https://hooks.zapier.com")
     payload = json.loads(sent["body"])
     assert payload["tool"] == "book_meeting" and payload["arguments"]["preferred_time"] == "Tue 3pm" and payload["conversation_id"] == cid
-    assert webhooks.verify("whsec_b", sent["body"], sent["headers"]["Mirage-Signature"])
+    assert webhooks.verify("whsec_b", sent["body"], sent["headers"]["VocalFace-Signature"])
     # test endpoint
     t = client.post(f"/v1/personas/{pid}/integrations/test", json={"which": "booking"}, headers=h).json()
     assert t["ok"] and json.loads(sent["body"])["arguments"]["test"] is True
@@ -200,9 +200,9 @@ def test_python_sdk_methods(client):
     from pathlib import Path
 
     sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "sdk" / "python"))
-    from mirage_sdk import Mirage
+    from vocalface_sdk import VocalFace
 
-    m = Mirage(http_client=client)
+    m = VocalFace(http_client=client)
     m.signup("sdk2@x.com")
     assert len(m.list_templates()["templates"]) == 8 and m.get_template("online-tutor")["language"] == "auto"
     r = m.instantiate_template("customer-support", variables={"company_name": "Zed"})

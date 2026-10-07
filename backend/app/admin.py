@@ -1,4 +1,4 @@
-"""Operator CLI. Run from backend/ against whatever MIRAGE_DB_URL points at (never prints API keys).
+"""Operator CLI. Run from backend/ against whatever VOCALFACE_DB_URL points at (never prints API keys).
 
   python -m app.admin stats
   python -m app.admin accounts [--search EMAIL_PART] [--limit 50]

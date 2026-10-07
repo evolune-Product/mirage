@@ -25,7 +25,7 @@ const POS = ["top-left", "top-right", "bottom-left", "bottom-right"] as const;
 
 function CaptionSample({ style, accent }: { style: string; accent: string }) {
   if (style === "off") return null;
-  const words = ["Welcome", "to", "Mirage"];
+  const words = ["Welcome", "to", "VocalFace"];
   const base = style === "bold" ? "text-xl font-black uppercase tracking-tight [text-shadow:0_2px_0_#000,0_0_8px_#000]" : style === "minimal" ? "text-[11px] font-light lowercase" : style === "karaoke" ? "text-base font-extrabold [text-shadow:0_2px_0_#000]" : "rounded bg-black/65 px-2 py-0.5 text-sm font-medium";
   return <div className={`absolute inset-x-0 bottom-[10%] flex justify-center gap-1 text-white ${base}`}>{words.map((w, i) => <span key={w} style={style === "karaoke" && i === 1 ? { color: accent } : style === "bold" ? { color: accent } : undefined}>{w}</span>)}</div>;
 }
@@ -69,7 +69,7 @@ export default function CreativePanel({ o, set, faceSrc, voices, sceneCount }: {
         <div className={sec}>
           <p className="label">Logo watermark</p>
           {o.logo ? (<div className="space-y-3">
-            <div className="flex flex-wrap items-center gap-2 text-xs"><span className="rounded-lg bg-white/5 px-2 py-1 text-gray-200">{assets.find((a) => a.id === o.logo!.asset_id)?.filename || o.logo.asset_id}</span><button type="button" className="text-mirage-rose hover:underline" onClick={() => patch({ logo: null })}>Remove logo</button></div>
+            <div className="flex flex-wrap items-center gap-2 text-xs"><span className="rounded-lg bg-white/5 px-2 py-1 text-gray-200">{assets.find((a) => a.id === o.logo!.asset_id)?.filename || o.logo.asset_id}</span><button type="button" className="text-vocalface-rose hover:underline" onClick={() => patch({ logo: null })}>Remove logo</button></div>
             <Segmented size="sm" label="Logo position" value={o.logo.position} onChange={(v) => patch({ logo: { ...o.logo!, position: v } })} options={POS.map((p) => ({ id: p, label: p.replace("-", " ") }))} />
             <div className="grid gap-3 sm:grid-cols-2">
               <Field label={`Size: ${Math.round(o.logo.scale * 100)}%`}><input type="range" min={4} max={50} value={Math.round(o.logo.scale * 100)} aria-label="Logo size" onChange={(e) => patch({ logo: { ...o.logo!, scale: Number(e.target.value) / 100 } })} className="w-full" /></Field>
@@ -77,14 +77,14 @@ export default function CreativePanel({ o, set, faceSrc, voices, sceneCount }: {
           ) : (<div className="space-y-3">
             <FileDrop accept="image/png,image/jpeg,image/webp" label="Upload a logo" hint="PNG with transparency works best, up to 15 MB" busy={busy} onFile={upload} />
             <div className="flex gap-2"><input className="input" type="url" placeholder="or a logo URL" aria-label="Logo URL" value={url} onChange={(e) => setUrl(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); fromUrl(); } }} /><button type="button" onClick={fromUrl} className="btn" disabled={busy}>{busy ? <Spinner size={14} /> : "Fetch"}</button></div>
-            {assets.length > 0 && <ul className="flex flex-wrap gap-2">{assets.map((a) => <li key={a.id} className="flex items-center gap-1.5 rounded-lg border border-white/10 px-2 py-1 text-xs"><button type="button" className="max-w-32 truncate text-gray-200" onClick={() => patch({ logo: { asset_id: a.id, position: "top-right", scale: 0.14, opacity: 0.9 } })}>{a.filename || a.id}</button><button type="button" aria-label={`Delete ${a.filename || a.id}`} onClick={() => del(a.id)} className="text-gray-500 hover:text-mirage-rose"><Trash2 size={12} /></button></li>)}</ul>}
+            {assets.length > 0 && <ul className="flex flex-wrap gap-2">{assets.map((a) => <li key={a.id} className="flex items-center gap-1.5 rounded-lg border border-white/10 px-2 py-1 text-xs"><button type="button" className="max-w-32 truncate text-gray-200" onClick={() => patch({ logo: { asset_id: a.id, position: "top-right", scale: 0.14, opacity: 0.9 } })}>{a.filename || a.id}</button><button type="button" aria-label={`Delete ${a.filename || a.id}`} onClick={() => del(a.id)} className="text-gray-500 hover:text-vocalface-rose"><Trash2 size={12} /></button></li>)}</ul>}
           </div>)}
-          {err && <p className="mt-2 text-xs text-mirage-rose" role="alert">{err}</p>}
+          {err && <p className="mt-2 text-xs text-vocalface-rose" role="alert">{err}</p>}
         </div>
         <div className={sec}>
           <p className="label">Voice</p>
           <select className="input" aria-label="Voice" value={o.voice} onChange={(e) => patch({ voice: e.target.value })}>{voices.map((v) => <option key={v.value} value={v.value}>{v.label}</option>)}</select>
-          <p className="mt-1.5 text-xs text-gray-500">A cloned voice is a synthetic copy of the replica owner&apos;s voice and needs their verified consent. If it ever fails, Mirage falls back to the default voice and logs it.</p>
+          <p className="mt-1.5 text-xs text-gray-500">A cloned voice is a synthetic copy of the replica owner&apos;s voice and needs their verified consent. If it ever fails, VocalFace falls back to the default voice and logs it.</p>
         </div>
         <div className={sec}>
           <p className="label">Scenes and finishing</p>

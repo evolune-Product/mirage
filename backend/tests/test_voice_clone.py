@@ -92,8 +92,8 @@ def env(tmp_path, monkeypatch):
                                                     poolclass=StaticPool))
     SQLModel.metadata.create_all(db.engine)
     monkeypatch.setattr(jobs, "DATA_DIR", tmp_path)
-    monkeypatch.setenv("MIRAGE_SECRET_KEY", "test-secret-key-0123456789")
-    monkeypatch.setenv("MIRAGE_RL_SIGNUP", "1000/60")
+    monkeypatch.setenv("VOCALFACE_SECRET_KEY", "test-secret-key-0123456789")
+    monkeypatch.setenv("VOCALFACE_RL_SIGNUP", "1000/60")
     monkeypatch.setattr(consent_verify, "transcribe", lambda wav: service.TEST_SENTENCE)  # no Whisper in unit tests
     service._cache.clear()
     safety.limiter.reset()
@@ -304,7 +304,7 @@ def test_preview_is_gated_moderated_and_labelled(env, tmp_path):
     env.post(f"/v1/replicas/{rid}/voice", headers=h)
     r = env.post(f"/v1/replicas/{rid}/voice/preview", json={"text": "Hello world."}, headers=h)
     assert r.status_code == 200 and r.headers["content-type"] == "audio/wav" and r.content[:4] == b"RIFF"
-    assert r.headers["x-mirage-synthetic-voice"] == "cloned"
+    assert r.headers["x-vocalface-synthetic-voice"] == "cloned"
     assert env.post(f"/v1/replicas/{rid}/voice/preview", json={"text": "x" * 301}, headers=h).status_code == 422
     assert "voice.clone_used" in actions(rid)
 
@@ -453,7 +453,7 @@ def test_worker_hook_auto_creates_voice_only_with_consent(env, tmp_path, monkeyp
     with Session(db.engine) as s:
         assert s.get(ReplicaVoice, with_c).status == "ready"
         assert s.get(ReplicaVoice, without) is None
-    monkeypatch.setenv("MIRAGE_VOICE_CLONE_AUTO", "0")
+    monkeypatch.setenv("VOCALFACE_VOICE_CLONE_AUTO", "0")
     other = make_replica(env, tmp_path, acc)
     service.auto_after_replica_ready(other, env.fake)
     with Session(db.engine) as s:
@@ -464,7 +464,7 @@ def test_production_rejects_typed_consent_for_cloning(env, tmp_path, monkeypatch
     acc, h = signup(env)
     rid = make_replica(env, tmp_path, acc, consent="typed-transcript (dev only)")
     assert env.post(f"/v1/replicas/{rid}/voice", headers=h).status_code == 202  # dev: allowed
-    monkeypatch.setenv("MIRAGE_ENV", "production")
+    monkeypatch.setenv("VOCALFACE_ENV", "production")
     rid2 = make_replica(env, tmp_path, acc, consent="typed-transcript (dev only)")
     with Session(db.engine) as s:
         assert service.active_consent(s, rid2) is None

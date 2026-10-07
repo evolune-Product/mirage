@@ -5,8 +5,8 @@ fake mic file in Chromium/Firefox, Playwright mobile emulation and an echo simul
 phones and flaky networks are NOT verified (see the last section).
 
 ## Layout
-* `backend/app/static/mirage-client.js` (transport, audio, video, reconnect, PTT, camera/screen), `mirage-ui.js`
-  (controls, meters, transcript, banners, shortcuts), `mirage-client.css`. `playground.html` and `guest.html` are now thin
+* `backend/app/static/vocalface-client.js` (transport, audio, video, reconnect, PTT, camera/screen), `vocalface-ui.js`
+  (controls, meters, transcript, banners, shortcuts), `vocalface-client.css`. `playground.html` and `guest.html` are now thin
   pages on top (parity by construction). Element ids `go/int/stop/state/log/vid/face` and `window.__live` are unchanged.
 * `backend/app/rtc_transport.py` (hello negotiation, binary framing, JPEG tiers, adaptation), `pipeline/echo.py`
   (echo reference), `routers/realtime.py` (pump, resume, heartbeat), `scripts_echo_sim.py`, `tests/test_rtc.py` (9 tests).
@@ -41,8 +41,8 @@ is off (hidden when a headset-like output device is detected), and offers push-t
 | real user interrupts over echo at 1.6 s: -26 dB / -18 dB / -10 dB detected | 12/12 (100 ms) / 0/12 / 0/12 | 12/12 (186 ms) / 12/12 (475 ms) / 11/12 (1.4 s) |
 
 Honest limits: the simulation is synthetic (one speaker-mic path model); at -10 dB (basically no AEC) a user as loud as the
-echo is hard to separate. The remaining false barge-ins are at -10 dB. Thresholds: `MIRAGE_ECHO_RATIO/CORR/WARMUP_FRAMES`,
-`MIRAGE_ECHO_REF=0` disables. Real hardware tuning is needed.
+echo is hard to separate. The remaining false barge-ins are at -10 dB. Thresholds: `VOCALFACE_ECHO_RATIO/CORR/WARMUP_FRAMES`,
+`VOCALFACE_ECHO_REF=0` disables. Real hardware tuning is needed.
 
 ## 2. Connection robustness
 States: connecting, listening, hearing, thinking, speaking, reconnecting, error, ended (also `data-state` on `#state`).

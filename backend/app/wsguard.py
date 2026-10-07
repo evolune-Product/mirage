@@ -1,16 +1,16 @@
 """WebSocket abuse controls: single-use tickets, connection-rate limits, per-account concurrent-session caps and per-connection
 message/byte budgets. All state is in-process (per worker, resets on restart), like the HTTP rate limiter.
 
-Env (limit/window, e.g. MIRAGE_WS_CONNECT_IP=60/60):
-  MIRAGE_WS_CONNECT_IP       connection attempts per client IP            (default 120/60)
-  MIRAGE_WS_CONNECT_ACCOUNT  authenticated connection attempts per account (default 60/60)
-  MIRAGE_WS_AUTH_FAIL_IP     failed authentications per IP                 (default 15/60)
-  MIRAGE_WS_MAX_SESSIONS     concurrent live conversations per account     (default 5; 0 = unlimited)
-  MIRAGE_WS_MSG_RATE         binary frames/s sustained "rate/burst"        (default 200/400)
-  MIRAGE_WS_TEXT_RATE        text frames/s sustained "rate/burst"          (default 40/80)
-  MIRAGE_WS_BYTES_RATE       bytes/s sustained "rate/burst"                (default 2000000/4000000)
-  MIRAGE_WS_MAX_BIN / MIRAGE_WS_MAX_TEXT  largest single frame            (default 65536 / 1000000)
-  MIRAGE_WS_TICKET_TTL       ticket lifetime seconds                        (default 30)
+Env (limit/window, e.g. VOCALFACE_WS_CONNECT_IP=60/60):
+  VOCALFACE_WS_CONNECT_IP       connection attempts per client IP            (default 120/60)
+  VOCALFACE_WS_CONNECT_ACCOUNT  authenticated connection attempts per account (default 60/60)
+  VOCALFACE_WS_AUTH_FAIL_IP     failed authentications per IP                 (default 15/60)
+  VOCALFACE_WS_MAX_SESSIONS     concurrent live conversations per account     (default 5; 0 = unlimited)
+  VOCALFACE_WS_MSG_RATE         binary frames/s sustained "rate/burst"        (default 200/400)
+  VOCALFACE_WS_TEXT_RATE        text frames/s sustained "rate/burst"          (default 40/80)
+  VOCALFACE_WS_BYTES_RATE       bytes/s sustained "rate/burst"                (default 2000000/4000000)
+  VOCALFACE_WS_MAX_BIN / VOCALFACE_WS_MAX_TEXT  largest single frame            (default 65536 / 1000000)
+  VOCALFACE_WS_TICKET_TTL       ticket lifetime seconds                        (default 30)
 """
 import os
 import secrets
@@ -42,18 +42,18 @@ def _int(name: str, default: int) -> int:
 
 # ---------------- connection-level limits ----------------
 def connect_allowed(ip: str) -> bool:
-    lim, win = _pair("MIRAGE_WS_CONNECT_IP", (120, 60))
+    lim, win = _pair("VOCALFACE_WS_CONNECT_IP", (120, 60))
     return limiter.check(f"ws:ip:{ip}", int(lim), win)
 
 
 def account_connect_allowed(account_id: str) -> bool:
-    lim, win = _pair("MIRAGE_WS_CONNECT_ACCOUNT", (60, 60))
+    lim, win = _pair("VOCALFACE_WS_CONNECT_ACCOUNT", (60, 60))
     return limiter.check(f"ws:acc:{account_id}", int(lim), win)
 
 
 def auth_failure_allowed(ip: str) -> bool:
     """Record a failed authentication; False once the IP has burned its budget (brute-forcing keys/tickets)."""
-    lim, win = _pair("MIRAGE_WS_AUTH_FAIL_IP", (15, 60))
+    lim, win = _pair("VOCALFACE_WS_AUTH_FAIL_IP", (15, 60))
     return limiter.check(f"ws:fail:{ip}", int(lim), win)
 
 
@@ -63,7 +63,7 @@ _live: dict[str, Counter] = {}  # account id -> {conversation id: live sockets};
 
 
 def max_sessions() -> int:
-    return _int("MIRAGE_WS_MAX_SESSIONS", 5)
+    return _int("VOCALFACE_WS_MAX_SESSIONS", 5)
 
 
 def acquire_session(account_id: str, cid: str) -> bool:
@@ -99,7 +99,7 @@ MAX_OUTSTANDING = 50
 
 
 def ticket_ttl() -> int:
-    return _int("MIRAGE_WS_TICKET_TTL", 30)
+    return _int("VOCALFACE_WS_TICKET_TTL", 30)
 
 
 def mint_ticket(account_id: str, cid: str) -> str | None:
@@ -149,11 +149,11 @@ class MsgGuard:
     """One per socket. check(msg) -> None when ok, else (close_code, reason). msg is an ASGI websocket.receive dict."""
 
     def __init__(self, clock=time.monotonic):
-        r, b = _pair("MIRAGE_WS_MSG_RATE", (200, 400))
-        tr, tb = _pair("MIRAGE_WS_TEXT_RATE", (40, 80))
-        br, bb = _pair("MIRAGE_WS_BYTES_RATE", (2_000_000, 4_000_000))
+        r, b = _pair("VOCALFACE_WS_MSG_RATE", (200, 400))
+        tr, tb = _pair("VOCALFACE_WS_TEXT_RATE", (40, 80))
+        br, bb = _pair("VOCALFACE_WS_BYTES_RATE", (2_000_000, 4_000_000))
         self.bin, self.text, self.bytes = _Bucket(r, b, clock), _Bucket(tr, tb, clock), _Bucket(br, bb, clock)
-        self.max_bin, self.max_text = _int("MIRAGE_WS_MAX_BIN", 65536), _int("MIRAGE_WS_MAX_TEXT", 1_000_000)
+        self.max_bin, self.max_text = _int("VOCALFACE_WS_MAX_BIN", 65536), _int("VOCALFACE_WS_MAX_TEXT", 1_000_000)
 
     def check(self, msg: dict):
         b, t = msg.get("bytes"), msg.get("text")

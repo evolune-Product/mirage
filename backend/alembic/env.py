@@ -1,4 +1,4 @@
-"""Alembic environment: uses the app's own engine URL (MIRAGE_DB_URL) and the full SQLModel metadata."""
+"""Alembic environment: uses the app's own engine URL (VOCALFACE_DB_URL) and the full SQLModel metadata."""
 from alembic import context
 
 from app import migrate

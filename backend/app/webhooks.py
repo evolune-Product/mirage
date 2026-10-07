@@ -4,8 +4,8 @@ emit(account_id, event, data)  -> inserts one WebhookDelivery per matching endpo
                                   including the worker process; never raises).
 deliver_due(...)               -> sends due deliveries; run by the API process loop (`run_loop`) or any process.
 
-Signature header (Stripe style):  Mirage-Signature: t=<unix>,v1=<hex hmac_sha256(secret, f"{t}.{body}")>
-Other headers: Mirage-Event, Mirage-Delivery-Id, Mirage-Event-Id, User-Agent: Mirage-Webhooks/1.
+Signature header (Stripe style):  VocalFace-Signature: t=<unix>,v1=<hex hmac_sha256(secret, f"{t}.{body}")>
+Other headers: VocalFace-Event, VocalFace-Delivery-Id, VocalFace-Event-Id, User-Agent: VocalFace-Webhooks/1.
 A delivery succeeds on any 2xx. Retries after 10s, 1m, 5m, 30m, 2h (6 attempts total), then status=failed.
 """
 from __future__ import annotations
@@ -122,8 +122,8 @@ def deliver_one(s: Session, d: WebhookDelivery, send=http_send) -> None:
         d.status, d.last_error = "failed", "endpoint removed or disabled"
         s.add(d); s.commit()
         return
-    headers = {"content-type": "application/json", "user-agent": "Mirage-Webhooks/1", "Mirage-Event": d.event,
-               "Mirage-Delivery-Id": d.id, "Mirage-Event-Id": d.event_id, "Mirage-Signature": sign(ep.secret, d.payload)}
+    headers = {"content-type": "application/json", "user-agent": "VocalFace-Webhooks/1", "VocalFace-Event": d.event,
+               "VocalFace-Delivery-Id": d.id, "VocalFace-Event-Id": d.event_id, "VocalFace-Signature": sign(ep.secret, d.payload)}
     try:
         code, text = send(ep.url, headers, d.payload)
         d.last_status_code = code

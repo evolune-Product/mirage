@@ -1,9 +1,9 @@
 """Sanity-test templates against the real local LLM (Ollama) with the production prompt/retrieval/tool/guardrail chain.
 
-  cd backend && MIRAGE_DB_URL=sqlite:////tmp/tpl.db MIRAGE_DATA=/tmp/tpl_data .venv/bin/python -m app.templates.eval_cli \
+  cd backend && VOCALFACE_DB_URL=sqlite:////tmp/tpl.db VOCALFACE_DATA=/tmp/tpl_data .venv/bin/python -m app.templates.eval_cli \
       [--template customer-support] [--model qwen3:8b] [--out /tmp/tpl_eval.json]
 
-Uses the same DB as a running API (set MIRAGE_DB_URL identically) only for the lead rows; text-in/text-out (no STT/TTS).
+Uses the same DB as a running API (set VOCALFACE_DB_URL identically) only for the lead rows; text-in/text-out (no STT/TTS).
 Per template: sample Q&A (knowledge used), guardrail probes, a scripted lead-capture conversation (must call capture_lead with
 consent and store name + phone), and a decline conversation (must NOT store a lead and must not keep asking).
 """

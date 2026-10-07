@@ -1,7 +1,7 @@
 """Plain-assert checks for workers/engines (run by backend/tests/test_engines.py in a workers venv with numpy+opencv+scipy).
 
   python engine_checks.py <case>      cases: gate_strict gate_unclear dev_auto viseme phonemes warp server_commercial server_dev_viseme
-Env is set by the caller (MIRAGE_COMMERCIAL_ONLY etc.), so each case is its own process."""
+Env is set by the caller (VOCALFACE_COMMERCIAL_ONLY etc.), so each case is its own process."""
 import os
 import subprocess
 import sys
@@ -21,7 +21,7 @@ def gate_strict():
         try:
             call()
         except CommercialOnlyError as e:
-            assert "wav2lip" in str(e) and "MIRAGE_COMMERCIAL_ONLY" in str(e)
+            assert "wav2lip" in str(e) and "VOCALFACE_COMMERCIAL_ONLY" in str(e)
         else:
             raise AssertionError("wav2lip must be refused in commercial-only mode")
     engines.check_allowed("viseme")
@@ -47,7 +47,7 @@ def gate_strict():
 
 
 def gate_unclear():
-    assert engines.commercial_only() and os.environ.get("MIRAGE_COMMERCIAL_ALLOW_UNCLEAR") == "1"
+    assert engines.commercial_only() and os.environ.get("VOCALFACE_COMMERCIAL_ALLOW_UNCLEAR") == "1"
     engines.check_allowed("musetalk")  # operator opted in
     try:
         engines.check_allowed("wav2lip")
@@ -148,8 +148,8 @@ def warp():
 
 
 def _server_env_ok():
-    os.environ.setdefault("MIRAGE_DATA", "/tmp/_engine_checks_data")
-    os.environ["MIRAGE_LIPSYNC_PRELOAD"] = "0"
+    os.environ.setdefault("VOCALFACE_DATA", "/tmp/_engine_checks_data")
+    os.environ["VOCALFACE_LIPSYNC_PRELOAD"] = "0"
 
 
 def server_commercial():
@@ -160,13 +160,13 @@ def server_commercial():
     c = TestClient(ls.app)
     h = c.get("/health").json()
     assert h["commercial_only"] is True and "wav2lip" in h["disabled_engines"], h
-    explicit = os.environ.get("MIRAGE_LIPSYNC_ENGINE") == "wav2lip"
+    explicit = os.environ.get("VOCALFACE_LIPSYNC_ENGINE") == "wav2lip"
     if not explicit:
         assert h["engine"] in ("viseme", "musetalk"), h["engine"]
         assert h["engine_licence"]["commercial"] in (True, None)
     assert h["engines"]["wav2lip"]["disabled_by_policy"]
     if explicit:  # explicitly requested research engine -> refused, service says why
-        assert h["engine_error"] and "MIRAGE_COMMERCIAL_ONLY" in h["engine_error"]
+        assert h["engine_error"] and "VOCALFACE_COMMERCIAL_ONLY" in h["engine_error"]
         r = c.post("/render/x", content=b"\0" * 8000)
         assert r.status_code == 503, r.status_code
 

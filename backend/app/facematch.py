@@ -28,7 +28,7 @@ import numpy as np
 from . import consent_verify, secretbox, settings
 
 ROOT = Path(__file__).resolve().parents[2]
-FACE_PY = Path(os.getenv("MIRAGE_FACE_PY", "") or ROOT / "workers" / ".venv-face" / "bin" / "python")
+FACE_PY = Path(os.getenv("VOCALFACE_FACE_PY", "") or ROOT / "workers" / ".venv-face" / "bin" / "python")
 FACE_SCRIPT = ROOT / "workers" / "face_embed.py"
 MODELS = ROOT / "models"
 
@@ -48,20 +48,20 @@ class FaceUnavailable(RuntimeError):
 
 def mode() -> str:
     """enforce | warn | off. Default enforce in production, warn in dev."""
-    m = os.getenv("MIRAGE_CONSENT_FACE_MATCH", "").strip().lower()
+    m = os.getenv("VOCALFACE_CONSENT_FACE_MATCH", "").strip().lower()
     if m in ("enforce", "warn", "off"):
         return m
     return "enforce" if settings.is_production() else "warn"
 
 
 def liveness_mode() -> str:
-    m = os.getenv("MIRAGE_CONSENT_LIVENESS", "").strip().lower()
+    m = os.getenv("VOCALFACE_CONSENT_LIVENESS", "").strip().lower()
     return m if m in ("enforce", "warn", "off") else mode()
 
 
 def threshold() -> float:
     try:
-        return float(os.getenv("MIRAGE_FACE_MATCH_THRESHOLD", "") or DEFAULT_THRESHOLD)
+        return float(os.getenv("VOCALFACE_FACE_MATCH_THRESHOLD", "") or DEFAULT_THRESHOLD)
     except ValueError:
         return DEFAULT_THRESHOLD
 
@@ -125,7 +125,7 @@ def reference_embeddings(rid: str, url: str, photo: bool) -> np.ndarray:
             return np.array(json.loads(secretbox.decrypt(cache.read_text())), dtype=np.float32)
         except Exception:  # noqa: BLE001  (corrupt or key rotated: rebuild)
             cache.unlink(missing_ok=True)
-    with tempfile.TemporaryDirectory(prefix="mirage_ref_") as td:
+    with tempfile.TemporaryDirectory(prefix="vocalface_ref_") as td:
         src = Path(td) / ("ref.img" if photo else "ref.vid")
         consent_verify.fetch_train_video(url, src)
         if photo:

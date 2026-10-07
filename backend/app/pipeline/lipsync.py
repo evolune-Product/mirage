@@ -4,8 +4,8 @@ import secrets
 
 import httpx
 
-URL = os.environ.get("MIRAGE_LIPSYNC_URL", "http://localhost:8100")
-RENDER_TIMEOUT_S = float(os.environ.get("MIRAGE_LIPSYNC_RENDER_TIMEOUT", "15"))  # a piece later than this is useless: skip it
+URL = os.environ.get("VOCALFACE_LIPSYNC_URL", "http://localhost:8100")
+RENDER_TIMEOUT_S = float(os.environ.get("VOCALFACE_LIPSYNC_RENDER_TIMEOUT", "15"))  # a piece later than this is useless: skip it
 _shared: dict = {}
 
 

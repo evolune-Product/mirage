@@ -14,8 +14,8 @@ import time
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-FH = Path(os.environ.get("MIRAGE_FLASHHEAD_DIR", HERE / "SoulX-FlashHead"))
-PY = Path(os.environ.get("MIRAGE_FLASHHEAD_PY", HERE / ".venv-flash" / "bin" / "python"))
+FH = Path(os.environ.get("VOCALFACE_FLASHHEAD_DIR", HERE / "SoulX-FlashHead"))
+PY = Path(os.environ.get("VOCALFACE_FLASHHEAD_PY", HERE / ".venv-flash" / "bin" / "python"))
 
 
 def available() -> tuple[bool, str]:
@@ -44,7 +44,7 @@ def main():
     ap.add_argument("--audio", required=True)
     ap.add_argument("--out", required=True)
     ap.add_argument("--fps", type=float, default=25.0)  # FlashHead is fixed 25 fps; accepted for CLI compatibility
-    ap.add_argument("--model", default=os.environ.get("MIRAGE_FLASHHEAD_MODEL", "lite"), choices=["lite", "pro"])
+    ap.add_argument("--model", default=os.environ.get("VOCALFACE_FLASHHEAD_MODEL", "lite"), choices=["lite", "pro"])
     ap.add_argument("--no-face-crop", action="store_true")
     a = ap.parse_args()
     ok, why = available()

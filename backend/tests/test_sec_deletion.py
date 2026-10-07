@@ -24,8 +24,8 @@ def env(tmp_path, monkeypatch):
     monkeypatch.setattr(db, "engine", create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool))
     SQLModel.metadata.create_all(db.engine)
     monkeypatch.setattr(jobs, "DATA_DIR", tmp_path)
-    monkeypatch.setenv("MIRAGE_SECRET_KEY", "test-secret-key-0123456789")
-    monkeypatch.setenv("MIRAGE_RL_SIGNUP", "1000/60")
+    monkeypatch.setenv("VOCALFACE_SECRET_KEY", "test-secret-key-0123456789")
+    monkeypatch.setenv("VOCALFACE_RL_SIGNUP", "1000/60")
     safety.limiter.reset()
 
     def sess():

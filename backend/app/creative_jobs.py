@@ -60,9 +60,9 @@ def replica_background(s: Session, rid: str) -> Optional[dict]:
 
 def use_creative(s: Session, vid: str, rep: Replica) -> bool:
     """Route a video through the Wav2Lip creative renderer?  Yes when it has render options, the replica is a photo replica,
-    the replica has a default background, or MIRAGE_VIDEO_ENGINE=wav2lip. Plain videos keep the legacy path."""
+    the replica has a default background, or VOCALFACE_VIDEO_ENGINE=wav2lip. Plain videos keep the legacy path."""
     return (s.get(VideoOptions, vid) is not None or s.get(PhotoReplica, rep.id) is not None
-            or replica_background(s, rep.id) is not None or os.environ.get("MIRAGE_VIDEO_ENGINE", "").lower() == "wav2lip")
+            or replica_background(s, rep.id) is not None or os.environ.get("VOCALFACE_VIDEO_ENGINE", "").lower() == "wav2lip")
 
 
 # ---------------------------------------------------------------- heavy steps (monkeypatched in tests)
@@ -93,7 +93,7 @@ def run_photo_idle(photo: Path, out_mp4: Path, seconds: float, head: float) -> d
             res = _last_json(r.stdout)
         except Exception:  # noqa: BLE001
             res = {"ok": False, "error": (r.stderr or r.stdout)[-400:] or "flashhead idle failed"}
-        if res.get("ok") or os.environ.get("MIRAGE_VIDEO_RENDERER", "auto").lower() == "flashhead":
+        if res.get("ok") or os.environ.get("VOCALFACE_VIDEO_RENDERER", "auto").lower() == "flashhead":
             return res
     r = subprocess.run([str(LP_PY), str(WORKERS / "photo_idle.py"), "--image", str(photo), "--out", str(out_mp4),
                         "--seconds", str(seconds), "--head", str(head)], capture_output=True, text=True, timeout=3 * 3600,
@@ -120,7 +120,7 @@ def transcribe_words(wav: Path, language: Optional[str] = None) -> Optional[list
         if _whisper is None:
             from faster_whisper import WhisperModel
 
-            _whisper = WhisperModel(os.environ.get("MIRAGE_CAPTION_WHISPER", "base"), device="cpu", compute_type="int8")
+            _whisper = WhisperModel(os.environ.get("VOCALFACE_CAPTION_WHISPER", "base"), device="cpu", compute_type="int8")
         segs, _ = _whisper.transcribe(audio, language=language, word_timestamps=True)
         return [{"w": w.word.strip(), "s": float(w.start), "e": float(w.end)} for sg in segs for w in (sg.words or []) if w.word.strip()]
     except Exception:  # noqa: BLE001

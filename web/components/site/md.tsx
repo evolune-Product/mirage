@@ -9,9 +9,9 @@ export function inline(s: string, key = ""): ReactNode[] {
   while ((m = re.exec(s))) {
     if (m.index > last) out.push(s.slice(last, m.index));
     const t = m[0];
-    if (t[0] === "`") out.push(<code key={key + i} className="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.85em] text-mirage-cyan [overflow-wrap:anywhere]">{t.slice(1, -1)}</code>);
+    if (t[0] === "`") out.push(<code key={key + i} className="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.85em] text-vocalface-cyan [overflow-wrap:anywhere]">{t.slice(1, -1)}</code>);
     else if (t[0] === "*") out.push(<strong key={key + i} className="font-semibold text-white">{t.slice(2, -2)}</strong>);
-    else { const mm = /\[([^\]]+)\]\(([^)]+)\)/.exec(t)!; out.push(<a key={key + i} href={mm[2]} className="text-mirage-rose underline underline-offset-2 hover:text-white">{mm[1]}</a>); }
+    else { const mm = /\[([^\]]+)\]\(([^)]+)\)/.exec(t)!; out.push(<a key={key + i} href={mm[2]} className="text-vocalface-rose underline underline-offset-2 hover:text-white">{mm[1]}</a>); }
     last = m.index + t.length; i++;
   }
   if (last < s.length) out.push(s.slice(last));
@@ -45,7 +45,7 @@ export function Markdown({ source }: { source: string }) {
     if (h) {
       const id = slugify(h[2]); const n = h[1].length;
       if (n === 1) out.push(<h1 key={k++} id={id} className="font-display text-5xl text-white md:text-6xl">{h[2]}</h1>);
-      else if (n === 2) out.push(<h2 key={k++} id={id} className="mt-14 scroll-mt-24 border-t border-white/10 pt-8 font-display text-3xl text-white md:text-4xl"><a href={`#${id}`} className="hover:text-mirage-amber">{h[2]}</a></h2>);
+      else if (n === 2) out.push(<h2 key={k++} id={id} className="mt-14 scroll-mt-24 border-t border-white/10 pt-8 font-display text-3xl text-white md:text-4xl"><a href={`#${id}`} className="hover:text-vocalface-amber">{h[2]}</a></h2>);
       else out.push(<h3 key={k++} id={id} className="mt-8 scroll-mt-24 text-lg font-semibold text-white">{h[2]}</h3>);
       i++; continue;
     }
@@ -57,7 +57,7 @@ export function Markdown({ source }: { source: string }) {
     if (/^(- |\d+\. )/.test(l)) {
       const ord = /^\d+\. /.test(l); const items: string[] = [];
       while (i < lines.length && /^(- |\d+\. )/.test(lines[i])) items.push(lines[i++].replace(/^(- |\d+\. )/, ""));
-      const cls = `my-4 space-y-2 pl-6 text-gray-300 ${ord ? "list-decimal" : "list-disc"} marker:text-mirage-rose`;
+      const cls = `my-4 space-y-2 pl-6 text-gray-300 ${ord ? "list-decimal" : "list-disc"} marker:text-vocalface-rose`;
       const kids = items.map((t, j) => <li key={j} className="pl-1 leading-relaxed">{inline(t, `l${j}`)}</li>);
       out.push(ord ? <ol key={k++} className={cls}>{kids}</ol> : <ul key={k++} className={cls}>{kids}</ul>); continue;
     }

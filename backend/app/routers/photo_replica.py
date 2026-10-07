@@ -118,7 +118,7 @@ def get_photo_replica(rid: str, acc: Account = Depends(current_account), s: Sess
 def _lipsync_invalidate(rid: str) -> None:
     """Best effort: tell the live lip-sync service to rebuild this replica's base with the new background."""
     try:
-        httpx.post(f"{os.environ.get('MIRAGE_LIPSYNC_URL', 'http://localhost:8100').rstrip('/')}/invalidate/{rid}", timeout=2)
+        httpx.post(f"{os.environ.get('VOCALFACE_LIPSYNC_URL', 'http://localhost:8100').rstrip('/')}/invalidate/{rid}", timeout=2)
     except Exception:  # noqa: BLE001
         pass
 

@@ -10,7 +10,7 @@ export function simVerdict(sim: number): { label: string; tone: "mint" | "grad" 
   if (sim >= 0.75) return { label: "Very close", tone: "mint", text: "Sounds like the same person to the speaker model." };
   if (sim >= 0.55) return { label: "Good", tone: "mint", text: "Recognisably the same voice; fine for videos." };
   if (sim >= 0.3) return { label: "Weak", tone: "grad", text: "Accepted, but it only loosely resembles the original. Re-clone from cleaner training audio for better results." };
-  return { label: "Too low", tone: "rose", text: "Below the 0.30 threshold, so Mirage refuses to use this voice." };
+  return { label: "Too low", tone: "rose", text: "Below the 0.30 threshold, so VocalFace refuses to use this voice." };
 }
 
 export default function VoicePanel({ rid, replicaReady, consent }: { rid: string; replicaReady: boolean; consent: "none" | "typed" | "verified" | undefined }) {
@@ -35,24 +35,24 @@ export default function VoicePanel({ rid, replicaReady, consent }: { rid: string
   const sv = v && v.similarity != null ? simVerdict(v.similarity) : null;
   const needVerified = consent !== "verified";
   return (
-    <Section title="Cloned voice" icon={<AudioLines size={16} className="text-mirage-violet" />} hint="A synthetic copy of the replica owner's voice, created only with their recorded consent. It speaks your videos and can be picked for personas.">
+    <Section title="Cloned voice" icon={<AudioLines size={16} className="text-vocalface-violet" />} hint="A synthetic copy of the replica owner's voice, created only with their recorded consent. It speaks your videos and can be picked for personas.">
       {na ? <Callout title="Unavailable">This server does not expose voice cloning.</Callout> : v === undefined ? <div className="h-16 animate-pulse rounded-xl bg-white/5" /> : (<div className="space-y-3" data-testid="voice-panel">
         {(!v || v.status === "none") && (<>
           {!replicaReady
-            ? <Callout tone="warn" title="Replica not ready yet">Cloning starts from the training video&apos;s audio, so the replica has to finish training first. If consent is voice-verified Mirage starts cloning automatically once it is ready.</Callout>
+            ? <Callout tone="warn" title="Replica not ready yet">Cloning starts from the training video&apos;s audio, so the replica has to finish training first. If consent is voice-verified VocalFace starts cloning automatically once it is ready.</Callout>
             : needVerified
               ? <Callout tone="warn" title="Voice-verified consent needed">{consent === "none" ? "This replica has no consent on file. " : "Only typed consent is on file. "}To clone a voice, the person must record the consent phrase with a microphone and their voice has to match the training video. Open Consent evidence above to check, or re-record consent from the replica card.</Callout>
-              : <Callout tone="info" title="Ready to clone">Mirage extracts the cleanest 15-20 seconds of the training audio and tests the result. Good for videos; in live conversations a cloned voice adds roughly 4-5 s of delay, so presets stay the default there.</Callout>}
+              : <Callout tone="info" title="Ready to clone">VocalFace extracts the cleanest 15-20 seconds of the training audio and tests the result. Good for videos; in live conversations a cloned voice adds roughly 4-5 s of delay, so presets stay the default there.</Callout>}
           <button type="button" className="btn-grad" disabled={busy || !replicaReady || needVerified} onClick={() => clone(false)}>{busy ? <Spinner /> : <AudioLines size={15} />}Clone this voice</button>
           {err && <Callout tone="bad" title="Cloning refused">{err}</Callout>}
         </>)}
-        {active && (<div className="rounded-xl border border-mirage-violet/25 bg-mirage-violet/[0.07] p-3.5"><p className="mb-2 flex items-center gap-2 text-sm"><Spinner size={14} />{v.status === "queued" ? "Queued" : "Cloning your voice"}</p><Progress pct={v.status === "queued" ? 15 : 60} label="Extracting a clean reference, synthesising a test sentence, measuring similarity..." /></div>)}
+        {active && (<div className="rounded-xl border border-vocalface-violet/25 bg-vocalface-violet/[0.07] p-3.5"><p className="mb-2 flex items-center gap-2 text-sm"><Spinner size={14} />{v.status === "queued" ? "Queued" : "Cloning your voice"}</p><Progress pct={v.status === "queued" ? 15 : 60} label="Extracting a clean reference, synthesising a test sentence, measuring similarity..." /></div>)}
         {v?.status === "failed" && (<><Callout tone="bad" title="Cloning failed">{v.error || "The clone did not pass the quality check."}</Callout>
           <button type="button" className="btn" disabled={busy} onClick={() => clone(true)}>{busy ? <Spinner size={14} /> : <RefreshCw size={14} />}Try again</button></>)}
         {v?.status === "revoked" && <Callout tone="warn" title="Voice revoked">Consent was revoked, so the reference audio was deleted and this voice can no longer be used. Record consent again to clone a new one.</Callout>}
         {v?.status === "ready" && (<>
           <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3.5">
-            <div className="flex flex-wrap items-center gap-2"><Badge s="ready" /><span className="rounded-full bg-mirage-violet/15 px-2 py-0.5 text-[11px] text-mirage-violet">synthetic voice</span><code className="ml-auto truncate font-mono text-[11px] text-gray-500">{v.voice_id}</code></div>
+            <div className="flex flex-wrap items-center gap-2"><Badge s="ready" /><span className="rounded-full bg-vocalface-violet/15 px-2 py-0.5 text-[11px] text-vocalface-violet">synthetic voice</span><code className="ml-auto truncate font-mono text-[11px] text-gray-500">{v.voice_id}</code></div>
             {sv && v.similarity != null && (<div className="mt-3" data-testid="similarity">
               <div className="flex items-baseline justify-between"><p className="text-sm">Similarity <span className="font-mono text-white">{v.similarity.toFixed(2)}</span> <span className="text-gray-400">({sv.label})</span></p><span className="text-[11px] text-gray-500">same person is typically 0.8-0.9</span></div>
               <Progress pct={v.similarity * 100} tone={sv.tone} className="mt-1.5" label={sv.text} /></div>)}
@@ -72,7 +72,7 @@ export default function VoicePanel({ rid, replicaReady, consent }: { rid: string
           </form>
           <div className="flex flex-wrap gap-2">
             <button type="button" className="btn-ghost !px-3 !py-1.5 text-xs" disabled={busy} onClick={() => clone(true)}><RefreshCw size={13} />Re-clone</button>
-            <button type="button" className="btn-ghost !border-mirage-rose/40 !px-3 !py-1.5 text-xs !text-mirage-rose hover:!bg-mirage-rose/10" onClick={() => setDel(true)}><Trash2 size={13} />Delete voice</button></div>
+            <button type="button" className="btn-ghost !border-vocalface-rose/40 !px-3 !py-1.5 text-xs !text-vocalface-rose hover:!bg-vocalface-rose/10" onClick={() => setDel(true)}><Trash2 size={13} />Delete voice</button></div>
         </>)}
         {err && v && v.status !== "none" && <Callout tone="bad">{err}</Callout>}
       </div>)}

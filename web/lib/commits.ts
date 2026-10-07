@@ -2,7 +2,7 @@ export const commits: [string,string,string][] = [
  [
   "9d96f15",
   "2026-10-02",
-  "Mirage v0.1: API, tenancy, metering, pipeline interfaces"
+  "VocalFace v0.1: API, tenancy, metering, pipeline interfaces"
  ],
  [
   "f5e6986",
@@ -37,7 +37,7 @@ export const commits: [string,string,string][] = [
  [
   "577ae7e",
   "2026-10-03",
-  "Design foundation: mirage palette, fonts, three.js orb, reveal, logo"
+  "Design foundation: vocalface palette, fonts, three.js orb, reveal, logo"
  ],
  [
   "16edffc",

@@ -100,7 +100,7 @@ def test_runtime_wires_tool_and_prompt(client):
     with Session(db.engine) as s:
         conv = s.get(db.Conversation, cid)
         rt = cr.ConversationRuntime.build(s, conv, s.get(db.Persona, pid))
-    assert [t.name for t in rt.tools] == ["capture_lead"] and rt.tools[0].webhook_url.startswith("mirage-internal://")
+    assert [t.name for t in rt.tools] == ["capture_lead"] and rt.tools[0].webhook_url.startswith("vocalface-internal://")
     sp = rt.system_prompt("You are X.")
     assert "Contact details (lead capture)" in sp and "never push" in sp.lower() or "Never push" in sp
     # a persona without lead capture is untouched

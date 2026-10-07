@@ -1,5 +1,5 @@
 {
-  "name": "mirage-e2e",
+  "name": "vocalface-e2e",
   "private": true,
   "type": "module",
   "description": "In-repo end-to-end suite (Playwright + isolated backend/web/lipsync). Run `make e2e` from the repo root.",

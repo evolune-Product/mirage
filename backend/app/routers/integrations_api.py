@@ -76,8 +76,8 @@ def test_integration(pid: str, body: TestIn, acc: Account = Depends(current_acco
     if not url:
         raise HTTPException(409, f"{body.which} webhook is not configured")
     enc = i.booking_secret_enc if body.which == "booking" else i.notify_secret_enc
-    args = ({"name": "Test Person", "email": "test@example.com", "preferred_time": "Tomorrow 3pm", "topic": "Mirage test", "test": True}
-            if body.which == "booking" else {"subject": "Mirage test", "message": "This is a test notification.", "test": True})
+    args = ({"name": "Test Person", "email": "test@example.com", "preferred_time": "Tomorrow 3pm", "topic": "VocalFace test", "test": True}
+            if body.which == "booking" else {"subject": "VocalFace test", "message": "This is a test notification.", "test": True})
     spec = lb.ToolSpec("book_meeting" if body.which == "booking" else "send_notification", "", {}, url, decrypt(enc) if enc else "", 10.0)
     ok, text = lb.execute_tool(spec, args, {"conversation_id": "test", "persona_id": pid})
     return {"ok": ok, "response": text[:500]}

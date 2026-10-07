@@ -15,15 +15,15 @@ import os
 import numpy as np
 
 FRAME_MS = 20
-MAX_LAG = int(os.environ.get("MIRAGE_ECHO_MAX_LAG_FRAMES", "100"))  # 2.0 s: playback buffering + acoustic + network
+MAX_LAG = int(os.environ.get("VOCALFACE_ECHO_MAX_LAG_FRAMES", "100"))  # 2.0 s: playback buffering + acoustic + network
 WINDOW = 25  # 500 ms of envelope compared per decision
-WARMUP = int(os.environ.get("MIRAGE_ECHO_WARMUP_FRAMES", "45"))  # frames after a reply starts in which no barge-in is accepted
+WARMUP = int(os.environ.get("VOCALFACE_ECHO_WARMUP_FRAMES", "45"))  # frames after a reply starts in which no barge-in is accepted
 MIN_WINDOW = 6  # shortest history we will judge on (start of a call/reply); needs a higher correlation
-CORR_ON = float(os.environ.get("MIRAGE_ECHO_CORR", "0.6"))  # envelope correlation that counts as 'follows the agent'
-RATIO = float(os.environ.get("MIRAGE_ECHO_RATIO", "2.0"))  # mic louder than 2x the predicted echo => the user is on top
+CORR_ON = float(os.environ.get("VOCALFACE_ECHO_CORR", "0.6"))  # envelope correlation that counts as 'follows the agent'
+RATIO = float(os.environ.get("VOCALFACE_ECHO_RATIO", "2.0"))  # mic louder than 2x the predicted echo => the user is on top
 SUSPECT_GAIN = 0.1  # echo weaker than about -20 dB is harmless; only louder echo raises the 'use headphones' hint
 FLOOR = 30.0  # rms below this is silence/noise-floor, never evidence of anything
-ENABLED = os.environ.get("MIRAGE_ECHO_REF", "1") != "0"
+ENABLED = os.environ.get("VOCALFACE_ECHO_REF", "1") != "0"
 
 
 def _env(x: np.ndarray, frame: int) -> np.ndarray:

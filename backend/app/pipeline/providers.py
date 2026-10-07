@@ -28,9 +28,9 @@ class OllamaLLM:
         host = host or os.environ.get("OLLAMA_URL") or "http://localhost:11434"  # same variable as /health/deep and llm_backends
         self.model, self.host = model, host.rstrip("/")
         self.options: dict = {"num_predict": 90}
-        if os.environ.get("MIRAGE_OLLAMA_NUM_CTX"):
-            self.options["num_ctx"] = int(os.environ["MIRAGE_OLLAMA_NUM_CTX"])
-        self.keep_alive = os.environ.get("MIRAGE_OLLAMA_KEEP_ALIVE", "30m")
+        if os.environ.get("VOCALFACE_OLLAMA_NUM_CTX"):
+            self.options["num_ctx"] = int(os.environ["VOCALFACE_OLLAMA_NUM_CTX"])
+        self.keep_alive = os.environ.get("VOCALFACE_OLLAMA_KEEP_ALIVE", "30m")
 
     def _body(self, system: str, history: list[dict], user: str, stream: bool = True, **opts) -> dict:
         msgs = [{"role": "system", "content": system}, *history, {"role": "user", "content": user}]

@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=os.getenv("MIRAGE_CORS_ORIGINS", "http://localhost:3000").split(","),
+    allow_origins=os.getenv("VOCALFACE_CORS_ORIGINS", "http://localhost:3000").split(","),
     allow_methods=["*"],
     allow_headers=["*"],   # must include x-api-key and content-type
 )

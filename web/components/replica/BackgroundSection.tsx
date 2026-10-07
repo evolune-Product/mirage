@@ -22,7 +22,7 @@ export default function BackgroundSection({ rid, ready }: { rid: string; ready: 
     } catch (x) { setErr(errText(x)); } finally { setBusy(false); }
   }
   return (
-    <Section title="Background" icon={<Palette size={16} className="text-mirage-cyan" />} hint="Replaces the background behind this replica in live conversations and in every video (unless a video sets its own). Segmentation runs once, so live speed is unchanged.">
+    <Section title="Background" icon={<Palette size={16} className="text-vocalface-cyan" />} hint="Replaces the background behind this replica in live conversations and in every video (unless a video sets its own). Segmentation runs once, so live speed is unchanged.">
       {saved === undefined ? <div className="h-28 animate-pulse rounded-xl bg-white/5" /> : (<div className="space-y-3">
         <BackgroundPicker value={bg} onChange={setBg} faceSrc={face || undefined} noneLabel="Original" />
         <p className="text-[11px] text-gray-500">The preview is an approximation: the real cut-out is made from your clip, so hair edges and shoulders can differ slightly.</p>

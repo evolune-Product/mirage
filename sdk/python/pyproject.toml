@@ -1,7 +1,7 @@
 [project]
-name = "mirage-sdk"
+name = "vocalface-sdk"
 version = "0.1.0"
-description = "Python client for the Mirage CVI API"
+description = "Python client for the VocalFace CVI API"
 requires-python = ">=3.9"
 dependencies = ["httpx>=0.25"]
 
@@ -10,4 +10,4 @@ requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["mirage_sdk"]
+packages = ["vocalface_sdk"]

@@ -1,14 +1,14 @@
 # One-machine self-host. From the repo root:  cp .env.example .env  (edit!)  &&  docker compose -f infra/docker-compose.yml up -d --build
 # UNTESTED: written without Docker available. Read docs/DEPLOY.md first.
-name: mirage
+name: vocalface
 
 x-common-env: &common-env
-  MIRAGE_ENV: production
-  MIRAGE_DATA: /data
-  MIRAGE_SECRET_KEY: ${MIRAGE_SECRET_KEY:?set MIRAGE_SECRET_KEY in .env}
-  MIRAGE_CORS_ORIGINS: ${MIRAGE_CORS_ORIGINS:?set MIRAGE_CORS_ORIGINS in .env}
+  VOCALFACE_ENV: production
+  VOCALFACE_DATA: /data
+  VOCALFACE_SECRET_KEY: ${VOCALFACE_SECRET_KEY:?set VOCALFACE_SECRET_KEY in .env}
+  VOCALFACE_CORS_ORIGINS: ${VOCALFACE_CORS_ORIGINS:?set VOCALFACE_CORS_ORIGINS in .env}
   OLLAMA_URL: http://ollama:11434
-  MIRAGE_LIPSYNC_URL: http://lipsync:8100
+  VOCALFACE_LIPSYNC_URL: http://lipsync:8100
 
 services:
   backend:
@@ -16,9 +16,9 @@ services:
     env_file: [../.env]
     environment:
       <<: *common-env
-      MIRAGE_DB_URL: sqlite:////data/mirage.db
+      VOCALFACE_DB_URL: sqlite:////data/vocalface.db
     volumes:
-      - mirage-data:/data
+      - vocalface-data:/data
       - ../models:/app/models:ro
     depends_on: [ollama]
     restart: unless-stopped
@@ -39,9 +39,9 @@ services:
     env_file: [../.env]
     environment:
       <<: *common-env
-      MIRAGE_DB_URL: sqlite:////data/mirage.db
+      VOCALFACE_DB_URL: sqlite:////data/vocalface.db
     volumes:
-      - mirage-data:/data
+      - vocalface-data:/data
       - ../models:/app/models:ro
       - ../workers/LivePortrait/pretrained_weights:/app/workers/LivePortrait/pretrained_weights:ro
     deploy: { resources: { reservations: { devices: [{ driver: nvidia, count: 1, capabilities: [gpu] }] } } }
@@ -51,10 +51,10 @@ services:
   lipsync:       # live lip-sync service used by conversations
     build: { context: .., dockerfile: infra/Dockerfile.gpu }
     environment:
-      MIRAGE_DATA: /data
-      MIRAGE_LIPSYNC_DEVICE: cuda
+      VOCALFACE_DATA: /data
+      VOCALFACE_LIPSYNC_DEVICE: cuda
     volumes:
-      - mirage-data:/data:ro
+      - vocalface-data:/data:ro
       - ../workers/Wav2Lip/checkpoints:/app/workers/Wav2Lip/checkpoints:ro
     deploy: { resources: { reservations: { devices: [{ driver: nvidia, count: 1, capabilities: [gpu] }] } } }
     restart: unless-stopped
@@ -68,5 +68,5 @@ services:
     expose: ["11434"]
 
 volumes:
-  mirage-data:
+  vocalface-data:
   ollama:

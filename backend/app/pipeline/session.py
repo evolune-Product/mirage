@@ -15,22 +15,22 @@ from .echo import EchoReference
 from .local import sentences
 from .turn_taking import EnergyVAD, SileroVAD, TurnTaker, make_vad, utterance_complete
 
-log = logging.getLogger("mirage.voice")
-if os.environ.get("MIRAGE_LOG_VOICE"):  # per-turn stage timings on stderr
+log = logging.getLogger("vocalface.voice")
+if os.environ.get("VOCALFACE_LOG_VOICE"):  # per-turn stage timings on stderr
     log.addHandler(logging.StreamHandler())
     log.setLevel(logging.INFO)
 FRAME_MS = 20
 FRAME_BYTES = 16000 * 2 * FRAME_MS // 1000  # 640
 BARGE_IN_FRAMES = 5  # energy VAD: 100 ms of continuous speech while agent talks => interrupt
-BARGE_IN_FRAMES_SILERO = int(os.environ.get("MIRAGE_BARGE_IN_FRAMES", "5"))  # Silero: ~100 ms of confident speech
-BARGE_MIN_RMS = float(os.environ.get("MIRAGE_BARGE_MIN_RMS", "600"))  # echo at -18 dB is ~330 rms; speech ~1500-3000
+BARGE_IN_FRAMES_SILERO = int(os.environ.get("VOCALFACE_BARGE_IN_FRAMES", "5"))  # Silero: ~100 ms of confident speech
+BARGE_MIN_RMS = float(os.environ.get("VOCALFACE_BARGE_MIN_RMS", "600"))  # echo at -18 dB is ~330 rms; speech ~1500-3000
 SPEECH_ON = 0.5  # Silero speech-probability threshold normally ...
-SPEECH_ON_WHILE_AGENT_TALKS = float(os.environ.get("MIRAGE_BARGE_IN_PROB", "0.7"))  # ... stricter during agent audio (echo)
-BARGE_IN_FRAMES_ECHO = int(os.environ.get("MIRAGE_BARGE_IN_FRAMES_ECHO", "8"))  # longer proof of speech when echo is suspected
+SPEECH_ON_WHILE_AGENT_TALKS = float(os.environ.get("VOCALFACE_BARGE_IN_PROB", "0.7"))  # ... stricter during agent audio (echo)
+BARGE_IN_FRAMES_ECHO = int(os.environ.get("VOCALFACE_BARGE_IN_FRAMES_ECHO", "8"))  # longer proof of speech when echo is suspected
 ECHO_TAIL_FRAMES = 25  # keep gating this long after the last agent audio should have finished playing
-PAUSE_MS = int(os.environ.get("MIRAGE_PAUSE_MS", "150"))  # silence after which STT starts speculatively
-MIN_COMMIT_MS = int(os.environ.get("MIRAGE_MIN_COMMIT_MS", "350"))  # earliest early end-of-turn (complete sentence)
-EARLY_COMMIT = os.environ.get("MIRAGE_EARLY_COMMIT", "1") != "0"
+PAUSE_MS = int(os.environ.get("VOCALFACE_PAUSE_MS", "150"))  # silence after which STT starts speculatively
+MIN_COMMIT_MS = int(os.environ.get("VOCALFACE_MIN_COMMIT_MS", "350"))  # earliest early end-of-turn (complete sentence)
+EARLY_COMMIT = os.environ.get("VOCALFACE_EARLY_COMMIT", "1") != "0"
 PREROLL_FRAMES = 10  # 200 ms kept before detected speech onset
 MIN_UTTERANCE_MS = 300
 MAX_HISTORY = 20
@@ -60,15 +60,15 @@ def default_provider_factory(llm_spec: str = "") -> Providers:
         _singletons["stt"] = stt
     if "tts" not in _singletons:
         _singletons["tts"] = _with_clone(_make_tts())
-    model = os.environ.get("MIRAGE_LLM") or (llm_spec.split("/", 1)[-1] if llm_spec else "llama3.2:1b")
+    model = os.environ.get("VOCALFACE_LLM") or (llm_spec.split("/", 1)[-1] if llm_spec else "llama3.2:1b")
     return Providers(_singletons["stt"], OllamaLLM(model), _singletons["tts"])
 
 
 def _make_tts():
-    """MLX Kokoro sidecar (fast, optional) with automatic fallback to CPU/ONNX Kokoro; MIRAGE_TTS=onnx|mlx|auto."""
+    """MLX Kokoro sidecar (fast, optional) with automatic fallback to CPU/ONNX Kokoro; VOCALFACE_TTS=onnx|mlx|auto."""
     from .local import KokoroTTS
 
-    mode = os.environ.get("MIRAGE_TTS", "auto").lower()
+    mode = os.environ.get("VOCALFACE_TTS", "auto").lower()
     if mode != "onnx":
         try:
             from .mlx_tts import FallbackTTS, MlxKokoroTTS, sidecar_python
@@ -122,20 +122,20 @@ def build_system_prompt(persona) -> str:
     return sp
 
 
-PIECE_S = float(os.environ.get("MIRAGE_LIPSYNC_PIECE_S", "1.0"))
+PIECE_S = float(os.environ.get("VOCALFACE_LIPSYNC_PIECE_S", "1.0"))
 # Progressive piece sizes: the first video segment gates the first audio, and Wav2Lip render time is ~40 ms + 0.3x piece
 # length, so start tiny (0.35 s => ~130 ms) and grow while earlier pieces are playing (each render < previous piece's length).
-FIRST_PIECE_S = float(os.environ.get("MIRAGE_LIPSYNC_FIRST_PIECE_S", "0.35"))
-SECOND_PIECE_S = float(os.environ.get("MIRAGE_LIPSYNC_SECOND_PIECE_S", "0.6"))
+FIRST_PIECE_S = float(os.environ.get("VOCALFACE_LIPSYNC_FIRST_PIECE_S", "0.35"))
+SECOND_PIECE_S = float(os.environ.get("VOCALFACE_LIPSYNC_SECOND_PIECE_S", "0.6"))
 MIN_PIECE_S = 0.25  # a remainder shorter than this is merged into the previous piece
 MIN_RENDER_S = 0.3  # shorter audio is zero-padded for rendering (server errors below ~0.2 s)
 LIPSYNC_MAX_FAILS = 3  # consecutive render failures before the face is switched off
-LIPSYNC_RETRY_S = float(os.environ.get("MIRAGE_LIPSYNC_RETRY_S", "8"))  # then the service is re-probed this often; when it answers the face comes back
-LLM_FIRST_TOKEN_S = float(os.environ.get("MIRAGE_LLM_FIRST_TOKEN_TIMEOUT", "25"))  # a hung/overloaded Ollama must not hang the turn
-LLM_STALL_S = float(os.environ.get("MIRAGE_LLM_STALL_TIMEOUT", "15"))
-FALLBACK_LLM = os.environ.get("MIRAGE_FALLBACK_TEXT", "Sorry, I'm having trouble answering right now. Please try again in a moment.")
+LIPSYNC_RETRY_S = float(os.environ.get("VOCALFACE_LIPSYNC_RETRY_S", "8"))  # then the service is re-probed this often; when it answers the face comes back
+LLM_FIRST_TOKEN_S = float(os.environ.get("VOCALFACE_LLM_FIRST_TOKEN_TIMEOUT", "25"))  # a hung/overloaded Ollama must not hang the turn
+LLM_STALL_S = float(os.environ.get("VOCALFACE_LLM_STALL_TIMEOUT", "15"))
+FALLBACK_LLM = os.environ.get("VOCALFACE_FALLBACK_TEXT", "Sorry, I'm having trouble answering right now. Please try again in a moment.")
 FALLBACK_STT = "Sorry, I didn't catch that. Could you say it again?"
-MAX_UTTERANCE_S = float(os.environ.get("MIRAGE_MAX_UTTERANCE_S", "60"))  # bounds the per-session audio buffer (memory)
+MAX_UTTERANCE_S = float(os.environ.get("VOCALFACE_MAX_UTTERANCE_S", "60"))  # bounds the per-session audio buffer (memory)
 
 
 async def warmup_providers(p, system: str = "", voice: str = "") -> None:
@@ -178,9 +178,9 @@ class Session:
         self.ptt = False  # push-to-talk: the client marks turn boundaries, VAD/echo gating are bypassed
         self._ptt_down = False
         self._echo_flag = False
-        # Silero VAD for the real local stack (or when forced via MIRAGE_VAD); unit tests that inject fake providers
+        # Silero VAD for the real local stack (or when forced via VOCALFACE_VAD); unit tests that inject fake providers
         # keep the dependency-free energy gate.
-        vad = make_vad(energy_threshold=energy_threshold) if (_factory is default_provider_factory or os.environ.get("MIRAGE_VAD")) else None
+        vad = make_vad(energy_threshold=energy_threshold) if (_factory is default_provider_factory or os.environ.get("VOCALFACE_VAD")) else None
         self.turn = TurnTaker(end_of_turn_ms=end_of_turn_ms, energy_threshold=energy_threshold, vad=vad, pause_ms=PAUSE_MS)
         self._silero = isinstance(vad, SileroVAD)
         self.barge_frames = BARGE_IN_FRAMES_SILERO if self._silero else BARGE_IN_FRAMES

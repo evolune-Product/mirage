@@ -3,7 +3,7 @@
   .venv-face/bin/python render_offline.py --source VIDEO --audio SPEECH.wav --out OUT.mp4
         [--engine wav2lip|musetalk] [--listening CLIP.mp4] [--restore none|sr] [--seconds N] [--workdir DIR]
 
-The replica dir is created under --workdir (default /tmp/mirage_offline/<name>) so nothing in the product data is touched."""
+The replica dir is created under --workdir (default /tmp/vocalface_offline/<name>) so nothing in the product data is touched."""
 import argparse
 import shutil
 import subprocess
@@ -37,7 +37,7 @@ def main():
     ap.add_argument("--engine", default="wav2lip", choices=["wav2lip", "musetalk", "viseme"])
     ap.add_argument("--restore", default="none")
     ap.add_argument("--seconds", type=float)
-    ap.add_argument("--workdir", default="/tmp/mirage_offline")
+    ap.add_argument("--workdir", default="/tmp/vocalface_offline")
     ap.add_argument("--win", type=float, help="base window seconds (longer = more natural head motion)")
     ap.add_argument("--no-track", action="store_true")
     ap.add_argument("--sharpen", type=float, default=0.6)

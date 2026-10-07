@@ -2,9 +2,9 @@
 
 Question: are there other commercially licensed open talking-head models that beat SoulX-FlashHead Lite on this Mac (M1 Pro, 32 GB, MPS, no NVIDIA)?
 
-**How to read this:** I cannot watch video. Quality statements below come from reading a handful of still frames plus the objective metrics in `/tmp/mirage_demo/evalface.py` (jaw range, lip-audio correlation, SFace identity cosine, sharpness, head jitter). BENCHMARKS.md already notes the lip-audio correlation is a weak proxy (real footage scores about 0.14), so treat it as a sanity check, not a ranking. Nobody has watched these clips yet except via the blind-test page (c5, c6).
+**How to read this:** I cannot watch video. Quality statements below come from reading a handful of still frames plus the objective metrics in `/tmp/vocalface_demo/evalface.py` (jaw range, lip-audio correlation, SFace identity cosine, sharpness, head jitter). BENCHMARKS.md already notes the lip-audio correlation is a weak proxy (real footage scores about 0.14), so treat it as a sanity check, not a ranking. Nobody has watched these clips yet except via the blind-test page (c5, c6).
 
-Inputs, identical for every model: `/tmp/mirage_demo/wa_tight.png` (768x768; also `p2_tight.png` for Ditto), `/tmp/mirage_demo/clone_b.wav` (16 kHz mono, 12 s). Reference: `wa_out.mp4` (FlashHead Lite, 512x512, 5-6 min).
+Inputs, identical for every model: `/tmp/vocalface_demo/wa_tight.png` (768x768; also `p2_tight.png` for Ditto), `/tmp/vocalface_demo/clone_b.wav` (16 kHz mono, 12 s). Reference: `wa_out.mp4` (FlashHead Lite, 512x512, 5-6 min).
 
 ## Results
 
@@ -15,7 +15,7 @@ Inputs, identical for every model: `/tmp/mirage_demo/wa_tight.png` (768x768; als
 | Wall clock | 5 to 6 min (per owner) | 337 to 340 s (includes ~35 s model load) | 867 s for 3.24 s (831 s denoise + decode, ~36 s load) |
 | Wall seconds per video second | ~25 to 30 | **~28** (steady-state render alone ~10, see below) | **~267** |
 | Peak memory (max RSS of the process; MPS memory is unified) | not measured | ~3.0 GB | ~17.2 GB (T5 + CLIP on CPU, DiT + VAE-encode on GPU) |
-| Clip | `/tmp/mirage_demo/wa_out.mp4` | `/tmp/mirage_demo/ditto_out.mp4` (stock crop), `ditto_out_noif.mp4` (InsightFace-free), `ditto_out_p2.mp4` | `/tmp/mirage_demo/echo_out.mp4` |
+| Clip | `/tmp/vocalface_demo/wa_out.mp4` | `/tmp/vocalface_demo/ditto_out.mp4` (stock crop), `ditto_out_noif.mp4` (InsightFace-free), `ditto_out_p2.mp4` | `/tmp/vocalface_demo/echo_out.mp4` |
 
 Objective metrics, full 12 s clips (`workers/.venv-face/bin/python`, same script as evalface.py, identity vs the input photo):
 

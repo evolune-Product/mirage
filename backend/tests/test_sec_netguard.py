@@ -30,7 +30,7 @@ def fake_dns(monkeypatch, table: dict, calls: list | None = None):
 
 @pytest.fixture()
 def prod_block(monkeypatch):
-    monkeypatch.setenv("MIRAGE_BLOCK_PRIVATE_URLS", "1")
+    monkeypatch.setenv("VOCALFACE_BLOCK_PRIVATE_URLS", "1")
     fake_dns(monkeypatch, {"public.example": ["93.184.216.34"], "evil.example": ["10.0.0.5"],
                            "mixed.example": ["93.184.216.34", "127.0.0.1"], "meta.example": ["169.254.169.254"]})
 
@@ -62,19 +62,19 @@ def test_public_url_allowed_and_unresolvable_refused(prod_block):
 
 
 def test_default_policy_dev_allows_localhost_production_blocks(monkeypatch):
-    monkeypatch.delenv("MIRAGE_BLOCK_PRIVATE_URLS", raising=False)
-    monkeypatch.delenv("MIRAGE_ALLOW_PRIVATE_URLS", raising=False)
-    monkeypatch.setenv("MIRAGE_ENV", "dev")
+    monkeypatch.delenv("VOCALFACE_BLOCK_PRIVATE_URLS", raising=False)
+    monkeypatch.delenv("VOCALFACE_ALLOW_PRIVATE_URLS", raising=False)
+    monkeypatch.setenv("VOCALFACE_ENV", "dev")
     assert not netguard.blocking()
     netguard.check_url("http://127.0.0.1:9/")  # dev tests use local servers
-    monkeypatch.setenv("MIRAGE_ENV", "production")
+    monkeypatch.setenv("VOCALFACE_ENV", "production")
     assert netguard.blocking()
     with pytest.raises(netguard.UnsafeURL):
         netguard.check_url("http://127.0.0.1:9/")
-    monkeypatch.setenv("MIRAGE_BLOCK_PRIVATE_URLS", "0")  # explicit operator override
+    monkeypatch.setenv("VOCALFACE_BLOCK_PRIVATE_URLS", "0")  # explicit operator override
     assert not netguard.blocking()
-    monkeypatch.setenv("MIRAGE_ENV", "dev")
-    monkeypatch.setenv("MIRAGE_BLOCK_PRIVATE_URLS", "1")  # dev can opt in
+    monkeypatch.setenv("VOCALFACE_ENV", "dev")
+    monkeypatch.setenv("VOCALFACE_BLOCK_PRIVATE_URLS", "1")  # dev can opt in
     assert netguard.blocking()
 
 
@@ -110,7 +110,7 @@ def test_relative_redirect_keeps_real_host_and_connection_is_pinned(prod_block):
 
 def test_dns_rebinding_cannot_swap_the_address_after_the_check(monkeypatch):
     """The validated IP is the one connected to: a second (malicious) DNS answer is never used."""
-    monkeypatch.setenv("MIRAGE_BLOCK_PRIVATE_URLS", "1")
+    monkeypatch.setenv("VOCALFACE_BLOCK_PRIVATE_URLS", "1")
     answers = iter([["93.184.216.34"], ["127.0.0.1"], ["127.0.0.1"]])
     fake_dns(monkeypatch, {"rebind.example": lambda: next(answers)})
     hosts = []
@@ -154,7 +154,7 @@ def test_training_video_download_refuses_metadata(prod_block, tmp_path):
 def test_worker_downloader_refuses_private_hosts_and_prod_local_paths(prod_block, tmp_path, monkeypatch):
     with pytest.raises(netguard.UnsafeURL):
         jobs.fetch_video("http://10.0.0.7/video.mp4", tmp_path / "x.mp4")
-    monkeypatch.setenv("MIRAGE_ENV", "production")
+    monkeypatch.setenv("VOCALFACE_ENV", "production")
     with pytest.raises(ValueError, match="only http"):
         jobs.fetch_video("/etc/hosts", tmp_path / "y.mp4")
 
@@ -201,7 +201,7 @@ def test_photo_url_and_listening_clip_refuse_private(prod_block, monkeypatch):
 
     monkeypatch.setattr(db, "engine", create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool))
     SQLModel.metadata.create_all(db.engine)
-    monkeypatch.setenv("MIRAGE_SECRET_KEY", "test-secret-key-0123456789")
+    monkeypatch.setenv("VOCALFACE_SECRET_KEY", "test-secret-key-0123456789")
 
     def sess():
         with Session(db.engine) as s:
@@ -240,7 +240,7 @@ def test_pinned_connection_over_a_real_socket_keeps_the_host_header(monkeypatch)
     srv = http.server.HTTPServer(("127.0.0.1", 0), H)
     threading.Thread(target=srv.serve_forever, daemon=True).start()
     port = srv.server_address[1]
-    monkeypatch.setenv("MIRAGE_BLOCK_PRIVATE_URLS", "1")
+    monkeypatch.setenv("VOCALFACE_BLOCK_PRIVATE_URLS", "1")
     fake_dns(monkeypatch, {"pin.example": ["127.0.0.1"]})
     with pytest.raises(netguard.UnsafeURL):  # normally refused
         netguard.get(f"http://pin.example:{port}/")

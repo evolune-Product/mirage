@@ -26,11 +26,11 @@ from ..safety import audit
 from . import refprep
 from .metrics import wer
 
-log = logging.getLogger("mirage.voice_clone")
+log = logging.getLogger("vocalface.voice_clone")
 
 ENGINE = "chatterbox-mlx"
 TEST_SENTENCE = "Hello, this is a quick check of my cloned voice. The weather today is lovely, and I am happy to help."
-MIN_SIMILARITY = float(os.environ.get("MIRAGE_CLONE_MIN_SIMILARITY", "0.30"))  # below this the clone is rejected
+MIN_SIMILARITY = float(os.environ.get("VOCALFACE_CLONE_MIN_SIMILARITY", "0.30"))  # below this the clone is rejected
 VOICE_PREFIX = "clone"
 
 
@@ -73,7 +73,7 @@ def engine_installed() -> bool:
 
 
 def enabled() -> bool:
-    return os.environ.get("MIRAGE_VOICE_CLONE", "1") != "0"
+    return os.environ.get("VOCALFACE_VOICE_CLONE", "1") != "0"
 
 
 def ensure_table() -> None:
@@ -145,7 +145,7 @@ def request_voice(s: Session, account_id: str, rid: str, force: bool = False) ->
     """Gate + queue. Raises CloneRefused. Idempotent: a ready/processing voice is returned unchanged unless force."""
     ensure_table()
     if not enabled():
-        raise CloneRefused("voice cloning is disabled on this server (MIRAGE_VOICE_CLONE=0)", 503)
+        raise CloneRefused("voice cloning is disabled on this server (VOCALFACE_VOICE_CLONE=0)", 503)
     rep = s.get(db.Replica, rid)
     if rep is None or rep.account_id != account_id:
         raise CloneRefused("replica not found", 404)
@@ -266,7 +266,7 @@ def delete_voice(s: Session, rid: str, account_id: str | None = None, reason: st
 # ---------------------------------------------------------------- synthesis-time gate (live + offline)
 _cache: dict[str, tuple[float, Path | None]] = {}
 _clock = threading.Lock()
-CACHE_S = float(os.environ.get("MIRAGE_CLONE_GATE_CACHE_S", "5"))
+CACHE_S = float(os.environ.get("VOCALFACE_CLONE_GATE_CACHE_S", "5"))
 
 
 def _forget(rid: str) -> None:
@@ -341,7 +341,7 @@ def auto_after_replica_ready(rid: str, sidecar=None) -> None:
     """Worker hook (after a replica turned ready): extract the reference and register + test the clone.
     Best effort, never raises, silent when cloning is disabled / the engine is not installed / consent does not qualify."""
     try:
-        if not enabled() or os.environ.get("MIRAGE_VOICE_CLONE_AUTO", "1") == "0" or (sidecar is None and not engine_installed()):
+        if not enabled() or os.environ.get("VOCALFACE_VOICE_CLONE_AUTO", "1") == "0" or (sidecar is None and not engine_installed()):
             return
         with Session(db.engine) as s:
             rep = s.get(db.Replica, rid)

@@ -1,16 +1,16 @@
-"""Synchronous httpx client for every /v1 endpoint of the Mirage API."""
+"""Synchronous httpx client for every /v1 endpoint of the VocalFace API."""
 from typing import Any, Optional
 
 import httpx
 
 
-class MirageError(Exception):
+class VocalFaceError(Exception):
     def __init__(self, status: int, detail: Any):
         super().__init__(f"HTTP {status}: {detail}")
         self.status, self.detail = status, detail
 
 
-class Mirage:
+class VocalFace:
     def __init__(self, api_key: Optional[str] = None, base_url: str = "http://localhost:8000",
                  http_client: Optional[httpx.Client] = None, timeout: float = 30.0):
         self.api_key = api_key
@@ -24,7 +24,7 @@ class Mirage:
                 d = r.json().get("detail", r.text)
             except Exception:
                 d = r.text
-            raise MirageError(r.status_code, d)
+            raise VocalFaceError(r.status_code, d)
         return r.json() if r.content else None
 
     # account
@@ -160,7 +160,7 @@ class Mirage:
 
     @staticmethod
     def verify_webhook(secret: str, body: str, signature_header: str, tolerance_s: int = 300) -> bool:
-        """Verify a `Mirage-Signature` header (t=<unix>,v1=<hmac_sha256(secret, "t.body")>) against the raw body."""
+        """Verify a `VocalFace-Signature` header (t=<unix>,v1=<hmac_sha256(secret, "t.body")>) against the raw body."""
         import hashlib, hmac, time
         try:
             parts = dict(p.split("=", 1) for p in signature_header.split(","))
@@ -187,7 +187,7 @@ class Mirage:
         r = self._http.post(f"/v1/replicas/{replica_id}/voice/preview", headers={"x-api-key": self.api_key},
                             json={"text": text, "language": language}, timeout=300)
         if r.status_code >= 400:
-            raise MirageError(r.status_code, r.text)
+            raise VocalFaceError(r.status_code, r.text)
         return r.content
 
     # ---- API keys ----
@@ -243,7 +243,7 @@ class Mirage:
         r = self._http.get("/v1/leads/export.csv", headers={"x-api-key": self.api_key or ""},
                            params={k: v for k, v in filters.items() if v is not None})
         if r.status_code >= 400:
-            raise MirageError(r.status_code, r.text)
+            raise VocalFaceError(r.status_code, r.text)
         return r.text
     def get_lead_capture(self, persona_id: str) -> dict: return self._req("GET", f"/personas/{persona_id}/lead-capture")
     def set_lead_capture(self, persona_id: str, **cfg) -> dict:

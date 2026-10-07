@@ -25,7 +25,7 @@ sys.stdout = sys.stderr
 
 import numpy as np  # noqa: E402
 
-REPO = os.environ.get("MIRAGE_MLX_TTS_REPO", "mlx-community/Kokoro-82M-bf16")
+REPO = os.environ.get("VOCALFACE_MLX_TTS_REPO", "mlx-community/Kokoro-82M-bf16")
 DEFAULT_VOICE = "af_heart"
 
 
@@ -33,7 +33,7 @@ def send(rid: int, kind: int, payload: bytes = b"") -> None:
     _out.write(struct.pack("<III", rid, kind, len(payload)) + payload)
 
 
-GAIN = float(os.environ.get("MIRAGE_MLX_TTS_GAIN", "1.35"))  # MLX bf16 output is ~3 dB quieter than the ONNX build
+GAIN = float(os.environ.get("VOCALFACE_MLX_TTS_GAIN", "1.35"))  # MLX bf16 output is ~3 dB quieter than the ONNX build
 
 
 def trim(a: np.ndarray, thresh: float = 0.004, pad: int = 480) -> np.ndarray:

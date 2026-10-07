@@ -22,18 +22,18 @@ async def lifespan(_):
     from . import convo_runtime as _cr
 
     tasks = []
-    if _os.environ.get("MIRAGE_WEBHOOK_LOOP", "1") != "0":
+    if _os.environ.get("VOCALFACE_WEBHOOK_LOOP", "1") != "0":
         tasks = [asyncio.create_task(_wh.run_loop()), asyncio.create_task(_cr.reaper_loop())]
-        if _os.environ.get("MIRAGE_BILLING_LOOP", "1") != "0":
+        if _os.environ.get("VOCALFACE_BILLING_LOOP", "1") != "0":
             from . import billing as _bl
 
             tasks.append(asyncio.create_task(_bl.reset_loop()))  # monthly plan lapse/expiry; idempotent
-    if _os.environ.get("MIRAGE_PRELOAD", "1") != "0":
+    if _os.environ.get("VOCALFACE_PRELOAD", "1") != "0":
         async def _preload():  # background: the server accepts requests immediately; the first call is then warm
             try:
                 from .pipeline.session import get_providers, warmup_providers
 
-                p = await asyncio.to_thread(get_providers, _os.environ.get("MIRAGE_PRELOAD_LLM", "ollama/llama3.2:3b"))
+                p = await asyncio.to_thread(get_providers, _os.environ.get("VOCALFACE_PRELOAD_LLM", "ollama/llama3.2:3b"))
                 await warmup_providers(p, "")
             except Exception:  # noqa: BLE001 - an optimisation, never fatal
                 pass
@@ -50,7 +50,7 @@ async def lifespan(_):
             t.cancel()
 
 
-app = FastAPI(title="Mirage API", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="VocalFace API", version="0.1.0", lifespan=lifespan)
 
 from . import hardening as _hardening
 
@@ -63,7 +63,7 @@ from fastapi.staticfiles import StaticFiles
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=os.environ.get("MIRAGE_CORS_ORIGINS", "http://localhost:3000").split(","),
+    allow_origins=os.environ.get("VOCALFACE_CORS_ORIGINS", "http://localhost:3000").split(","),
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -90,7 +90,7 @@ for _m in pkgutil.iter_modules(_routers_pkg.__path__):
 class SignupIn(BaseModel):
     email: str
     website: str = ""        # honeypot: hidden in the signup form, real users leave it empty
-    pow_challenge: str = ""  # only when MIRAGE_SIGNUP_POW_BITS > 0 (GET /v1/signup/challenge)
+    pow_challenge: str = ""  # only when VOCALFACE_SIGNUP_POW_BITS > 0 (GET /v1/signup/challenge)
     pow_nonce: str = ""
 
 

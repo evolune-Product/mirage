@@ -1,6 +1,6 @@
 """Objective evaluation of the cloning engine against a reference recording (we cannot listen).
 
-    cd backend && MIRAGE_CLONE_REPO=<weights dir or hf repo> .venv/bin/python scripts_voice_clone_eval.py \
+    cd backend && VOCALFACE_CLONE_REPO=<weights dir or hf repo> .venv/bin/python scripts_voice_clone_eval.py \
         --ref-from <video-or-audio> [--lang en,es,hi] [--runs 2] [--json out.json]
 
 For each sentence: time to first audio (Chatterbox is not incremental, so = whole-sentence synthesis time), real-time

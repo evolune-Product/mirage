@@ -9,7 +9,7 @@ Goal: find out, with real numbers, whether SoulX-FlashHead runs in real time on 
 - Stop the instance when done. Idle GPUs bill.
 
 ## Steps (about 1 hour including the ~14 GB download)
-1. SSH in, `git clone https://github.com/evolune-Product/mirage && cd mirage`
+1. SSH in, `git clone https://github.com/evolune-Product/vocalface && cd vocalface`
 2. `bash infra/gpu_flashhead_setup.sh` (optionally pass your face PNG and a 16 kHz speech WAV).
 3. Read the per-step timings. Real time means a chunk of video is produced faster than it plays (25 fps).
 4. `scp` flashhead_lite.mp4 / flashhead_pro.mp4 back and compare with the Mac renders.
@@ -18,7 +18,7 @@ Goal: find out, with real numbers, whether SoulX-FlashHead runs in real time on 
 GPU model, Lite and Pro seconds per generated second, peak VRAM (`nvidia-smi`), and concurrent streams before slowdown. Put them in `docs/UNIT_ECONOMICS.md` replacing the assumed $0.007-0.022/user-minute.
 
 ## Then wire it into the live path (not built yet)
-FlashHead's streaming mode (`gradio_app_streaming.py`) yields chunks. Mirage's live protocol sends `video_segment` frames; a new engine in `workers/engines/` would wrap the streaming pipeline. That is real work (days) and only worth it if step 3 shows real time.
+FlashHead's streaming mode (`gradio_app_streaming.py`) yields chunks. VocalFace's live protocol sends `video_segment` frames; a new engine in `workers/engines/` would wrap the streaming pipeline. That is real work (days) and only worth it if step 3 shows real time.
 
 ## Licence reminder
 README says Apache-2.0 (code+weights). Bundled VAE and wav2vec2 have their own licences; have counsel confirm before selling. See `docs/LICENSES.md`.

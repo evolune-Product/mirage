@@ -101,8 +101,8 @@ class SileroVAD:
 
 
 def make_vad(kind: str | None = None, energy_threshold: float = 500.0):
-    """kind: 'silero' | 'energy' | 'auto' (default: env MIRAGE_VAD or auto = silero, falling back to energy)."""
-    kind = (kind or os.environ.get("MIRAGE_VAD") or "auto").lower()
+    """kind: 'silero' | 'energy' | 'auto' (default: env VOCALFACE_VAD or auto = silero, falling back to energy)."""
+    kind = (kind or os.environ.get("VOCALFACE_VAD") or "auto").lower()
     if kind in ("silero", "auto"):
         try:
             return SileroVAD()

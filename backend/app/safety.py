@@ -35,14 +35,14 @@ class ModerationResult:
 
 
 def _blocklist():
-    extra = [w.strip() for w in os.getenv("MIRAGE_BLOCKLIST", "").split(",") if w.strip()]
+    extra = [w.strip() for w in os.getenv("VOCALFACE_BLOCKLIST", "").split(",") if w.strip()]
     return [re.compile(p, re.I) for p in DEFAULT_BLOCKLIST] + [re.compile(re.escape(w), re.I) for w in extra]
 
 
 def moderate(text: str) -> ModerationResult:
     reasons = [f"blocklist:{p.pattern}" for p in _blocklist() if p.search(text)]
     classifier = "blocklist"
-    model = os.getenv("MIRAGE_MODERATION_OLLAMA_MODEL", "qwen3:8b")  # "" disables; 1B models misclassify too often
+    model = os.getenv("VOCALFACE_MODERATION_OLLAMA_MODEL", "qwen3:8b")  # "" disables; 1B models misclassify too often
     if model and not reasons:
         classifier = f"blocklist+ollama/{model}"
         try:
@@ -160,8 +160,8 @@ def require_consent(replica_id: str, session: Session | None = None) -> None:
             ok = has_consent(s, replica_id)
     if not ok:
         raise ConsentRequired(replica_id)
-    if os.getenv("MIRAGE_CONSENT_FACE_MATCH", "").strip().lower() == "enforce" or (
-            not os.getenv("MIRAGE_CONSENT_FACE_MATCH") and os.getenv("MIRAGE_ENV", "dev").strip().lower() in ("prod", "production")):
+    if os.getenv("VOCALFACE_CONSENT_FACE_MATCH", "").strip().lower() == "enforce" or (
+            not os.getenv("VOCALFACE_CONSENT_FACE_MATCH") and os.getenv("VOCALFACE_ENV", "dev").strip().lower() in ("prod", "production")):
         if not _face_bound(replica_id, session):  # defence in depth: the worker re-checks the face binding
             raise ConsentRequired(replica_id)
 

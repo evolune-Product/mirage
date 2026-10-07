@@ -1,11 +1,11 @@
 """Observability: Prometheus metrics (no extra dependency), structured JSON logs with request ids, deep health.
 
     install(app)                 one call in main.py: request-id + metrics + access-log middleware, /metrics, /health/deep
-    GET /metrics                 Prometheus text format. Protected by MIRAGE_METRICS_TOKEN (Authorization: Bearer <t> or ?token=<t>).
+    GET /metrics                 Prometheus text format. Protected by VOCALFACE_METRICS_TOKEN (Authorization: Bearer <t> or ?token=<t>).
                                  No token configured: open in dev, disabled (403) in production.
     GET /health/deep             db + ollama + lipsync + worker heartbeat (503 only when the DATABASE is down; others report "degraded")
 
-Logging: MIRAGE_LOG_FORMAT=json|text (default json in production, text in dev). Every record carries `request_id`
+Logging: VOCALFACE_LOG_FORMAT=json|text (default json in production, text in dev). Every record carries `request_id`
 (also returned as the X-Request-ID response header; an inbound X-Request-ID is honoured when it looks sane). Messages are
 passed through settings.redact(); the access log records method, route template, status and latency only: never query
 strings (the playground passes api_key there), bodies, headers, or client IPs.
@@ -118,12 +118,12 @@ class Histogram(_Metric):
         return out
 
 
-HTTP_REQUESTS = Counter("mirage_http_requests_total", "HTTP requests by method, route template and status", ("method", "route", "status"))
-HTTP_LATENCY = Histogram("mirage_http_request_duration_seconds", "HTTP request latency", ("method", "route"))
-WS_ACTIVE = Gauge("mirage_websocket_connections", "Open websocket connections (live conversation streams)")
-FIRST_AUDIO = Histogram("mirage_first_audio_seconds", "End of user speech to first agent audio (in-process observations; see observe_first_audio)",
+HTTP_REQUESTS = Counter("vocalface_http_requests_total", "HTTP requests by method, route template and status", ("method", "route", "status"))
+HTTP_LATENCY = Histogram("vocalface_http_request_duration_seconds", "HTTP request latency", ("method", "route"))
+WS_ACTIVE = Gauge("vocalface_websocket_connections", "Open websocket connections (live conversation streams)")
+FIRST_AUDIO = Histogram("vocalface_first_audio_seconds", "End of user speech to first agent audio (in-process observations; see observe_first_audio)",
                         (), (0.25, 0.5, 0.75, 1, 1.5, 2, 3, 5, 10))
-WEBHOOK_FAIL = Counter("mirage_webhook_delivery_failures_total", "Webhook delivery attempts that failed (in-process observations)")
+WEBHOOK_FAIL = Counter("vocalface_webhook_delivery_failures_total", "Webhook delivery attempts that failed (in-process observations)")
 _HEARTBEAT_FILE = ".worker_heartbeat"
 
 
@@ -204,22 +204,22 @@ def render_metrics() -> str:
     if snap:
         def g(name, help_, val, labels=""):
             lines.extend([f"# HELP {name} {help_}", f"# TYPE {name} gauge", f"{name}{labels} {val}"])
-        g("mirage_conversations_active", "Conversations with status=active", snap["conversations_active"])
-        lines += ["# HELP mirage_worker_queue_depth Jobs waiting for a worker", "# TYPE mirage_worker_queue_depth gauge",
-                  f'mirage_worker_queue_depth{{kind="replica"}} {snap["queue_replicas"]}',
-                  f'mirage_worker_queue_depth{{kind="video"}} {snap["queue_videos"]}']
-        g("mirage_videos_rendering", "Videos currently rendering", snap["videos_rendering"])
-        g("mirage_accounts", "Total accounts", snap["accounts"])
-        lines += ["# HELP mirage_webhook_deliveries Webhook deliveries by status (failed = retries exhausted)", "# TYPE mirage_webhook_deliveries gauge"]
-        lines += [f'mirage_webhook_deliveries{{status="{_esc(k)}"}} {v}' for k, v in sorted(snap["webhook"].items())]
+        g("vocalface_conversations_active", "Conversations with status=active", snap["conversations_active"])
+        lines += ["# HELP vocalface_worker_queue_depth Jobs waiting for a worker", "# TYPE vocalface_worker_queue_depth gauge",
+                  f'vocalface_worker_queue_depth{{kind="replica"}} {snap["queue_replicas"]}',
+                  f'vocalface_worker_queue_depth{{kind="video"}} {snap["queue_videos"]}']
+        g("vocalface_videos_rendering", "Videos currently rendering", snap["videos_rendering"])
+        g("vocalface_accounts", "Total accounts", snap["accounts"])
+        lines += ["# HELP vocalface_webhook_deliveries Webhook deliveries by status (failed = retries exhausted)", "# TYPE vocalface_webhook_deliveries gauge"]
+        lines += [f'vocalface_webhook_deliveries{{status="{_esc(k)}"}} {v}' for k, v in sorted(snap["webhook"].items())]
         fa = snap["first_audio_ms"]
-        lines += ["# HELP mirage_first_audio_window_ms First-audio latency over the last hour, from stored transcript turns", "# TYPE mirage_first_audio_window_ms summary"]
+        lines += ["# HELP vocalface_first_audio_window_ms First-audio latency over the last hour, from stored transcript turns", "# TYPE vocalface_first_audio_window_ms summary"]
         if fa:
-            lines += [f'mirage_first_audio_window_ms{{quantile="0.5"}} {_q(fa, 0.5):g}', f'mirage_first_audio_window_ms{{quantile="0.95"}} {_q(fa, 0.95):g}']
-        lines += [f"mirage_first_audio_window_ms_count {len(fa)}", f"mirage_first_audio_window_ms_sum {sum(fa):g}"]
+            lines += [f'vocalface_first_audio_window_ms{{quantile="0.5"}} {_q(fa, 0.5):g}', f'vocalface_first_audio_window_ms{{quantile="0.95"}} {_q(fa, 0.95):g}']
+        lines += [f"vocalface_first_audio_window_ms_count {len(fa)}", f"vocalface_first_audio_window_ms_sum {sum(fa):g}"]
     age = worker_heartbeat_age()
-    lines += ["# HELP mirage_worker_heartbeat_age_seconds Seconds since a worker last polled (-1 = never seen)", "# TYPE mirage_worker_heartbeat_age_seconds gauge",
-              f"mirage_worker_heartbeat_age_seconds {age if age is not None else -1:g}"]
+    lines += ["# HELP vocalface_worker_heartbeat_age_seconds Seconds since a worker last polled (-1 = never seen)", "# TYPE vocalface_worker_heartbeat_age_seconds gauge",
+              f"vocalface_worker_heartbeat_age_seconds {age if age is not None else -1:g}"]
     return "\n".join(lines) + "\n"
 
 
@@ -258,7 +258,7 @@ def deep_health() -> tuple[dict, bool]:
         checks["migrations"] = {"status": "unknown", "error": type(e).__name__}
     ollama = os.getenv("OLLAMA_URL", os.getenv("OLLAMA_HOST", "http://localhost:11434")).rstrip("/")
     checks["ollama"] = _probe(ollama + "/api/tags")
-    checks["lipsync"] = _probe(os.getenv("MIRAGE_LIPSYNC_URL", "http://localhost:8100").rstrip("/") + "/health")
+    checks["lipsync"] = _probe(os.getenv("VOCALFACE_LIPSYNC_URL", "http://localhost:8100").rstrip("/") + "/health")
     age = worker_heartbeat_age()
     checks["worker"] = {"status": "ok" if age is not None and age < 30 else ("stale" if age is not None else "never_seen"),
                         "heartbeat_age_s": None if age is None else round(age, 1)}
@@ -302,7 +302,7 @@ class _RequestIdFilter(logging.Filter):
 
 
 def log_format() -> str:
-    f = os.getenv("MIRAGE_LOG_FORMAT", "").strip().lower()
+    f = os.getenv("VOCALFACE_LOG_FORMAT", "").strip().lower()
     return f if f in ("json", "text") else ("json" if settings.is_production() else "text")
 
 
@@ -311,7 +311,7 @@ def configure_logging() -> None:
     fmt = log_format()
     root = logging.getLogger()
     if fmt == "json":
-        for name in ("", "uvicorn", "uvicorn.error", "uvicorn.access", "mirage"):
+        for name in ("", "uvicorn", "uvicorn.error", "uvicorn.access", "vocalface"):
             lg = logging.getLogger(name)
             if name == "uvicorn.access":
                 lg.handlers, lg.propagate = [], False  # our access log replaces it (uvicorn's contains query strings)
@@ -331,7 +331,7 @@ def configure_logging() -> None:
             h.addFilter(_RequestIdFilter())
 
 
-access_log = logging.getLogger("mirage.access")
+access_log = logging.getLogger("vocalface.access")
 
 
 # ======================= middleware =======================
@@ -411,7 +411,7 @@ class Observability:
 
 
 def _token_ok(request) -> bool:
-    tok = os.getenv("MIRAGE_METRICS_TOKEN", "")
+    tok = os.getenv("VOCALFACE_METRICS_TOKEN", "")
     if not tok:
         return not settings.is_production()
     import hmac
@@ -430,8 +430,8 @@ def install(app) -> None:
 
     @r.get("/metrics", include_in_schema=False)
     def metrics_endpoint(request: Request):
-        if not os.getenv("MIRAGE_METRICS_TOKEN") and settings.is_production():
-            return PlainTextResponse("metrics disabled: set MIRAGE_METRICS_TOKEN\n", status_code=403)
+        if not os.getenv("VOCALFACE_METRICS_TOKEN") and settings.is_production():
+            return PlainTextResponse("metrics disabled: set VOCALFACE_METRICS_TOKEN\n", status_code=403)
         if not _token_ok(request):
             return PlainTextResponse("unauthorized\n", status_code=401, headers={"WWW-Authenticate": "Bearer"})
         return PlainTextResponse(render_metrics(), media_type="text/plain; version=0.0.4; charset=utf-8", headers={"Cache-Control": "no-store"})

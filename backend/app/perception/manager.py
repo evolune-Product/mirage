@@ -24,7 +24,7 @@ from typing import Any, Awaitable, Callable, Optional
 
 from .vlm import PROMPTS, VLM
 
-log = logging.getLogger("mirage.perception")
+log = logging.getLogger("vocalface.perception")
 MAX_FRAME_BYTES = 1_500_000
 MAX_SIDE = 768  # frames are downscaled to this before the VLM (speed); ample for scene + large text
 STALE_S = {"camera": 45.0, "screen": 90.0}  # an older observation is described as old, then dropped

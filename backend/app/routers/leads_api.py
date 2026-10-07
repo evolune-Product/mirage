@@ -140,7 +140,7 @@ def export_csv(persona_id: str | None = None, since: str | None = None, until: s
         w.writerow([l.id, l.created_at.isoformat() if l.created_at else "", l.persona_id, _csv_safe(names.get(l.persona_id, "")),
                     l.conversation_id, *[_csv_safe(getattr(l, f)) for f in leads.FIELDS], "yes" if l.consent else "no", l.source])
     return Response(out.getvalue(), media_type="text/csv; charset=utf-8",
-                    headers={"Content-Disposition": 'attachment; filename="mirage-leads.csv"'})
+                    headers={"Content-Disposition": 'attachment; filename="vocalface-leads.csv"'})
 
 
 @router.get("/leads/{lid}")

@@ -27,16 +27,16 @@ function Knowledge({ pid }: { pid: string }) {
   async function del(id: string) { try { await api(`/v1/personas/${pid}/knowledge/${id}`, { method: "DELETE" }); load(); } catch (x) { toast.error(x); } }
   return (
     <div className="mt-8 border-t border-white/10 pt-6">
-      <h3 className="flex items-center gap-2 font-medium"><BrainCircuit size={17} className="text-mirage-violet" />Knowledge</h3>
+      <h3 className="flex items-center gap-2 font-medium"><BrainCircuit size={17} className="text-vocalface-violet" />Knowledge</h3>
       <p className="mb-4 mt-1 text-xs text-gray-400">The persona answers from these documents. Paste pricing, FAQs, policies, anything it should know.</p>
       {docs === null ? <div className="h-12 animate-pulse rounded-xl bg-white/5" /> : docs.length === 0 ? (
         <div className="mb-4 flex items-center gap-3 rounded-xl border border-dashed border-white/15 p-4 text-sm text-gray-500"><FileText size={18} />No documents yet.</div>
       ) : (
         <ul className="mb-4 space-y-2">{docs.map((d) => (
           <li key={d.id} className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-3.5 py-2.5">
-            <FileText size={16} className="shrink-0 text-mirage-cyan" />
+            <FileText size={16} className="shrink-0 text-vocalface-cyan" />
             <div className="min-w-0 flex-1"><p className="truncate text-sm">{d.title}</p><p className="text-xs text-gray-500">{d.source} - {d.n_chunks} chunks</p></div>
-            <button aria-label={`Delete ${d.title}`} onClick={() => del(d.id)} className="rounded-lg p-1.5 text-gray-500 hover:bg-mirage-rose/10 hover:text-mirage-rose"><Trash2 size={15} /></button>
+            <button aria-label={`Delete ${d.title}`} onClick={() => del(d.id)} className="rounded-lg p-1.5 text-gray-500 hover:bg-vocalface-rose/10 hover:text-vocalface-rose"><Trash2 size={15} /></button>
           </li>))}</ul>
       )}
       <form onSubmit={add} className="space-y-3 rounded-xl bg-white/[0.03] p-3.5">
@@ -87,18 +87,18 @@ function Tools({ pid }: { pid: string }) {
       setF({ name: "", description: "", url: "", secret: "", timeout: "8" }); setSchema(SCHEMA_TEMPLATE); toast.success("Tool added."); load();
     } catch (x) { toast.error(x); } finally { setBusy(false); }
   }
-  // Mirage's server calls the webhook when the model asks for the tool. This browser-side probe sends the same body so you can check reachability;
+  // VocalFace's server calls the webhook when the model asks for the tool. This browser-side probe sends the same body so you can check reachability;
   // browsers enforce CORS, so a "blocked" result is not proof the endpoint is down for the server.
   async function tryCall(t: { id: string; name: string; webhook_url: string; parameters: Record<string, unknown> }) {
     setProbe((p) => ({ ...p, [t.id]: "sending..." }));
     try {
       const r = await fetch(t.webhook_url, { method: "POST", headers: { "content-type": "application/json" }, body: payload(t.name, t.parameters) });
       setProbe((p) => ({ ...p, [t.id]: `HTTP ${r.status}` }));
-    } catch { setProbe((p) => ({ ...p, [t.id]: "Blocked by the browser (CORS or unreachable). The Mirage server is not subject to CORS." })); }
+    } catch { setProbe((p) => ({ ...p, [t.id]: "Blocked by the browser (CORS or unreachable). The VocalFace server is not subject to CORS." })); }
   }
   return (
     <div>
-      <Section title="Tools" icon={<Wrench size={16} className="text-mirage-amber" />} hint="Function calling: when the model decides to use a tool, Mirage POSTs the arguments to your webhook, then the agent speaks the result.">
+      <Section title="Tools" icon={<Wrench size={16} className="text-vocalface-amber" />} hint="Function calling: when the model decides to use a tool, VocalFace POSTs the arguments to your webhook, then the agent speaks the result.">
         {list === null ? <div className="h-12 animate-pulse rounded-xl bg-white/5" /> : list.length === 0 ? (
           <div className="flex items-center gap-3 rounded-xl border border-dashed border-white/15 p-4 text-sm text-gray-500"><Wrench size={18} />No tools yet.</div>
         ) : (
@@ -110,11 +110,11 @@ function Tools({ pid }: { pid: string }) {
                   <p className="mt-0.5 text-xs text-gray-400">{t.description}</p>
                   <p className="mt-1 truncate font-mono text-[11px] text-gray-500">{t.webhook_url} - {t.timeout_s}s timeout</p>
                 </div>
-                <button aria-label={`Delete tool ${t.name}`} onClick={() => setDel(t)} className="rounded-lg p-1.5 text-gray-500 hover:bg-mirage-rose/10 hover:text-mirage-rose"><Trash2 size={15} /></button>
+                <button aria-label={`Delete tool ${t.name}`} onClick={() => setDel(t)} className="rounded-lg p-1.5 text-gray-500 hover:bg-vocalface-rose/10 hover:text-vocalface-rose"><Trash2 size={15} /></button>
               </div>
               <details className="mt-2 text-xs text-gray-400"><summary className="cursor-pointer select-none hover:text-white">Schema and test payload</summary>
                 <pre className="mt-2 overflow-x-auto rounded-lg bg-black/40 p-2.5 font-mono text-[11px] text-gray-300">{JSON.stringify(t.parameters, null, 2)}</pre>
-                <p className="mb-1 mt-2">Body Mirage will POST:</p>
+                <p className="mb-1 mt-2">Body VocalFace will POST:</p>
                 <pre className="overflow-x-auto rounded-lg bg-black/40 p-2.5 font-mono text-[11px] text-gray-300">{payload(t.name, t.parameters)}</pre>
                 <div className="mt-2 flex flex-wrap items-center gap-2"><button type="button" className="btn-ghost !px-3 !py-1.5 text-xs" onClick={() => tryCall(t)}><Send size={12} />Send sample call</button>{probe[t.id] && <span data-testid="tool-probe" className="text-xs text-gray-400">{probe[t.id]}</span>}</div>
               </details>
@@ -129,12 +129,12 @@ function Tools({ pid }: { pid: string }) {
         </div>
         <Field label="Description (shown to the model)"><input className="input" required placeholder="Look up the current weather for a city" value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} /></Field>
         <Field label="Webhook URL"><input className="input" type="url" required placeholder="https://example.com/tools/weather" value={f.url} onChange={(e) => setF({ ...f, url: e.target.value })} /></Field>
-        <Field label="Signing secret (optional)" hint="Adds a Mirage-Signature header. Write-only."><input className="input font-mono" autoComplete="off" value={f.secret} onChange={(e) => setF({ ...f, secret: e.target.value })} /></Field>
+        <Field label="Signing secret (optional)" hint="Adds a VocalFace-Signature header. Write-only."><input className="input font-mono" autoComplete="off" value={f.secret} onChange={(e) => setF({ ...f, secret: e.target.value })} /></Field>
         <div>
           <div className="mb-1.5 flex items-center justify-between"><label className="label !mb-0">Parameters (JSON schema)</label>
-            <span className={`text-xs ${v.ok ? "text-mirage-mint" : "text-mirage-rose"}`} data-testid="schema-status">{v.ok ? "Valid schema" : "Invalid"}</span></div>
-          <textarea spellCheck={false} aria-label="Parameters JSON schema" className={`input h-40 font-mono text-xs ${v.ok ? "" : "!border-mirage-rose/60"}`} value={schema} onChange={(e) => setSchema(e.target.value)} />
-          {!v.ok && <p className="mt-1 text-xs text-mirage-rose">{v.error}</p>}
+            <span className={`text-xs ${v.ok ? "text-vocalface-mint" : "text-vocalface-rose"}`} data-testid="schema-status">{v.ok ? "Valid schema" : "Invalid"}</span></div>
+          <textarea spellCheck={false} aria-label="Parameters JSON schema" className={`input h-40 font-mono text-xs ${v.ok ? "" : "!border-vocalface-rose/60"}`} value={schema} onChange={(e) => setSchema(e.target.value)} />
+          {!v.ok && <p className="mt-1 text-xs text-vocalface-rose">{v.error}</p>}
         </div>
         <button className="btn" disabled={busy || !v.ok}>{busy ? <Spinner size={14} /> : <Plus size={14} />}Add tool</button>
       </form>
@@ -159,7 +159,7 @@ function Share({ pid }: { pid: string }) {
   }
   return (
     <div>
-      <Section title="Guest links" icon={<Link2 size={16} className="text-mirage-cyan" />} hint="Anyone with the link can talk to this persona without an account. Guest minutes are charged to your credits, capped per session and in total.">
+      <Section title="Guest links" icon={<Link2 size={16} className="text-vocalface-cyan" />} hint="Anyone with the link can talk to this persona without an account. Guest minutes are charged to your credits, capped per session and in total.">
         {list === null ? <div className="h-12 animate-pulse rounded-xl bg-white/5" /> : list.length === 0 ? (
           <div className="flex items-center gap-3 rounded-xl border border-dashed border-white/15 p-4 text-sm text-gray-500"><Link2 size={18} />No guest links yet.</div>
         ) : (
@@ -169,9 +169,9 @@ function Share({ pid }: { pid: string }) {
               <li key={l.token} className={`rounded-xl border border-white/10 bg-white/[0.03] p-3.5 ${l.revoked ? "opacity-60" : ""}`}>
                 <div className="flex items-center gap-2"><p className="min-w-0 flex-1 truncate text-sm font-medium">{l.label || "Untitled link"}</p><Badge s={l.revoked ? "revoked" : "active"} /></div>
                 <div className="mt-2 flex items-center gap-2 rounded-lg bg-black/40 px-2.5 py-1.5"><code className="min-w-0 flex-1 truncate font-mono text-[11px] text-gray-300" data-testid="guest-url">{l.url}</code><CopyButton text={l.url} label="" /><a aria-label="Open guest page" href={l.url} target="_blank" rel="noreferrer" className="rounded-lg border border-white/10 bg-white/5 p-1.5 text-gray-300 hover:text-white"><ExternalLink size={13} /></a></div>
-                <div className="mt-2.5 h-1 overflow-hidden rounded-full bg-white/10"><div className="h-full bg-mirage-gradient" style={{ width: pct + "%" }} /></div>
+                <div className="mt-2.5 h-1 overflow-hidden rounded-full bg-white/10"><div className="h-full bg-vocalface-gradient" style={{ width: pct + "%" }} /></div>
                 <p className="mt-1.5 text-xs text-gray-500">{fmtDur(l.used_seconds)} of {fmtDur(l.max_total_seconds)} used - {l.sessions_started} sessions - {fmtDur(l.max_seconds)} each{l.expires_at ? ` - expires ${fmtDate(l.expires_at)}` : ""}</p>
-                {!l.revoked && <button className="mt-2 text-xs text-mirage-rose hover:underline" onClick={() => setRevoke(l)}>Revoke link</button>}
+                {!l.revoked && <button className="mt-2 text-xs text-vocalface-rose hover:underline" onClick={() => setRevoke(l)}>Revoke link</button>}
               </li>);
           })}</ul>
         )}
@@ -199,7 +199,7 @@ function Memories({ pid }: { pid: string }) {
   const [list, setList] = useState<Mem[] | null>(null);
   useEffect(() => { setList(null); api<Mem[]>(`/v1/personas/${pid}/memories?limit=30`).then(setList).catch((x) => { toast.error(x); setList([]); }); }, [pid]);
   return (
-    <Section title="Memories" icon={<Brain size={16} className="text-mirage-violet" />} hint="After each conversation Mirage writes a short summary. The latest ones are recalled in the next conversation (per participant).">
+    <Section title="Memories" icon={<Brain size={16} className="text-vocalface-violet" />} hint="After each conversation VocalFace writes a short summary. The latest ones are recalled in the next conversation (per participant).">
       {list === null ? <div className="h-12 animate-pulse rounded-xl bg-white/5" /> : list.length === 0 ? (
         <div className="flex items-center gap-3 rounded-xl border border-dashed border-white/15 p-4 text-sm text-gray-500"><Brain size={18} />No memories yet. They appear after a conversation with some turns ends.</div>
       ) : (
@@ -230,10 +230,10 @@ function PerceptionTab({ pid }: { pid: string }) {
   const cur = models.find((m) => m.model === c.vlm_model);
   return (
     <div className="space-y-5">
-      <Section title="Let the agent see" icon={<Eye size={16} className="text-mirage-cyan" />} hint="With perception on, the person can share their camera or screen and the agent describes what it sees (&quot;what am I holding?&quot;, &quot;read this error&quot;). Analysis runs on a local vision model.">
+      <Section title="Let the agent see" icon={<Eye size={16} className="text-vocalface-cyan" />} hint="With perception on, the person can share their camera or screen and the agent describes what it sees (&quot;what am I holding?&quot;, &quot;read this error&quot;). Analysis runs on a local vision model.">
         <div className="space-y-3 rounded-xl border border-white/10 bg-white/[0.03] p-4">
           <Toggle checked={c.enabled} onChange={(v) => upd({ enabled: v })} label="Enable perception for this persona" />
-          <label className={`flex cursor-pointer items-start gap-2.5 rounded-lg border p-3 text-sm ${c.consent_acknowledged ? "border-mirage-mint/30 bg-mirage-mint/[0.05]" : "border-mirage-amber/30 bg-mirage-amber/[0.05]"}`}>
+          <label className={`flex cursor-pointer items-start gap-2.5 rounded-lg border p-3 text-sm ${c.consent_acknowledged ? "border-vocalface-mint/30 bg-vocalface-mint/[0.05]" : "border-vocalface-amber/30 bg-vocalface-amber/[0.05]"}`}>
             <input type="checkbox" className="mt-1" checked={c.consent_acknowledged} onChange={(e) => upd({ consent_acknowledged: e.target.checked })} aria-label="I confirm users are told" />
             <span><span className="font-medium text-gray-100">I confirm the people talking to this persona are told that their camera or screen is analysed.</span>
               <span className="mt-1 block text-xs text-gray-400">Required. You are responsible for telling users (for example in your page text) and for any consent your local law requires.</span></span>
@@ -243,7 +243,7 @@ function PerceptionTab({ pid }: { pid: string }) {
         </div>
       </Section>
       <Callout tone="info" title="What happens to the images">
-        Frames are analysed in memory and thrown away; opting out or ending the call forgets everything. Mirage never identifies who someone is, but it can read text visible on screen (such as a name tag). {c.store_frames ? "Frame storage is ON below, which keeps up to 100 images per conversation." : "Nothing is stored."}
+        Frames are analysed in memory and thrown away; opting out or ending the call forgets everything. VocalFace never identifies who someone is, but it can read text visible on screen (such as a name tag). {c.store_frames ? "Frame storage is ON below, which keeps up to 100 images per conversation." : "Nothing is stored."}
       </Callout>
       <Section title="Advanced">
         <div className="space-y-3">
@@ -345,7 +345,7 @@ export default function PersonaDrawer({ open, onClose, persona, reps, onSaved }:
             <div><label className="label">Name</label><input className="input" required value={f.name} onChange={set("name")} /></div>
             <div><label className="label">Replica</label><select className="input" aria-label="Replica" value={f.replica_id} onChange={set("replica_id")}><option value="">None</option>{reps.map((r) => <option key={r.id} value={r.id}>{r.name} ({r.status})</option>)}</select><p className="mt-1 text-xs text-gray-500">Backgrounds are set per replica (Replicas, Details), not per persona.</p></div>
             <div className="sm:col-span-2"><label className="label">LLM</label><input className="input" aria-label="LLM" value={f.llm} onChange={set("llm")} />
-              <div className="mt-2 flex flex-wrap gap-1.5" aria-label="Model recommendations">{[["ollama/llama3.2:1b", "fastest, demos"], ["ollama/llama3.2:3b", "recommended with knowledge"], ["ollama/qwen3:8b", "recommended with tools"]].map(([m, h]) => <button type="button" key={m} onClick={() => setF({ ...f, llm: m })} className={`rounded-full border px-2.5 py-1 text-[11px] ${f.llm === m ? "border-mirage-violet/60 bg-mirage-violet/15 text-white" : "border-white/10 text-gray-400 hover:text-white"}`}>{m.replace("ollama/", "")} <span className="text-gray-500">- {h}</span></button>)}</div>
+              <div className="mt-2 flex flex-wrap gap-1.5" aria-label="Model recommendations">{[["ollama/llama3.2:1b", "fastest, demos"], ["ollama/llama3.2:3b", "recommended with knowledge"], ["ollama/qwen3:8b", "recommended with tools"]].map(([m, h]) => <button type="button" key={m} onClick={() => setF({ ...f, llm: m })} className={`rounded-full border px-2.5 py-1 text-[11px] ${f.llm === m ? "border-vocalface-violet/60 bg-vocalface-violet/15 text-white" : "border-white/10 text-gray-400 hover:text-white"}`}>{m.replace("ollama/", "")} <span className="text-gray-500">- {h}</span></button>)}</div>
               <p className="mt-1.5 text-xs text-gray-500">Measured on our evals: llama3.2:3b answered 100% of document questions (1b: 88%) for about 0.3 s more; only qwen3:8b called tools reliably (100% vs 29-71%). Models above ~8b are too slow for live voice.</p></div>
           </div>
           <div><label className="label">System prompt</label><textarea className="input h-28" required placeholder="You are a friendly sales rep who..." value={f.system_prompt} onChange={set("system_prompt")} /></div>
@@ -386,25 +386,25 @@ export default function PersonaDrawer({ open, onClose, persona, reps, onSaved }:
           <Section title="Greeting" hint="If set, the agent speaks first. Use {{first_name}}-style variables supplied when you start a conversation.">
             <input className="input" aria-label="Greeting" placeholder="Hi {{first_name}}, thanks for joining. How can I help?" value={cfg.greeting} onChange={(e) => setCfg({ ...cfg, greeting: e.target.value })} />
           </Section>
-          <Section title="Objectives" icon={<Target size={16} className="text-mirage-mint" />} hint="Goals the agent works towards. A judge model marks each complete and extracts the variables you name. Results show in the conversation detail."
+          <Section title="Objectives" icon={<Target size={16} className="text-vocalface-mint" />} hint="Goals the agent works towards. A judge model marks each complete and extracts the variables you name. Results show in the conversation detail."
             action={<button type="button" className="btn-ghost !px-3 !py-1.5 text-xs" onClick={() => setCfg({ ...cfg, objectives: [...cfg.objectives, { name: "", description: "", success_criteria: "", output_variables: [] }] })}><Plus size={13} />Add</button>}>
             {cfg.objectives.length === 0 && <p className="rounded-xl border border-dashed border-white/15 p-3 text-xs text-gray-500">No objectives. Example: collect the visitor&apos;s email and budget.</p>}
             <div className="space-y-3">{cfg.objectives.map((o, i) => (
               <div key={i} className="space-y-2.5 rounded-xl border border-white/10 bg-white/[0.03] p-3.5">
                 <div className="flex items-end gap-2"><div className="flex-1"><label className="label">Name</label><input className="input" aria-label={`Objective ${i + 1} name`} placeholder="capture_email" value={o.name} onChange={(e) => updObj(i, { name: e.target.value })} /></div>
-                  <button type="button" aria-label={`Remove objective ${i + 1}`} className="mb-0.5 rounded-lg p-2 text-gray-500 hover:bg-mirage-rose/10 hover:text-mirage-rose" onClick={() => setCfg({ ...cfg, objectives: cfg.objectives.filter((_, j) => j !== i) })}><Trash2 size={15} /></button></div>
+                  <button type="button" aria-label={`Remove objective ${i + 1}`} className="mb-0.5 rounded-lg p-2 text-gray-500 hover:bg-vocalface-rose/10 hover:text-vocalface-rose" onClick={() => setCfg({ ...cfg, objectives: cfg.objectives.filter((_, j) => j !== i) })}><Trash2 size={15} /></button></div>
                 <div><label className="label">Description</label><input className="input" aria-label={`Objective ${i + 1} description`} placeholder="What the agent should achieve" value={o.description} onChange={(e) => updObj(i, { description: e.target.value })} /></div>
                 <div><label className="label">Success criteria</label><input className="input" aria-label={`Objective ${i + 1} success criteria`} placeholder="The user has said an email address" value={o.success_criteria} onChange={(e) => updObj(i, { success_criteria: e.target.value })} /></div>
                 <div><label className="label">Output variables</label><input className="input font-mono text-xs" aria-label={`Objective ${i + 1} output variables`} placeholder="email, budget (comma separated)" value={o.output_variables.join(", ")} onChange={(e) => updObj(i, { output_variables: csv(e.target.value) })} /></div>
               </div>))}</div>
           </Section>
-          <Section title="Guardrails" icon={<ShieldAlert size={16} className="text-mirage-rose" />} hint="Hard rules in the prompt, plus forbidden phrases blocked from the spoken output. On a hit the agent says the fallback line instead."
+          <Section title="Guardrails" icon={<ShieldAlert size={16} className="text-vocalface-rose" />} hint="Hard rules in the prompt, plus forbidden phrases blocked from the spoken output. On a hit the agent says the fallback line instead."
             action={<button type="button" className="btn-ghost !px-3 !py-1.5 text-xs" onClick={() => setCfg({ ...cfg, guardrails: [...cfg.guardrails, { name: "", rule: "", forbidden_phrases: [] }] })}><Plus size={13} />Add</button>}>
             {cfg.guardrails.length === 0 && <p className="rounded-xl border border-dashed border-white/15 p-3 text-xs text-gray-500">No guardrails. Example: never quote prices that are not in the knowledge base.</p>}
             <div className="space-y-3">{cfg.guardrails.map((g, i) => (
               <div key={i} className="space-y-2.5 rounded-xl border border-white/10 bg-white/[0.03] p-3.5">
                 <div className="flex items-end gap-2"><div className="flex-1"><label className="label">Name</label><input className="input" aria-label={`Guardrail ${i + 1} name`} placeholder="no_legal_advice" value={g.name} onChange={(e) => updGr(i, { name: e.target.value })} /></div>
-                  <button type="button" aria-label={`Remove guardrail ${i + 1}`} className="mb-0.5 rounded-lg p-2 text-gray-500 hover:bg-mirage-rose/10 hover:text-mirage-rose" onClick={() => setCfg({ ...cfg, guardrails: cfg.guardrails.filter((_, j) => j !== i) })}><Trash2 size={15} /></button></div>
+                  <button type="button" aria-label={`Remove guardrail ${i + 1}`} className="mb-0.5 rounded-lg p-2 text-gray-500 hover:bg-vocalface-rose/10 hover:text-vocalface-rose" onClick={() => setCfg({ ...cfg, guardrails: cfg.guardrails.filter((_, j) => j !== i) })}><Trash2 size={15} /></button></div>
                 <div><label className="label">Rule</label><input className="input" aria-label={`Guardrail ${i + 1} rule`} placeholder="Required: e.g. Never give legal advice" value={g.rule} onChange={(e) => updGr(i, { rule: e.target.value })} /></div>
                 <div><label className="label">Forbidden phrases</label><input className="input font-mono text-xs" aria-label={`Guardrail ${i + 1} forbidden phrases`} placeholder="comma separated" value={g.forbidden_phrases.join(", ")} onChange={(e) => updGr(i, { forbidden_phrases: csv(e.target.value) })} /></div>
               </div>))}</div>
@@ -416,7 +416,7 @@ export default function PersonaDrawer({ open, onClose, persona, reps, onSaved }:
 
       {tab === "model" && !locked && (<>
         {!cfgLoaded ? <div className="h-24 animate-pulse rounded-xl bg-white/5" /> : (
-          <Section title="Custom LLM endpoint" icon={<Cpu size={16} className="text-mirage-cyan" />} hint="Point the persona at any OpenAI-compatible /chat/completions endpoint (vLLM, LM Studio, OpenAI, Groq, Together). Leave empty to use the LLM from the General tab.">
+          <Section title="Custom LLM endpoint" icon={<Cpu size={16} className="text-vocalface-cyan" />} hint="Point the persona at any OpenAI-compatible /chat/completions endpoint (vLLM, LM Studio, OpenAI, Groq, Together). Leave empty to use the LLM from the General tab.">
             <div className="space-y-3">
               <Field label="Base URL"><input className="input" type="url" placeholder="https://api.openai.com/v1" value={cfg.custom_llm.base_url} onChange={(e) => setCfg({ ...cfg, custom_llm: { ...cfg.custom_llm, base_url: e.target.value } })} /></Field>
               <Field label="Model"><input className="input font-mono" placeholder="gpt-4o-mini" value={cfg.custom_llm.model} onChange={(e) => setCfg({ ...cfg, custom_llm: { ...cfg.custom_llm, model: e.target.value } })} /></Field>
@@ -425,7 +425,7 @@ export default function PersonaDrawer({ open, onClose, persona, reps, onSaved }:
                   placeholder={cfg.custom_llm.has_api_key ? "A key is saved. Type to replace it." : "sk-..."} value={apiKey} onChange={(e) => setApiKey(e.target.value)} />
               </Field>
               <div className="flex items-center gap-3 text-xs">
-                {cfg.custom_llm.has_api_key ? <span className="inline-flex items-center gap-1.5 rounded-full bg-mirage-mint/10 px-2.5 py-1 text-mirage-mint" data-testid="key-saved">Key saved</span> : <span className="rounded-full bg-white/5 px-2.5 py-1 text-gray-400">No key saved</span>}
+                {cfg.custom_llm.has_api_key ? <span className="inline-flex items-center gap-1.5 rounded-full bg-vocalface-mint/10 px-2.5 py-1 text-vocalface-mint" data-testid="key-saved">Key saved</span> : <span className="rounded-full bg-white/5 px-2.5 py-1 text-gray-400">No key saved</span>}
                 {cfg.custom_llm.has_api_key && <label className="flex cursor-pointer items-center gap-1.5 text-gray-400"><input type="checkbox" checked={clearKey} onChange={(e) => { setClearKey(e.target.checked); if (e.target.checked) setApiKey(""); }} />Remove the saved key on save</label>}
               </div>
             </div>

@@ -24,7 +24,7 @@ from ..models_templates import WidgetConfig
 router = APIRouter()
 PREFIX = ""  # explicit paths below: /v1/... for the API, /widget... for the public pieces
 STATIC = Path(__file__).resolve().parents[1] / "static"
-ASSET = Path(__file__).resolve().parents[1] / "templates" / "widget" / "mirage-widget.js"
+ASSET = Path(__file__).resolve().parents[1] / "templates" / "widget" / "vocalface-widget.js"
 
 
 class WidgetIn(BaseModel):
@@ -162,8 +162,8 @@ def widget_js():
 _BOOT = """<script>window.__MW=%s;</script>
 <style>:root{--mw:%s}#go{background:var(--mw)!important;box-shadow:none!important}h2{font-size:24px;background:none!important;color:#ece9f2!important;-webkit-text-fill-color:#ece9f2}body{padding:.9rem .9rem 1.2rem}</style>
 <script>(function(){if(window.parent===window)return;
-window.addEventListener('keydown',function(e){if(e.key==='Escape')window.parent.postMessage({mirage:'widget',type:'close'},'*')},true);
-window.addEventListener('load',function(){window.parent.postMessage({mirage:'widget',type:'ready'},'*')})})();</script>
+window.addEventListener('keydown',function(e){if(e.key==='Escape')window.parent.postMessage({vocalface:'widget',type:'close'},'*')},true);
+window.addEventListener('load',function(){window.parent.postMessage({vocalface:'widget',type:'ready'},'*')})})();</script>
 """
 
 

@@ -10,7 +10,7 @@ from pathlib import Path
 
 import numpy as np
 
-MODEL_PATH = Path(os.getenv("MIRAGE_SPEAKER_MODEL", "")) if os.getenv("MIRAGE_SPEAKER_MODEL") else \
+MODEL_PATH = Path(os.getenv("VOCALFACE_SPEAKER_MODEL", "")) if os.getenv("VOCALFACE_SPEAKER_MODEL") else \
     Path(__file__).resolve().parents[2] / "models" / "wespeaker_resnet34_lm.onnx"
 SR = 16000
 

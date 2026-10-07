@@ -36,8 +36,8 @@ export default function CreateReplica({ open, onClose, onCreated, initial = "vid
             <img src={url} alt="Photo preview" className={`h-24 w-24 rounded-xl object-cover ring-1 ring-white/10 ${imgOk === false ? "hidden" : ""}`} onLoad={() => setImgOk(true)} onError={() => setImgOk(false)} />
             <p className="text-xs text-gray-400">{imgOk === false ? "The browser cannot load this image. The server may still be able to." : imgOk ? "Check it against the rules below: is the mouth closed?" : "Loading preview..."}</p></div>)}
           <Callout tone="warn" title="The photo must have a closed mouth">
-            Mirage animates the photo into a calm idle loop (blinking, slight head sway) and keeps the mouth exactly as photographed, so a smile with teeth or a mid-word frame would freeze open. The server checks and rejects photos that fail, with the reason.
-            <ul className="mt-2 space-y-1">{PHOTO_RULES.map((r) => <li key={r} className="flex gap-1.5"><Check size={12} className="mt-0.5 shrink-0 text-mirage-mint" />{r}</li>)}</ul></Callout>
+            VocalFace animates the photo into a calm idle loop (blinking, slight head sway) and keeps the mouth exactly as photographed, so a smile with teeth or a mid-word frame would freeze open. The server checks and rejects photos that fail, with the reason.
+            <ul className="mt-2 space-y-1">{PHOTO_RULES.map((r) => <li key={r} className="flex gap-1.5"><Check size={12} className="mt-0.5 shrink-0 text-vocalface-mint" />{r}</li>)}</ul></Callout>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label={`Idle loop length: ${idle} s`} hint="2-8 s. Longer loops look less repetitive."><input type="range" min={2} max={8} step={1} value={idle} onChange={(e) => setIdle(Number(e.target.value))} className="w-full" aria-label="Idle seconds" /></Field>
             <Field label={`Head motion: ${motion.toFixed(1)}`} hint="0 = still, 1 = natural, 2 = lively."><input type="range" min={0} max={2} step={0.1} value={motion} onChange={(e) => setMotion(Number(e.target.value))} className="w-full" aria-label="Head motion" /></Field>

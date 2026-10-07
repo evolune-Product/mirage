@@ -126,7 +126,7 @@ def make_backend(llm_spec: str, base_url: str = "", model: str = "", api_key: st
     """Custom OpenAI-compatible endpoint when base_url is set, else local Ollama (spec like 'ollama/qwen3:8b')."""
     if base_url:
         return OpenAIBackend(base_url, model or llm_spec.split("/", 1)[-1], api_key)
-    m = model or os.environ.get("MIRAGE_LLM") or (llm_spec.split("/", 1)[-1] if llm_spec else "llama3.2:1b")
+    m = model or os.environ.get("VOCALFACE_LLM") or (llm_spec.split("/", 1)[-1] if llm_spec else "llama3.2:1b")
     return OllamaBackend(m)
 
 
@@ -166,14 +166,14 @@ def execute_tool(tool: ToolSpec, args: dict, ctx: dict) -> tuple[bool, str]:
     Returns (ok, result_text). Result text is whatever the webhook returned (JSON preferred), truncated."""
     from .webhooks import sign
 
-    if tool.webhook_url.startswith("mirage-internal://"):  # built-in tools (leads.py), no HTTP
+    if tool.webhook_url.startswith("vocalface-internal://"):  # built-in tools (leads.py), no HTTP
         from . import leads
 
         return leads.run_internal(tool.name, args, ctx)
     body = json.dumps({"tool": tool.name, "arguments": args, **ctx}, separators=(",", ":"))
-    headers = {"content-type": "application/json", "user-agent": "Mirage-Tools/1"}
+    headers = {"content-type": "application/json", "user-agent": "VocalFace-Tools/1"}
     if tool.secret:
-        headers["Mirage-Signature"] = sign(tool.secret, body)
+        headers["VocalFace-Signature"] = sign(tool.secret, body)
     try:
         code, text = _tool_post(tool.webhook_url, body, headers, tool.timeout_s)
     except Exception as e:  # noqa: BLE001
@@ -385,8 +385,8 @@ class GroundedLLM:
     that language) and a trimmed history (the last few messages, long agent replies cut) so the knowledge excerpts and
     the question stay in focus. The reminder is only sent to the model, never stored in the transcript."""
 
-    MAX_MSGS = int(os.environ.get("MIRAGE_HISTORY_MSGS", "8"))
-    ENABLED = os.environ.get("MIRAGE_GROUNDING", "1") != "0"
+    MAX_MSGS = int(os.environ.get("VOCALFACE_HISTORY_MSGS", "8"))
+    ENABLED = os.environ.get("VOCALFACE_GROUNDING", "1") != "0"
 
     @staticmethod
     def prepare(system: str, history: list[dict], user: str, max_msgs: int | None = None) -> tuple[str, list[dict], str]:
@@ -399,7 +399,7 @@ class GroundedLLM:
             hist = hist[1:]
         lang = detect_language(user, system)
         note = _NOTES.get(lang, _NOTES["en"])
-        if "Relevant knowledge" in system and os.environ.get("MIRAGE_NOTE_GROUND", "1") != "0":
+        if "Relevant knowledge" in system and os.environ.get("VOCALFACE_NOTE_GROUND", "1") != "0":
             note += _GROUND_NOTES.get(lang, _GROUND_NOTES["en"])
         return system, hist, f"{user}\n\n({note})"
 

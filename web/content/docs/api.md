@@ -1,4 +1,4 @@
-# Mirage API (v1)
+# VocalFace API (v1)
 
 Auth: header `x-api-key: mk_...` on everything except `/v1/signup`, `/v1/billing/plans`, webhooks, `/health`. Errors are `{"detail": ...}`. Interactive spec: `/docs` on the API server itself, raw: `/openapi.json`. Route list below was taken from the app's generated OpenAPI. Routes owned by other modules (knowledge, realtime) are listed with their request shapes at time of writing; check `/openapi.json` for changes.
 
@@ -35,10 +35,10 @@ Auth: header `x-api-key: mk_...` on everything except `/v1/signup`, `/v1/billing
 - `GET /v1/billing/plans`, `GET /v1/billing/status`
 - `POST /v1/billing/checkout` `{provider: stripe|razorpay, kind: topup|plan, sku, success_url?, cancel_url?}` -> `{provider, checkout_url, id}`. 501 `provider_not_configured` when keys are absent.
 - `POST /v1/billing/webhooks/stripe` (header `Stripe-Signature`, event `checkout.session.completed`), `POST /v1/billing/webhooks/razorpay` (header `X-Razorpay-Signature`, event `payment_link.paid`). 400 bad signature, 503 secret not set. Credits are added once per event id.
-- Env: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET`, `MIRAGE_USD_INR` (default 85).
+- Env: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET`, `VOCALFACE_USD_INR` (default 85).
 
 ## Moderation
-- `POST /v1/moderation/check` `{text}` -> `{allowed, reasons, classifier}`. Blocklist always; set `MIRAGE_MODERATION_OLLAMA_MODEL` for an extra Ollama classifier (falls back to blocklist-only if Ollama is down). Extra terms: `MIRAGE_BLOCKLIST=a,b`.
+- `POST /v1/moderation/check` `{text}` -> `{allowed, reasons, classifier}`. Blocklist always; set `VOCALFACE_MODERATION_OLLAMA_MODEL` for an extra Ollama classifier (falls back to blocklist-only if Ollama is down). Extra terms: `VOCALFACE_BLOCKLIST=a,b`.
 
 ## Integration hooks for other modules (python)
 - `app.safety.require_consent(replica_id)` before setting `Replica.status="ready"`.
@@ -47,4 +47,4 @@ Auth: header `x-api-key: mk_...` on everything except `/v1/signup`, `/v1/billing
 - `app.safety.enforce_rate_limit(acc.api_key, limit, window)` (in-process only).
 
 ## SDKs
-Python `sdk/python/mirage_sdk` (`Mirage(api_key, base_url)`), TypeScript `sdk/js` (`npm run build`), embed `sdk/embed/widget.js`.
+Python `sdk/python/vocalface_sdk` (`VocalFace(api_key, base_url)`), TypeScript `sdk/js` (`npm run build`), embed `sdk/embed/widget.js`.

@@ -43,7 +43,7 @@ def test_orphan_conversations_get_closed_stamp_and_reaper_bills_them():
 
 def test_recovery_can_be_disabled(monkeypatch):
     fresh_db()
-    monkeypatch.setenv("MIRAGE_RECOVER_ORPHANS", "0")
+    monkeypatch.setenv("VOCALFACE_RECOVER_ORPHANS", "0")
     assert resilience.recover_orphans() == 0
 
 

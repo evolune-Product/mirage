@@ -20,7 +20,7 @@ from pathlib import Path
 
 from sqlalchemy import inspect, text
 
-log = logging.getLogger("mirage.migrate")
+log = logging.getLogger("vocalface.migrate")
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 BASELINE = "0001"
 
@@ -41,7 +41,7 @@ def metadata():
 
 
 def db_url() -> str:
-    return os.environ.get("MIRAGE_DB_URL", "sqlite:///mirage.db")
+    return os.environ.get("VOCALFACE_DB_URL", "sqlite:///vocalface.db")
 
 
 def _cfg(engine=None):
@@ -149,7 +149,7 @@ def warn_if_behind(engine=None) -> dict | None:
     except Exception as e:  # noqa: BLE001
         log.warning("could not determine migration status: %s", e)
         return None
-    if st["state"] == "unstamped" and os.getenv("MIRAGE_ENV", "dev").lower() not in ("prod", "production"):
+    if st["state"] == "unstamped" and os.getenv("VOCALFACE_ENV", "dev").lower() not in ("prod", "production"):
         log.info("database was created by create_all (no alembic history); fine for dev. For production run `python -m app.migrate upgrade`")
     elif st["state"] in ("behind", "unstamped"):
         log.warning("DATABASE SCHEMA IS %s (current=%s head=%s): run `python -m app.migrate upgrade` before serving traffic",

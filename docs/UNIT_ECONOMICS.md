@@ -1,7 +1,7 @@
 # Unit economics (assumptions, not measurements)
 
 Run `cd backend && .venv/bin/python -m app.billing` to regenerate the table from `app/billing.py`.
-Nothing here is benchmarked on a production Mirage deployment; GPU prices and stream density are **assumptions** to replace with your measured numbers (see BENCHMARKS.md).
+Nothing here is benchmarked on a production VocalFace deployment; GPU prices and stream density are **assumptions** to replace with your measured numbers (see BENCHMARKS.md).
 
 ## Prices (code: `PLANS`, `TOPUPS`)
 | Plan | Price | Included min | Effective $/min | Overage |
@@ -36,7 +36,7 @@ Measured with `backend/loadtest/loadgen.py` on the M1 Pro (34 GB, MPS) **while f
 conservative, noisy numbers. Before the fixes the cliff was between 3 and 5 simultaneous conversations (voice N=5: 4/5 ok, first audio 9.6 s;
 face N=5: 0/5 ok; face N=8: 0/24 turns). After: voice N=5 5/5 ok (4.6 s median), live face N=5 15/15 turns (6.5 s warm median), N=8 21/24.
 Usable (acceptable latency, no drops): about **3 live-face** or **5 voice-only** conversations per Mac process under contention; shipped
-admission defaults are 6 total / 3 face (`MIRAGE_MAX_CONVOS`, `MIRAGE_MAX_FACE_CONVOS`). First saturated resource: the shared GPU
+admission defaults are 6 total / 3 face (`VOCALFACE_MAX_CONVOS`, `VOCALFACE_MAX_FACE_CONVOS`). First saturated resource: the shared GPU
 (TTS on MLX + Wav2Lip + any other GPU job), then Ollama (first token 0.2 s -> 5 s at N=5-8 with default parallelism); the API event loop
 stayed at 20-55 % of one core.
 

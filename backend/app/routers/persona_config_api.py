@@ -118,7 +118,7 @@ class ToolIn(BaseModel):
     description: str = ""
     parameters: dict = {"type": "object", "properties": {}}  # JSON schema for the arguments
     webhook_url: str
-    secret: str | None = None  # optional: calls are signed with Mirage-Signature (same scheme as webhooks)
+    secret: str | None = None  # optional: calls are signed with VocalFace-Signature (same scheme as webhooks)
     timeout_s: float = Field(default=8.0, gt=0, le=30)
 
 

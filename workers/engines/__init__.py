@@ -1,10 +1,10 @@
-"""Pluggable lip-sync engines + the MIRAGE_COMMERCIAL_ONLY licence gate.
+"""Pluggable lip-sync engines + the VOCALFACE_COMMERCIAL_ONLY licence gate.
 
-Select with MIRAGE_LIPSYNC_ENGINE=viseme|musetalk|wav2lip|auto (default auto). `auto` picks the best engine that is
+Select with VOCALFACE_LIPSYNC_ENGINE=viseme|musetalk|wav2lip|auto (default auto). `auto` picks the best engine that is
 allowed in the current mode and loadable: commercial-only -> musetalk if weights+GPU are present, else viseme;
 otherwise wav2lip (research-licensed, dev default) falling back to viseme.
 
-MIRAGE_COMMERCIAL_ONLY=1 refuses to load any engine whose licence is not commercial-safe (Wav2Lip), and the server's
+VOCALFACE_COMMERCIAL_ONLY=1 refuses to load any engine whose licence is not commercial-safe (Wav2Lip), and the server's
 /health lists what is disabled and why."""
 from __future__ import annotations
 
@@ -24,7 +24,7 @@ ORDER_DEV = ("wav2lip", "viseme")
 
 
 def commercial_only() -> bool:
-    return os.environ.get("MIRAGE_COMMERCIAL_ONLY", "0").strip().lower() in ("1", "true", "yes", "on")
+    return os.environ.get("VOCALFACE_COMMERCIAL_ONLY", "0").strip().lower() in ("1", "true", "yes", "on")
 
 
 def engine_class(name: str):
@@ -35,21 +35,21 @@ def engine_class(name: str):
 
 
 def check_allowed(name: str, strict: bool | None = None) -> None:
-    """Raise CommercialOnlyError if MIRAGE_COMMERCIAL_ONLY is on and `name` is not commercial-safe.
-    'Unclear' counts as allowed only when MIRAGE_COMMERCIAL_ALLOW_UNCLEAR=1 (default: refused)."""
+    """Raise CommercialOnlyError if VOCALFACE_COMMERCIAL_ONLY is on and `name` is not commercial-safe.
+    'Unclear' counts as allowed only when VOCALFACE_COMMERCIAL_ALLOW_UNCLEAR=1 (default: refused)."""
     if not (commercial_only() if strict is None else strict):
         return
     lic = engine_class(name).licence
     ok = lic.commercial
-    if ok is None and os.environ.get("MIRAGE_COMMERCIAL_ALLOW_UNCLEAR", "0") == "1":
+    if ok is None and os.environ.get("VOCALFACE_COMMERCIAL_ALLOW_UNCLEAR", "0") == "1":
         ok = True  # explicit operator opt-in after legal review (docs/LICENSES.md)
     if not ok:
         if lic.commercial is None:
             bad = [f"{w.name} ({w.licence}; {w.note})" for w in lic.weights if w.commercial is None]
-            raise CommercialOnlyError(f"engine '{name}' is disabled by MIRAGE_COMMERCIAL_ONLY=1: unclear weight licence: "
-                                      f"{', '.join(bad)}. Set MIRAGE_COMMERCIAL_ALLOW_UNCLEAR=1 only after legal review")
+            raise CommercialOnlyError(f"engine '{name}' is disabled by VOCALFACE_COMMERCIAL_ONLY=1: unclear weight licence: "
+                                      f"{', '.join(bad)}. Set VOCALFACE_COMMERCIAL_ALLOW_UNCLEAR=1 only after legal review")
         bad = [f"{w.name} ({w.licence})" for w in lic.weights if w.commercial is False] or ["research-only licence"]
-        raise CommercialOnlyError(f"engine '{name}' is disabled by MIRAGE_COMMERCIAL_ONLY=1: {', '.join(bad)}")
+        raise CommercialOnlyError(f"engine '{name}' is disabled by VOCALFACE_COMMERCIAL_ONLY=1: {', '.join(bad)}")
 
 
 def status(strict: bool | None = None) -> dict:
@@ -76,7 +76,7 @@ def status(strict: bool | None = None) -> dict:
 def resolve(name: str | None = None, strict: bool | None = None) -> str:
     """Engine name to use. Explicit name that violates commercial-only raises; 'auto' picks the best allowed+available."""
     strict = commercial_only() if strict is None else strict
-    name = (name or os.environ.get("MIRAGE_LIPSYNC_ENGINE") or "auto").lower()
+    name = (name or os.environ.get("VOCALFACE_LIPSYNC_ENGINE") or "auto").lower()
     if name != "auto":
         check_allowed(name, strict)
         return name
@@ -111,4 +111,4 @@ COMPONENTS_BLOCKED = {
 def require_commercial_safe(component: str) -> None:
     """Exit-by-exception guard for worker scripts (photo_idle.py, render_liveportrait.py)."""
     if commercial_only() and component in COMPONENTS_BLOCKED:
-        raise CommercialOnlyError(f"'{component}' is disabled by MIRAGE_COMMERCIAL_ONLY=1: {COMPONENTS_BLOCKED[component]}")
+        raise CommercialOnlyError(f"'{component}' is disabled by VOCALFACE_COMMERCIAL_ONLY=1: {COMPONENTS_BLOCKED[component]}")

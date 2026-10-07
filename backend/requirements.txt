@@ -16,6 +16,6 @@ fastembed==0.8.1
 pypdf==6.19.0
 cryptography==50.0.2
 alembic==1.20.0
-# optional: S3 storage (MIRAGE_STORAGE=s3) and Postgres (MIRAGE_DB_URL=postgresql+psycopg://...)
+# optional: S3 storage (VOCALFACE_STORAGE=s3) and Postgres (VOCALFACE_DB_URL=postgresql+psycopg://...)
 # boto3==1.43.108
 # psycopg[binary]

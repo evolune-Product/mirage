@@ -3,8 +3,8 @@ Silicon (first audio of a short phrase ~0.13 s vs ~0.45-0.85 s on CPU/ONNX). Opt
 dies, `FallbackTTS` transparently uses the ONNX engine.
 
 Setup:  ./backend/scripts_setup_tts_mlx.sh     (creates <repo>/.venv-tts with Python 3.11 + mlx-audio)
-Env:    MIRAGE_TTS=auto|mlx|onnx (default auto), MIRAGE_TTS_PYTHON=<python with mlx-audio>,
-        MIRAGE_TTS_WORKERS=<n sidecar processes, default 2>: one sidecar synthesises one request at a time, so concurrent
+Env:    VOCALFACE_TTS=auto|mlx|onnx (default auto), VOCALFACE_TTS_PYTHON=<python with mlx-audio>,
+        VOCALFACE_TTS_WORKERS=<n sidecar processes, default 2>: one sidecar synthesises one request at a time, so concurrent
         conversations queue behind each other; a request goes to the least busy sidecar (capacity work, see
         docs/overnight/capacity.md for the measured effect and the memory cost of each extra process).
 """
@@ -19,7 +19,7 @@ WORKER = Path(__file__).with_name("mlx_tts_worker.py")
 
 
 def sidecar_python() -> str | None:
-    p = os.environ.get("MIRAGE_TTS_PYTHON") or str(REPO_ROOT / ".venv-tts" / "bin" / "python")
+    p = os.environ.get("VOCALFACE_TTS_PYTHON") or str(REPO_ROOT / ".venv-tts" / "bin" / "python")
     return p if Path(p).exists() else None
 
 
@@ -132,7 +132,7 @@ class MlxKokoroTTS:
     sample_rate = 24000
 
     def __init__(self, python: str | None = None, workers: int | None = None):
-        n = workers if workers is not None else int(os.environ.get("MIRAGE_TTS_WORKERS", "2"))
+        n = workers if workers is not None else int(os.environ.get("VOCALFACE_TTS_WORKERS", "2"))
         self.workers = [_Sidecar(python) for _ in range(max(1, n))]
         self._rr = 0
 

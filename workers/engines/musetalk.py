@@ -3,8 +3,8 @@ even commercially'. Only three weight sets are loaded here (the repo's DWPose / 
 mediapipe landmarks replace it): MuseTalk unet, sd-vae-ft-mse (MIT), whisper-tiny (MIT / Apache-2.0).
 
 The unet's training data (HDTF + an undisclosed private set) makes the weight licence 'vendor-stated yes, provenance
-unclear', so MIRAGE_COMMERCIAL_ONLY=1 refuses it unless the operator sets MIRAGE_COMMERCIAL_ALLOW_UNCLEAR=1 after
-legal review. Env: MIRAGE_MUSETALK_RES (256 default; 192 / 128 = faster, softer), MIRAGE_MUSETALK_BS."""
+unclear', so VOCALFACE_COMMERCIAL_ONLY=1 refuses it unless the operator sets VOCALFACE_COMMERCIAL_ALLOW_UNCLEAR=1 after
+legal review. Env: VOCALFACE_MUSETALK_RES (256 default; 192 / 128 = faster, softer), VOCALFACE_MUSETALK_BS."""
 from __future__ import annotations
 
 import os
@@ -51,9 +51,9 @@ class MuseTalkLiveEngine(LipsyncEngine):
         if not ok:
             raise EngineUnavailable(why)
         self.device = device
-        self.res = int(os.environ.get("MIRAGE_MUSETALK_RES", "256"))
+        self.res = int(os.environ.get("VOCALFACE_MUSETALK_RES", "256"))
         self._e = MuseTalkEngine(device, res=self.res)
-        self.bs = int(os.environ.get("MIRAGE_MUSETALK_BS", "8"))
+        self.bs = int(os.environ.get("VOCALFACE_MUSETALK_BS", "8"))
         self._lat = {}
         return self
 

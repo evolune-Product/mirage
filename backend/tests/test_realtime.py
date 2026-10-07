@@ -236,7 +236,7 @@ def test_chunker_short_first_chunk_then_sentences():
 
 
 def test_early_commit_uses_speculative_transcript(monkeypatch):
-    monkeypatch.setenv("MIRAGE_VAD", "energy")  # synthetic square waves are not speech to Silero
+    monkeypatch.setenv("VOCALFACE_VAD", "energy")  # synthetic square waves are not speech to Silero
     calls = []
 
     class Stt:
@@ -267,7 +267,7 @@ def test_early_commit_uses_speculative_transcript(monkeypatch):
 
 
 def test_resumed_speech_drops_speculative_transcript(monkeypatch):
-    monkeypatch.setenv("MIRAGE_VAD", "energy")
+    monkeypatch.setenv("VOCALFACE_VAD", "energy")
     class Stt:
         n = 0
         async def transcribe(self, pcm, sr=16000):

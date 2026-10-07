@@ -20,7 +20,7 @@ export function usePhoto(rid: string, enabled: boolean) {
 export function PhotoProgress({ p, replicaStatus }: { p: PS; replicaStatus: string }) {
   const consentWait = replicaStatus === "awaiting_consent";
   if (p.status === "error") return <Callout tone="bad" title="This photo cannot be animated"><span data-testid="photo-error" className="block text-gray-200">{p.error || "The photo was rejected."}</span><span className="mt-2 block text-gray-400">Fix it and create the replica again with a new photo. Needed: {PHOTO_RULES.slice(0, 3).join("; ").toLowerCase()}.</span></Callout>;
-  if (p.status === "ready") return <p className="text-xs text-mirage-mint">Photo animated{p.animate_s ? ` in ${Math.round(p.animate_s)} s` : ""}. The idle loop below is what your agent shows while listening.</p>;
+  if (p.status === "ready") return <p className="text-xs text-vocalface-mint">Photo animated{p.animate_s ? ` in ${Math.round(p.animate_s)} s` : ""}. The idle loop below is what your agent shows while listening.</p>;
   return (
     <div data-testid="photo-progress">
       <p className="mb-1.5 flex items-center gap-2 text-xs text-gray-300">{consentWait ? "Waiting for consent before animation starts" : <><Spinner size={13} />{p.status === "queued" ? "Queued for the worker" : "Animating your photo (blinking, subtle head motion)"}</>}</p>
@@ -35,7 +35,7 @@ export default function PhotoSection({ rid, status, trainUrl }: { rid: string; s
   if (p === undefined) return <div className="mb-6 h-16 animate-pulse rounded-xl bg-white/5" />;
   if (p === null) return null; // not a photo replica
   return (
-    <Section title="Photo avatar" icon={<Camera size={16} className="text-mirage-amber" />} hint="Animated from one portrait. No voice is cloned from a photo: a preset voice is used.">
+    <Section title="Photo avatar" icon={<Camera size={16} className="text-vocalface-amber" />} hint="Animated from one portrait. No voice is cloned from a photo: a preset voice is used.">
       <div className="grid gap-3 sm:grid-cols-[8rem_1fr]">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={trainUrl} alt="Source photo" className="aspect-square w-32 rounded-xl object-cover ring-1 ring-white/10" onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }} />

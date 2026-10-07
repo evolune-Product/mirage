@@ -8,7 +8,7 @@ meaningful part. Own instances only (api 8440, lipsync 8441).
 * `backend/loadtest/loadgen.py`: N simultaneous real WebSocket conversations (hello/tagged binary like the browser, Kokoro-synthesised
   questions replayed at real-time 20 ms pacing, mic kept open with silence), voice-only and live-face modes; per turn end-of-speech ->
   first audio / first video segment, dropped turns (45 s timeout), error events, close codes; 1 Hz CPU/RSS of api/lipsync/ollama,
-  Apple GPU % (ioreg), background load before each run, server stage timings parsed from `MIRAGE_LOG_VOICE=1` logs. Prints a table.
+  Apple GPU % (ioreg), background load before each run, server stage timings parsed from `VOCALFACE_LOG_VOICE=1` logs. Prints a table.
   `cd backend && .venv/bin/python -m loadtest.loadgen --levels 1,2,3,5,8 --mode both --turns 3 --api-log /tmp/cap_api.log`
 * `backend/loadtest/leakcheck.py`: 100 connect/disconnect cycles (polite / abrupt / mid-reply) comparing tasks/threads/fds/RSS.
 
@@ -30,7 +30,7 @@ meaningful part. Own instances only (api 8440, lipsync 8441).
 ## Bottlenecks found (code reading + measurements)
 1. **TTS sidecar**: one MLX Kokoro process serves all sessions, and its protocol let a *newer request abandon the older one*
    (the worker dropped the rest of request A when B arrived): under concurrency this truncates other users' audio. Fixed: explicit
-   `{"cancel": id}`, pool of `MIRAGE_TTS_WORKERS` sidecars (default 2), least-busy routing.
+   `{"cancel": id}`, pool of `VOCALFACE_TTS_WORKERS` sidecars (default 2), least-busy routing.
 2. **lipsync `/render` ran inference + composite + JPEG on the event loop** behind a plain lock: the whole service froze per render,
    lock hand-over was arbitrary, abandoned requests still rendered, no queue bound, per-replica cursor shared by all sessions of a
    replica (guest links = many sessions, one replica). Fixed: `workers/lipsync_sched.py` (2 lane threads, first-piece priority + aging,
@@ -43,7 +43,7 @@ meaningful part. Own instances only (api 8440, lipsync 8441).
    (`resilience.recover_orphans`), SIGTERM now closes sockets with 1012 and waits for teardown.
 
 ## Admission control
-`backend/app/admission.py`, wired in `routers/realtime.py` (guest links go through the same function): MIRAGE_MAX_CONVOS, MIRAGE_MAX_FACE_CONVOS,
+`backend/app/admission.py`, wired in `routers/realtime.py` (guest links go through the same function): VOCALFACE_MAX_CONVOS, VOCALFACE_MAX_FACE_CONVOS,
 face overflow -> voice-only, optional queue, `busy` JSON + close 1013, `/health/capacity` (503 when full), `/health/deep` and `/metrics` gauges
 (live per kind, limits, admission counters, loop lag, fds, tasks, RSS). Tests: `tests/test_capacity*.py` (37).
 
@@ -69,7 +69,7 @@ last (20-55 % of one core, loop lag max 11 ms). Not done: soak test, disk-full s
 Found and fixed a real leak: `ConversationRuntime._watchdog` (sleeps for the whole call limit) survived every call (31 tasks after 30 cycles)
 because teardown could be cancelled before `rt.stop()` ran. `realtime.py` now cancels runtime/session tasks before its first await.
 After: tasks 8 -> 8, slots 0, fds 39 -> 42 (stable), threads 7 -> 11 (pool growth, not per call), RSS falls back. First 100-cycle run had 41
-failures only because signup is rate limited (MIRAGE_RATE_LIMIT=0 for load tests). `MIRAGE_DEBUG_TASKS=1` adds `tasks_by_coro` to /health/capacity.
+failures only because signup is rate limited (VOCALFACE_RATE_LIMIT=0 for load tests). `VOCALFACE_DEBUG_TASKS=1` adds `tasks_by_coro` to /health/capacity.
 
 ## Honest limits
 Defaults 6 total / 3 face are conservative and derived under contention. Chaos tests are fakes (no real SIGKILL of lipsync/Ollama run);

@@ -1,4 +1,4 @@
-/* Controls, transcript, meters and banners for MirageClient (shared by playground.html and guest.html). */
+/* Controls, transcript, meters and banners for VocalFaceClient (shared by playground.html and guest.html). */
 (() => {
 'use strict';
 const $ = (id) => document.getElementById(id);
@@ -136,5 +136,5 @@ async function copyText(t) {
   try { document.execCommand('copy'); } finally { a.remove(); }
 }
 
-window.MirageUI = { mount };
+window.VocalFaceUI = { mount };
 })();

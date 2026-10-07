@@ -1,7 +1,7 @@
 """Lead capture: validation + storage + the built-in `capture_lead` tool.
 
 The tool is injected into a persona's tool list by builtin_tools.tools_for() (only when the persona has lead capture
-enabled) and executed in-process via the `mirage-internal://capture_lead` URL scheme (llm_backends.execute_tool).
+enabled) and executed in-process via the `vocalface-internal://capture_lead` URL scheme (llm_backends.execute_tool).
 """
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ from .models_leads import Lead, LeadCaptureConfig
 FIELDS = ("name", "email", "phone", "company", "interest", "notes")
 _EMAIL = re.compile(r"^[A-Za-z0-9._%+\-']{1,64}@[A-Za-z0-9\-]+(\.[A-Za-z0-9\-]+)*\.[A-Za-z]{2,}$")
 _ensured: set[int] = set()
-log = logging.getLogger('mirage.leads')
+log = logging.getLogger('vocalface.leads')
 
 
 def ensure() -> None:
@@ -141,7 +141,7 @@ def save_lead(s: DB, *, account_id: str, conversation_id: str, persona_id: str, 
 
 
 def run_internal(name: str, args: dict, ctx: dict) -> tuple[bool, str]:
-    """Executor behind llm_backends.execute_tool for mirage-internal:// tools. Never raises."""
+    """Executor behind llm_backends.execute_tool for vocalface-internal:// tools. Never raises."""
     try:
         if name != "capture_lead":
             return False, json.dumps({"error": f"unknown internal tool {name}"})

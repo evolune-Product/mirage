@@ -1,5 +1,5 @@
-# Mirage dashboard + marketing site (Next.js 14).  docker build -f infra/Dockerfile.web \
-#   --build-arg NEXT_PUBLIC_API_URL=https://api.example.com -t mirage-web .
+# VocalFace dashboard + marketing site (Next.js 14).  docker build -f infra/Dockerfile.web \
+#   --build-arg NEXT_PUBLIC_API_URL=https://api.example.com -t vocalface-web .
 # NEXT_PUBLIC_* values are baked into the JS at build time: rebuild when the API URL changes. UNTESTED.
 FROM node:20-slim AS build
 WORKDIR /app

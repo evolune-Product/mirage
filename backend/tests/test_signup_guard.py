@@ -20,7 +20,7 @@ def c(monkeypatch):
 
     app.dependency_overrides[db.get_session] = sess
     limiter.reset()
-    for k in ("MIRAGE_SIGNUP_POW_BITS", "MIRAGE_SIGNUP_PER_IP_DAY", "MIRAGE_SIGNUP_GLOBAL_HOUR", "MIRAGE_SIGNUP_UNIQUE_EMAIL", "MIRAGE_BLOCKED_EMAIL_DOMAINS"):
+    for k in ("VOCALFACE_SIGNUP_POW_BITS", "VOCALFACE_SIGNUP_PER_IP_DAY", "VOCALFACE_SIGNUP_GLOBAL_HOUR", "VOCALFACE_SIGNUP_UNIQUE_EMAIL", "VOCALFACE_BLOCKED_EMAIL_DOMAINS"):
         monkeypatch.delenv(k, raising=False)
     yield TestClient(app)
     app.dependency_overrides.clear()
@@ -50,9 +50,9 @@ def test_disposable_blocked(c, email):
 
 
 def test_disposable_check_can_be_disabled_and_extended(c, monkeypatch):
-    monkeypatch.setenv("MIRAGE_BLOCKED_EMAIL_DOMAINS", "evil.test")
+    monkeypatch.setenv("VOCALFACE_BLOCKED_EMAIL_DOMAINS", "evil.test")
     assert c.post("/v1/signup", json={"email": "a@evil.test"}).status_code == 422
-    monkeypatch.setenv("MIRAGE_BLOCK_DISPOSABLE_EMAIL", "0")
+    monkeypatch.setenv("VOCALFACE_BLOCK_DISPOSABLE_EMAIL", "0")
     assert c.post("/v1/signup", json={"email": "a@mailinator.com"}).status_code == 200
 
 
@@ -62,19 +62,19 @@ def test_invalid_email(c, email):
 
 
 def test_per_ip_daily_cap(c, monkeypatch):
-    monkeypatch.setenv("MIRAGE_SIGNUP_PER_IP_DAY", "2")
+    monkeypatch.setenv("VOCALFACE_SIGNUP_PER_IP_DAY", "2")
     codes = [c.post("/v1/signup", json={"email": f"u{i}@example.org"}).status_code for i in range(4)]
     assert codes == [200, 200, 429, 429]
 
 
 def test_global_hourly_cap(c, monkeypatch):
-    monkeypatch.setenv("MIRAGE_SIGNUP_GLOBAL_HOUR", "1")
+    monkeypatch.setenv("VOCALFACE_SIGNUP_GLOBAL_HOUR", "1")
     assert c.post("/v1/signup", json={"email": "a@example.org"}).status_code == 200
     assert c.post("/v1/signup", json={"email": "b@example.org"}).status_code == 429
 
 
 def test_unique_email_normalised(c, monkeypatch):
-    monkeypatch.setenv("MIRAGE_SIGNUP_UNIQUE_EMAIL", "1")
+    monkeypatch.setenv("VOCALFACE_SIGNUP_UNIQUE_EMAIL", "1")
     assert c.post("/v1/signup", json={"email": "john.doe@gmail.com"}).status_code == 200
     r = c.post("/v1/signup", json={"email": "johndoe+promo@gmail.com"})
     assert r.status_code == 409 and r.json()["detail"]["error"] == "email_taken"
@@ -83,7 +83,7 @@ def test_unique_email_normalised(c, monkeypatch):
 
 def test_pow_flow(c, monkeypatch):
     assert c.get("/v1/signup/challenge").json() == {"bits": 0}
-    monkeypatch.setenv("MIRAGE_SIGNUP_POW_BITS", "10")
+    monkeypatch.setenv("VOCALFACE_SIGNUP_POW_BITS", "10")
     ch = c.get("/v1/signup/challenge").json()
     assert ch["bits"] == 10
     r = c.post("/v1/signup", json={"email": "a@example.org"})
@@ -98,7 +98,7 @@ def test_pow_flow(c, monkeypatch):
 
 
 def test_pow_forged_expired_and_downgraded_challenges_rejected(c, monkeypatch):
-    monkeypatch.setenv("MIRAGE_SIGNUP_POW_BITS", "8")
+    monkeypatch.setenv("VOCALFACE_SIGNUP_POW_BITS", "8")
     ch = c.get("/v1/signup/challenge").json()["challenge"]
     exp, rnd, bits, mac = ch.split(".")
     forged = f"{exp}.{rnd}.0.{mac}"  # lower the difficulty: MAC no longer matches

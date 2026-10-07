@@ -46,11 +46,11 @@ export function ConversationMock({ className = "" }: { className?: string }) {
   const speaking = cur?.[0] === "a";
   return (
     <div ref={ref} className={className}>
-      <Window title="mirage.app / live conversation">
+      <Window title="vocalface.com / live conversation">
         <div className="grid md:grid-cols-[1fr_1.1fr]">
           <div className="relative flex min-h-[200px] items-center justify-center bg-[radial-gradient(circle_at_50%_40%,rgba(124,92,255,.35),transparent_65%)] p-6 md:min-h-[360px]">
-            <div className={`h-24 w-24 rounded-full bg-mirage-gradient opacity-90 blur-[1px] md:h-32 md:w-32 ${speaking ? "animate-pulse" : ""}`} />
-            <span className="absolute left-3 top-3 flex items-center gap-1.5 rounded-full bg-black/40 px-2.5 py-1 font-mono text-[10px] text-mirage-mint"><i className="h-1.5 w-1.5 rounded-full bg-mirage-mint" />{speaking ? "speaking" : cur ? "listening" : "idle"}</span>
+            <div className={`h-24 w-24 rounded-full bg-vocalface-gradient opacity-90 blur-[1px] md:h-32 md:w-32 ${speaking ? "animate-pulse" : ""}`} />
+            <span className="absolute left-3 top-3 flex items-center gap-1.5 rounded-full bg-black/40 px-2.5 py-1 font-mono text-[10px] text-vocalface-mint"><i className="h-1.5 w-1.5 rounded-full bg-vocalface-mint" />{speaking ? "speaking" : cur ? "listening" : "idle"}</span>
             <span className="absolute bottom-3 left-3 rounded-full bg-black/40 px-2.5 py-1 font-mono text-[10px] text-gray-300">first audio 1.4s</span>
           </div>
           <div className="flex min-h-[260px] flex-col justify-end gap-2.5 border-t border-white/10 p-4 md:border-l md:border-t-0">
@@ -64,7 +64,7 @@ export function ConversationMock({ className = "" }: { className?: string }) {
 }
 function Bubble({ who, text, caret }: { who: "u" | "a"; text: string; caret?: boolean }) {
   const u = who === "u";
-  return <div className={`max-w-[88%] rounded-2xl px-3.5 py-2 text-[13px] leading-snug ${u ? "self-end bg-white/10 text-gray-100" : "self-start bg-mirage-violet/25 text-gray-50"}`}>{text}{caret && <span className="ml-0.5 inline-block h-3 w-px translate-y-0.5 animate-pulse bg-white" />}</div>;
+  return <div className={`max-w-[88%] rounded-2xl px-3.5 py-2 text-[13px] leading-snug ${u ? "self-end bg-white/10 text-gray-100" : "self-start bg-vocalface-violet/25 text-gray-50"}`}>{text}{caret && <span className="ml-0.5 inline-block h-3 w-px translate-y-0.5 animate-pulse bg-white" />}</div>;
 }
 
 export function ConsentMock({ className = "" }: { className?: string }) {
@@ -72,10 +72,10 @@ export function ConsentMock({ className = "" }: { className?: string }) {
   return (
     <Window title="dashboard / replicas / founder" className={className}>
       <div className="space-y-4 p-5">
-        <div className="flex items-center justify-between"><div><p className="text-sm font-medium text-white">Founder</p><p className="font-mono text-[11px] text-gray-400">rep_8f21c0</p></div><span className="rounded-full bg-mirage-mint/15 px-2.5 py-1 font-mono text-[10px] text-mirage-mint">ready</span></div>
-        <div className="rounded-xl border border-white/10 bg-black/30 p-3"><p className="mb-1 flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-mirage-amber"><ShieldCheck size={12} /> Say this phrase aloud</p><p className="text-sm text-gray-200">&ldquo;I, Founder, consent to Mirage creating a replica of my likeness.&rdquo;</p></div>
-        <ul className="space-y-2">{steps.map(([s]) => <li key={s} className="flex items-center gap-2.5 text-[13px] text-gray-300"><span className="grid h-5 w-5 place-items-center rounded-full bg-mirage-mint/20 text-mirage-mint"><Check size={12} /></span>{s}</li>)}</ul>
-        <div className="h-1.5 overflow-hidden rounded-full bg-white/10"><div className="h-full w-full rounded-full bg-mirage-gradient" /></div>
+        <div className="flex items-center justify-between"><div><p className="text-sm font-medium text-white">Founder</p><p className="font-mono text-[11px] text-gray-400">rep_8f21c0</p></div><span className="rounded-full bg-vocalface-mint/15 px-2.5 py-1 font-mono text-[10px] text-vocalface-mint">ready</span></div>
+        <div className="rounded-xl border border-white/10 bg-black/30 p-3"><p className="mb-1 flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-vocalface-amber"><ShieldCheck size={12} /> Say this phrase aloud</p><p className="text-sm text-gray-200">&ldquo;I, Founder, consent to VocalFace creating a replica of my likeness.&rdquo;</p></div>
+        <ul className="space-y-2">{steps.map(([s]) => <li key={s} className="flex items-center gap-2.5 text-[13px] text-gray-300"><span className="grid h-5 w-5 place-items-center rounded-full bg-vocalface-mint/20 text-vocalface-mint"><Check size={12} /></span>{s}</li>)}</ul>
+        <div className="h-1.5 overflow-hidden rounded-full bg-white/10"><div className="h-full w-full rounded-full bg-vocalface-gradient" /></div>
         <div className="flex gap-2"><span className="rounded-full border border-white/15 px-3 py-1.5 text-xs text-gray-300">Revoke consent</span><span className="rounded-full border border-white/15 px-3 py-1.5 text-xs text-gray-300">View audit log</span></div>
       </div>
     </Window>
@@ -87,9 +87,9 @@ export function KnowledgeMock({ className = "" }: { className?: string }) {
   return (
     <Window title="dashboard / personas / support-agent / knowledge" className={className} light>
       <div className="space-y-4 bg-[#faf7f1] p-5 text-ink">
-        <div className="grid place-items-center rounded-xl border-2 border-dashed border-black/15 py-6 text-center"><Upload size={20} className="text-mirage-violet" /><p className="mt-2 text-sm font-medium">Drop documents to add knowledge</p><p className="text-xs text-black/60">Indexed for retrieval at answer time</p></div>
-        <ul className="space-y-2">{docs.map(([d, c]) => <li key={d} className="flex items-center justify-between rounded-lg border border-black/10 bg-white px-3 py-2 text-[13px]"><span className="flex items-center gap-2"><FileText size={14} className="text-mirage-rose" />{d}</span><span className="font-mono text-[11px] text-black/60">{c}</span></li>)}</ul>
-        <div className="rounded-lg bg-ink p-3 text-[12px] text-gray-300"><span className="font-mono text-mirage-cyan">retrieved</span> refund-policy.txt, chunk 2 &rarr; used in answer</div>
+        <div className="grid place-items-center rounded-xl border-2 border-dashed border-black/15 py-6 text-center"><Upload size={20} className="text-vocalface-violet" /><p className="mt-2 text-sm font-medium">Drop documents to add knowledge</p><p className="text-xs text-black/60">Indexed for retrieval at answer time</p></div>
+        <ul className="space-y-2">{docs.map(([d, c]) => <li key={d} className="flex items-center justify-between rounded-lg border border-black/10 bg-white px-3 py-2 text-[13px]"><span className="flex items-center gap-2"><FileText size={14} className="text-vocalface-rose" />{d}</span><span className="font-mono text-[11px] text-black/60">{c}</span></li>)}</ul>
+        <div className="rounded-lg bg-ink p-3 text-[12px] text-gray-300"><span className="font-mono text-vocalface-cyan">retrieved</span> refund-policy.txt, chunk 2 &rarr; used in answer</div>
       </div>
     </Window>
   );
@@ -100,7 +100,7 @@ export function CodeMock({ className = "" }: { className?: string }) {
   const tabs = ["curl", "python", "javascript"];
   const code = [
 `curl -X POST http://localhost:8000/v1/conversations \\
-  -H "x-api-key: $MIRAGE_KEY" \\
+  -H "x-api-key: $VOCALFACE_KEY" \\
   -H "content-type: application/json" \\
   -d '{"persona_id": "per_31ab"}'`,
 `import requests
@@ -120,8 +120,8 @@ console.log(await r.json());`];
     <Window title="POST /v1/conversations" className={className}>
       <div className="flex gap-1 border-b border-white/10 px-3 pt-2">{tabs.map((t, i) => <button key={t} onClick={() => setTab(i)} className={`rounded-t-lg px-3 py-1.5 font-mono text-xs ${tab === i ? "bg-white/10 text-white" : "text-gray-400 hover:text-gray-200"}`}>{t}</button>)}</div>
       <pre className="overflow-x-auto p-4 font-mono text-[12px] leading-relaxed text-gray-200"><code>{code[tab]}</code></pre>
-      <div className="border-t border-white/10 bg-black/30 p-4"><p className="mb-1 font-mono text-[10px] uppercase tracking-wider text-mirage-mint">200 OK</p>
-        <pre className="overflow-x-auto font-mono text-[12px] leading-relaxed text-mirage-cyan"><code>{`{ "id": "conv_77d2",
+      <div className="border-t border-white/10 bg-black/30 p-4"><p className="mb-1 font-mono text-[10px] uppercase tracking-wider text-vocalface-mint">200 OK</p>
+        <pre className="overflow-x-auto font-mono text-[12px] leading-relaxed text-vocalface-cyan"><code>{`{ "id": "conv_77d2",
   "stream": "/v1/conversations/conv_77d2/stream" }`}</code></pre></div>
     </Window>
   );
@@ -130,7 +130,7 @@ console.log(await r.json());`];
 export function LatencyBars() {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once: true, margin: "-60px" });
-  const rows: [string, number, string, string][] = [["Speech to text", 0.3, "faster-whisper", "bg-mirage-cyan"], ["LLM first token", 0.2, "Ollama", "bg-mirage-violet"], ["Speech synthesis", 0.9, "Kokoro + overhead (remainder)", "bg-mirage-rose"]];
+  const rows: [string, number, string, string][] = [["Speech to text", 0.3, "faster-whisper", "bg-vocalface-cyan"], ["LLM first token", 0.2, "Ollama", "bg-vocalface-violet"], ["Speech synthesis", 0.9, "Kokoro + overhead (remainder)", "bg-vocalface-rose"]];
   return (
     <div ref={ref} className="space-y-4">
       {rows.map(([l, v, s, c]) => (

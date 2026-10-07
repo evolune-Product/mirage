@@ -23,14 +23,14 @@ function Evidence({ rid, rec }: { rid: string; rec: Rec }) {
   const [tone, text] = v ? VOICE[v.voice_status] ?? ["queued", v.voice_status] : ["queued", ""];
   return (
     <li className={`rounded-xl border border-white/10 bg-white/[0.03] p-3.5 ${rec.revoked ? "opacity-60" : ""}`}>
-      <div className="flex flex-wrap items-center gap-2"><ShieldCheck size={15} className="text-mirage-mint" /><span className="text-sm font-medium">{rec.speaker_name}</span>{rec.revoked && <Badge s="revoked" />}<span className="ml-auto text-xs text-gray-500">{fmtDate(rec.created_at)}</span></div>
+      <div className="flex flex-wrap items-center gap-2"><ShieldCheck size={15} className="text-vocalface-mint" /><span className="text-sm font-medium">{rec.speaker_name}</span>{rec.revoked && <Badge s="revoked" />}<span className="ml-auto text-xs text-gray-500">{fmtDate(rec.created_at)}</span></div>
       <p className="mt-2 text-xs italic text-gray-400">&ldquo;{rec.transcript}&rdquo;</p>
       {v === undefined ? <div className="mt-3 h-8 animate-pulse rounded bg-white/5" /> : v ? (
         <div className="mt-3 flex flex-wrap items-center gap-2 text-xs" data-testid="verification">
           <Badge s={tone} /><span className="text-gray-400">{text}</span>
           {v.voice_score != null && <span className="font-mono text-gray-200" data-testid="voice-score">voice match {(v.voice_score * 100).toFixed(0)}%</span>}
           <span className="font-mono text-gray-400">phrase {(v.phrase_score * 100).toFixed(0)}%</span>
-          <span className={v.code_words_ok ? "text-mirage-mint" : "text-mirage-rose"}>{v.code_words_ok ? "code words ok" : "code words missing"}</span>
+          <span className={v.code_words_ok ? "text-vocalface-mint" : "text-vocalface-rose"}>{v.code_words_ok ? "code words ok" : "code words missing"}</span>
         </div>
       ) : <p className="mt-3 text-xs text-gray-500">Typed consent ({rec.verified_by}): no recording or voice check on file.</p>}
       {audio ? <audio controls src={audio} className="mt-3 h-9 w-full" /> : v && !aerr ? <div className="mt-3 h-9 animate-pulse rounded bg-white/5" /> : null}
@@ -49,13 +49,13 @@ function ListeningClip({ rid }: { rid: string }) {
   }
   async function remove() { try { await api(`/v1/replicas/${rid}/listening-clip`, { method: "DELETE" }); setClip(null); toast.success("Listening clip removed."); } catch (x) { toast.error(x); } }
   return (
-    <Section title="Listening clip" icon={<Film size={16} className="text-mirage-cyan" />} hint="A short silent clip (a few seconds, mouth closed, natural blinking) the face loops while the agent listens. Without one, the playground falls back to the training video.">
+    <Section title="Listening clip" icon={<Film size={16} className="text-vocalface-cyan" />} hint="A short silent clip (a few seconds, mouth closed, natural blinking) the face loops while the agent listens. Without one, the playground falls back to the training video.">
       {na ? <p className="flex items-start gap-2 rounded-xl border border-white/15 bg-white/[0.03] p-3.5 text-sm text-gray-400" data-testid="clip-unavailable"><AlertCircle size={16} className="mt-0.5 shrink-0" />Listening clips are unavailable on this server (it does not expose the endpoint yet).</p> : (<>
         {clip === undefined ? <div className="h-12 animate-pulse rounded-xl bg-white/5" /> : clip ? (
           <div className="mb-3 rounded-xl border border-white/10 bg-white/[0.03] p-3.5 text-sm" data-testid="clip-info">
             <p className="flex items-center gap-2"><Badge s="active" /><span className="font-mono text-xs text-gray-300">{fmtDur(clip.duration_s)} - {clip.width}x{clip.height} - {clip.fps} fps - {(clip.bytes / 1e6).toFixed(1)} MB</span></p>
             <p className="mt-1.5 truncate text-xs text-gray-500">{clip.source_url}</p>
-            <button className="mt-2 inline-flex items-center gap-1 text-xs text-mirage-rose hover:underline" onClick={remove}><Trash2 size={12} />Remove clip</button>
+            <button className="mt-2 inline-flex items-center gap-1 text-xs text-vocalface-rose hover:underline" onClick={remove}><Trash2 size={12} />Remove clip</button>
           </div>
         ) : <p className="mb-3 rounded-xl border border-dashed border-white/15 p-3.5 text-sm text-gray-500">No listening clip set.</p>}
         <form onSubmit={save} className="space-y-2">
@@ -89,16 +89,16 @@ export default function ReplicaDetail({ replica: base, onClose, onDeleted }: { r
       {replica && (<>
         <div className="mb-6 flex flex-wrap items-center gap-2"><Badge s={replica.status} /><span className="font-mono text-xs text-gray-500">{replica.id}</span><span className="text-xs text-gray-500">created {fmtDate(replica.created_at)}</span></div>
         {photo && <PhotoSection rid={replica.id} status={replica.status} trainUrl={replica.train_video_url} />}
-        <Section title="Consent evidence" icon={<Mic size={16} className="text-mirage-mint" />} hint="The recording, transcript match and voice comparison with the training video for each consent given.">
+        <Section title="Consent evidence" icon={<Mic size={16} className="text-vocalface-mint" />} hint="The recording, transcript match and voice comparison with the training video for each consent given.">
           {recs === null ? <div className="h-20 animate-pulse rounded-xl bg-white/5" /> : recs.length === 0 ? <p className="rounded-xl border border-dashed border-white/15 p-3.5 text-sm text-gray-500">No consent recorded yet.</p>
             : <ul className="space-y-2.5">{recs.map((r) => <Evidence key={r.id} rid={replica.id} rec={r} />)}</ul>}
         </Section>
         {!photo && <VoicePanel rid={replica.id} replicaReady={replica.status === "ready"} consent={consentKind} />}
         <BackgroundSection rid={replica.id} ready={replica.status === "ready"} />
         {!photo && <ListeningClip rid={replica.id} />}
-        <div className="mt-8 border-t border-white/10 pt-5"><p className="text-sm font-medium text-mirage-rose">Danger zone</p>
+        <div className="mt-8 border-t border-white/10 pt-5"><p className="text-sm font-medium text-vocalface-rose">Danger zone</p>
           <p className="mb-3 mt-1 text-xs text-gray-400">Deleting removes the replica, its consent records and media. Personas using it fall back to voice only.</p>
-          <button className="btn-ghost !border-mirage-rose/40 !text-mirage-rose hover:!bg-mirage-rose/10" onClick={() => setDel(true)}><Trash2 size={14} />Delete replica</button></div>
+          <button className="btn-ghost !border-vocalface-rose/40 !text-vocalface-rose hover:!bg-vocalface-rose/10" onClick={() => setDel(true)}><Trash2 size={14} />Delete replica</button></div>
         <ConfirmDialog open={del} title="Delete this replica?" body={<>This permanently deletes <b>{replica.name}</b> and its consent evidence. This cannot be undone.</>} confirmLabel="Delete replica" onClose={() => setDel(false)}
           onConfirm={async () => { try { await api(`/v1/replicas/${replica.id}`, { method: "DELETE" }); setDel(false); toast.success("Replica deleted."); onDeleted(); } catch (x) { toast.error(x); } }} />
       </>)}

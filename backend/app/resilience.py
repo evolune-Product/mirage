@@ -4,7 +4,7 @@
   `ConversationMeta.last_closed_at`, so its conversations stayed `active` forever: never reaped, never billed beyond the last
   5-second meter tick. On boot every active conversation without that stamp is stamped "closed now": a client that
   reconnects within the grace period resumes it, otherwise the idle reaper ends it and settles the usage like any other.
-  Single-API-process architecture (docs/DEPLOY.md); with several API processes set MIRAGE_RECOVER_ORPHANS=0.
+  Single-API-process architecture (docs/DEPLOY.md); with several API processes set VOCALFACE_RECOVER_ORPHANS=0.
 * `graceful_shutdown()` (lifespan exit): closes the live sockets with 1012 ("service restart") and waits for each handler's
   teardown, which commits the final seconds_used (billing), stops the runtime (transcript flush, last_closed_at) and cancels
   the session's tasks. Clients that negotiated `hello` reconnect and resume on the next instance.
@@ -15,13 +15,13 @@ import asyncio
 import logging
 from datetime import datetime, timezone
 
-log = logging.getLogger("mirage.resilience")
+log = logging.getLogger("vocalface.resilience")
 
 
 def recover_orphans() -> int:
     import os
 
-    if os.environ.get("MIRAGE_RECOVER_ORPHANS", "1") == "0":
+    if os.environ.get("VOCALFACE_RECOVER_ORPHANS", "1") == "0":
         return 0
     try:
         from sqlmodel import Session as DB, select

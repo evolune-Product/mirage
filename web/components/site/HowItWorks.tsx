@@ -19,7 +19,7 @@ export default function HowItWorks() {
       <h3 className="mt-3 text-center font-display text-4xl text-white md:text-5xl">How it works</h3>
       <div ref={ref} className="relative mt-12 pl-12 md:pl-16">
         <div className="absolute bottom-2 left-[17px] top-2 w-px bg-white/15 md:left-[23px]" />
-        <motion.div className="absolute left-[16px] top-2 w-[3px] origin-top rounded-full bg-mirage-gradient md:left-[22px]" style={{ height: reduce ? "100%" : "calc(100% - 16px)", scaleY: reduce ? 1 : h }} />
+        <motion.div className="absolute left-[16px] top-2 w-[3px] origin-top rounded-full bg-vocalface-gradient md:left-[22px]" style={{ height: reduce ? "100%" : "calc(100% - 16px)", scaleY: reduce ? 1 : h }} />
         <ol className="space-y-12">
           {steps.map(([t, d], i) => (
             <li key={t} className="relative">

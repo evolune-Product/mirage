@@ -24,7 +24,7 @@ export default function Leads() {
     try {
       const h: Record<string, string> = { "x-api-key": getKey() }; const w = getWorkspace(); if (w) h["x-workspace"] = w;
       const r = await fetch(`${API_URL}/v1/leads/export.csv?${qs}`, { headers: h }); if (!r.ok) throw new Error(`${r.status}: ${r.statusText}`);
-      const a = document.createElement("a"); a.href = URL.createObjectURL(await r.blob()); a.download = `mirage-leads-${new Date().toISOString().slice(0, 10)}.csv`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); toast.success("CSV downloaded.");
+      const a = document.createElement("a"); a.href = URL.createObjectURL(await r.blob()); a.download = `vocalface-leads-${new Date().toISOString().slice(0, 10)}.csv`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); toast.success("CSV downloaded.");
     } catch (x) { toast.error(x); } finally { setExp(false); }
   }
   const filtered = !!(pid || since || until || dq || consent);
@@ -40,9 +40,9 @@ export default function Leads() {
           <div><label className="label">From</label><input type="date" className="input" value={since} onChange={(e) => setSince(e.target.value)} aria-label="From date" /></div>
           <div><label className="label">To</label><input type="date" className="input" value={until} onChange={(e) => setUntil(e.target.value)} aria-label="To date" /></div></div>
           <div className="mt-3 flex items-center gap-3 text-xs text-gray-400"><label className="flex items-center gap-1.5">Consent<select className="input !w-auto !py-1 text-xs" value={consent} onChange={(e) => setConsent(e.target.value)} aria-label="Consent filter"><option value="">any</option><option value="true">given</option><option value="false">not given</option></select></label>
-            {filtered && <button className="text-mirage-cyan hover:underline" onClick={() => { setPid(""); setSince(""); setUntil(""); setQ(""); setConsent(""); }}>Clear filters</button>}</div></div>
+            {filtered && <button className="text-vocalface-cyan hover:underline" onClick={() => { setPid(""); setSince(""); setUntil(""); setQ(""); setConsent(""); }}>Clear filters</button>}</div></div>
       </div>
-      {err && <p className="mb-3 text-sm text-mirage-rose" role="alert">{err}</p>}
+      {err && <p className="mb-3 text-sm text-vocalface-rose" role="alert">{err}</p>}
       {data === null ? <Skeleton className="h-64" /> : data.items.length === 0 ? (
         filtered ? <Empty kind="knowledge" title="No leads match" hint="Try a wider date range or clear the filters." /> : <Empty kind="conversation" title="No leads yet" hint="Create a persona from a template with lead capture on, share its widget or guest link, and contacts will land here." action={<Link href="/dashboard/personas" className="btn-grad">Go to personas</Link>} />
       ) : (<>
@@ -52,7 +52,7 @@ export default function Leads() {
             <tr key={l.id} className="cursor-pointer border-t border-white/5 hover:bg-white/[0.04]" onClick={() => setOpen(l)} tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter") setOpen(l); }}>
               <td className="whitespace-nowrap px-4 py-2.5 text-gray-400">{fmtDate(l.created_at)}</td><td className="px-4 py-2.5">{l.name || "-"}</td>
               <td className="px-4 py-2.5 text-gray-300"><span className="block max-w-[14rem] truncate">{l.email || "-"}</span><span className="text-xs text-gray-500">{l.phone}</span></td>
-              <td className="px-4 py-2.5 text-gray-400">{l.company || "-"}</td><td className="px-4 py-2.5 text-gray-400">{pname(l.persona_id)}</td><td className="px-4 py-2.5"><span className={`rounded-full px-2.5 py-0.5 text-xs ring-1 ring-inset ${l.consent ? "bg-mirage-mint/10 text-mirage-mint ring-mirage-mint/25" : "bg-mirage-amber/10 text-mirage-amber ring-mirage-amber/25"}`}>{l.consent ? "given" : "not given"}</span></td></tr>))}</tbody></table></div>
+              <td className="px-4 py-2.5 text-gray-400">{l.company || "-"}</td><td className="px-4 py-2.5 text-gray-400">{pname(l.persona_id)}</td><td className="px-4 py-2.5"><span className={`rounded-full px-2.5 py-0.5 text-xs ring-1 ring-inset ${l.consent ? "bg-vocalface-mint/10 text-vocalface-mint ring-vocalface-mint/25" : "bg-vocalface-amber/10 text-vocalface-amber ring-vocalface-amber/25"}`}>{l.consent ? "given" : "not given"}</span></td></tr>))}</tbody></table></div>
         <div className="mt-3 flex items-center justify-between text-xs text-gray-500"><span>{off + 1}-{Math.min(off + PAGE, total)} of {total}</span>
           <span className="flex items-center gap-2"><button className="btn-ghost !px-2.5 !py-1.5" aria-label="Previous page" disabled={off === 0} onClick={() => setOff(off - PAGE)}><ChevronLeft size={14} /></button>page {page} / {pages}<button className="btn-ghost !px-2.5 !py-1.5" aria-label="Next page" disabled={off + PAGE >= total} onClick={() => setOff(off + PAGE)}><ChevronRight size={14} /></button></span></div>
       </>)}
@@ -60,8 +60,8 @@ export default function Leads() {
         {open && <div className="space-y-4 text-sm">
           <dl className="grid grid-cols-[7rem_1fr] gap-x-3 gap-y-2.5">{([["Email", open.email], ["Phone", open.phone], ["Company", open.company], ["Interested in", open.interest], ["Notes", open.notes], ["Persona", pname(open.persona_id)], ["Captured", fmtDate(open.created_at)], ["Source", open.source]] as [string, string][]).map(([k, v]) => <div key={k} className="contents"><dt className="text-gray-500">{k}</dt><dd className="break-words text-gray-200">{v || "-"}</dd></div>)}</dl>
           <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3.5"><p className="label">Consent</p><p className="text-gray-300">{open.consent ? "Given." : "Not given."}</p>{open.consent_text && <p className="mt-1 text-xs italic text-gray-500">&ldquo;{open.consent_text}&rdquo;</p>}</div>
-          {open.conversation_id && <Link href="/dashboard/conversations" className="inline-flex items-center gap-1.5 text-xs text-mirage-cyan hover:underline"><Inbox size={12} />From conversation {open.conversation_id}</Link>}
-          <button className="btn-ghost !border-mirage-rose/40 !text-mirage-rose hover:!bg-mirage-rose/10" onClick={() => setDel(open)}><Trash2 size={14} />Delete permanently</button>
+          {open.conversation_id && <Link href="/dashboard/conversations" className="inline-flex items-center gap-1.5 text-xs text-vocalface-cyan hover:underline"><Inbox size={12} />From conversation {open.conversation_id}</Link>}
+          <button className="btn-ghost !border-vocalface-rose/40 !text-vocalface-rose hover:!bg-vocalface-rose/10" onClick={() => setDel(open)}><Trash2 size={14} />Delete permanently</button>
         </div>}
       </Modal>
       <ConfirmDialog open={!!del} title="Delete this lead?" body="This permanently erases the contact details (for example when the person asks you to). It cannot be undone." confirmLabel="Delete lead" onClose={() => setDel(null)}

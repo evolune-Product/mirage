@@ -4,8 +4,8 @@ import { Camera, Loader2, Square, RotateCcw } from "lucide-react";
 import { API_URL, api, getKey } from "@/lib/api";
 import { toast } from "@/components/ui";
 
-// Typed-phrase / audio-only fallback exists only for local dev (server flags MIRAGE_ALLOW_TYPED_CONSENT and
-// MIRAGE_CONSENT_FACE_MATCH=warn must also allow it; production rejects both).
+// Typed-phrase / audio-only fallback exists only for local dev (server flags VOCALFACE_ALLOW_TYPED_CONSENT and
+// VOCALFACE_CONSENT_FACE_MATCH=warn must also allow it; production rejects both).
 const TYPED_FALLBACK = process.env.NEXT_PUBLIC_ALLOW_TYPED_CONSENT === "1";
 const MIN_SECONDS = 4;
 
@@ -111,7 +111,7 @@ export default function ConsentRecorder({ rid, challengeId, phrase, onDone, onCa
       <p className="label">Consent for {rid}</p>
       <p className="mb-2 text-sm text-gray-300">The person shown in the {src} must record a short selfie video reading this phrase aloud. We transcribe it, check the code words, compare your voice and your face with the replica&apos;s source, and check that a live person is speaking.</p>
       <p className="mb-3 text-xs text-gray-400">Privacy: the video is analysed once and then discarded. We keep the audio, a hash of the recording, and match scores, never a stored selfie video. Delete everything any time with Delete replica.</p>
-      <p className="mb-3 rounded-lg border border-mirage-amber/20 bg-mirage-amber/5 p-3 font-display text-xl leading-snug" data-testid="consent-phrase">{phrase}</p>
+      <p className="mb-3 rounded-lg border border-vocalface-amber/20 bg-vocalface-amber/5 p-3 font-display text-xl leading-snug" data-testid="consent-phrase">{phrase}</p>
       <div className="grid gap-3 md:grid-cols-[1fr_2fr]">
         <div><label className="label">Your name</label><input className="input" value={who} onChange={(e) => setWho(e.target.value)} /></div>
         <div>
@@ -121,7 +121,7 @@ export default function ConsentRecorder({ rid, challengeId, phrase, onDone, onCa
             <video ref={live} muted playsInline data-testid="consent-live" className="h-full w-full object-cover" style={{ transform: "scaleX(-1)", display: state === "recording" || state === "starting" ? "block" : "none" }} />
             {(state === "recorded" || state === "uploading") && previewUrl && <video controls playsInline src={previewUrl} data-testid="consent-preview" className="h-full w-full object-cover" />}
             {state === "idle" && <div className="flex h-full items-center justify-center text-xs text-gray-400"><Camera size={18} className="mr-2" />Camera preview appears here</div>}
-            {state === "recording" && <span className="absolute left-2 top-2 flex items-center gap-2 rounded bg-black/60 px-2 py-0.5 font-mono text-xs text-mirage-rose"><i className="h-2 w-2 animate-pulse rounded-full bg-mirage-rose" />REC {mm}:{ss}</span>}
+            {state === "recording" && <span className="absolute left-2 top-2 flex items-center gap-2 rounded bg-black/60 px-2 py-0.5 font-mono text-xs text-vocalface-rose"><i className="h-2 w-2 animate-pulse rounded-full bg-vocalface-rose" />REC {mm}:{ss}</span>}
           </div>
           <div className="mt-2 flex flex-wrap items-center gap-3">
             {(state === "idle" || state === "starting") && <button className="btn" onClick={start} disabled={state === "starting"} data-testid="consent-record"><Camera size={15} />{state === "starting" ? "Starting camera..." : "Start recording"}</button>}
@@ -131,7 +131,7 @@ export default function ConsentRecorder({ rid, challengeId, phrase, onDone, onCa
           </div>
         </div>
       </div>
-      {err && <div role="alert" className="mt-3 rounded-lg bg-mirage-rose/10 p-3 text-xs text-mirage-rose" data-testid="consent-error">{err.message}
+      {err && <div role="alert" className="mt-3 rounded-lg bg-vocalface-rose/10 p-3 text-xs text-vocalface-rose" data-testid="consent-error">{err.message}
         {err.hint ? <span className="mt-1 block text-gray-300">{err.hint}</span> : null}
         {err.reasons?.length ? <span className="mt-1 block text-gray-400">{err.reasons.join("; ")}</span> : null}
         {err.heard ? <span className="mt-1 block text-gray-300">We heard: &ldquo;{err.heard}&rdquo;</span> : null}</div>}

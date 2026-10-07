@@ -50,10 +50,10 @@ export default function TemplatePicker({ replicas, onCreated, defaultReplicaId, 
       <div className="mb-4"><Segmented size="sm" label="Niche" value={niche} onChange={setNiche} options={niches.map((n) => ({ id: n, label: n === "all" ? "All" : n.replace("-", " ") }))} /></div>
       <ul className={`grid gap-3 ${compact ? "sm:grid-cols-2" : "sm:grid-cols-2 xl:grid-cols-3"}`} data-testid="template-grid">
         {list.filter((t) => niche === "all" || t.niche === niche).map((t) => (
-          <li key={t.id}><button type="button" onClick={() => setSel(t)} data-template={t.id} className="flex h-full w-full flex-col rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-left transition hover:border-mirage-violet/50 hover:bg-white/[0.07]">
-            <span className="mb-2 w-fit rounded-full bg-mirage-violet/15 px-2 py-0.5 text-[10px] uppercase tracking-wide text-mirage-violet">{t.niche.replace("-", " ")}</span>
+          <li key={t.id}><button type="button" onClick={() => setSel(t)} data-template={t.id} className="flex h-full w-full flex-col rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-left transition hover:border-vocalface-violet/50 hover:bg-white/[0.07]">
+            <span className="mb-2 w-fit rounded-full bg-vocalface-violet/15 px-2 py-0.5 text-[10px] uppercase tracking-wide text-vocalface-violet">{t.niche.replace("-", " ")}</span>
             <span className="font-medium">{t.name}</span><span className="mt-1 flex-1 text-xs leading-relaxed text-gray-400">{t.summary}</span>
-            <span className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-gray-500">{t.objectives.length > 0 && <span className="inline-flex items-center gap-1"><Target size={11} />{t.objectives.length} goals</span>}{t.tools.length > 0 && <span className="inline-flex items-center gap-1"><Wrench size={11} />{t.tools.length} tool{t.tools.length > 1 ? "s" : ""}</span>}{t.safety_notes && <span className="text-mirage-amber">safety note</span>}</span>
+            <span className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-gray-500">{t.objectives.length > 0 && <span className="inline-flex items-center gap-1"><Target size={11} />{t.objectives.length} goals</span>}{t.tools.length > 0 && <span className="inline-flex items-center gap-1"><Wrench size={11} />{t.tools.length} tool{t.tools.length > 1 ? "s" : ""}</span>}{t.safety_notes && <span className="text-vocalface-amber">safety note</span>}</span>
           </button></li>))}
       </ul>
     </div>);
@@ -82,7 +82,7 @@ export default function TemplatePicker({ replicas, onCreated, defaultReplicaId, 
 export function CreatedSummary({ r }: { r: Instantiated }) {
   return (
     <div className="space-y-3" data-testid="template-created">
-      <p className="flex items-center gap-2 text-mirage-mint"><Check size={16} />Created <b className="text-white">{r.persona.name}</b></p>
+      <p className="flex items-center gap-2 text-vocalface-mint"><Check size={16} />Created <b className="text-white">{r.persona.name}</b></p>
       {r.warnings.map((w, i) => <Callout key={i} tone="warn">{String(w)}</Callout>)}
       {r.next_steps.length > 0 && <ul className="list-disc space-y-1 pl-5 text-sm text-gray-300">{r.next_steps.map((n, i) => <li key={i}>{String(n)}</li>)}</ul>}
     </div>

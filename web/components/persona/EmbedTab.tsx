@@ -21,7 +21,7 @@ function Widgets({ pid }: { pid: string }) {
     catch (x) { setErr(errText(x)); } finally { setBusy(false); }
   }
   return (
-    <Section title="Website widget" icon={<Code2 size={16} className="text-mirage-cyan" />} hint="A 'Talk to us' button for your site: paste one script tag, visitors talk to this persona without an account. Minutes are charged to you within the limits you set.">
+    <Section title="Website widget" icon={<Code2 size={16} className="text-vocalface-cyan" />} hint="A 'Talk to us' button for your site: paste one script tag, visitors talk to this persona without an account. Minutes are charged to you within the limits you set.">
       {list === null ? <div className="h-16 animate-pulse rounded-xl bg-white/5" /> : list.length === 0 ? <p className="mb-3 rounded-xl border border-dashed border-white/15 p-3.5 text-sm text-gray-500">No widget yet.</p> : (
         <ul className="mb-4 space-y-3" data-testid="widgets">{list.map((w) => (
           <li key={w.token} className={`rounded-xl border border-white/10 bg-white/[0.03] p-3.5 ${w.limits.revoked ? "opacity-60" : ""}`}>
@@ -29,7 +29,7 @@ function Widgets({ pid }: { pid: string }) {
             <p className="mt-1 text-xs text-gray-500">{w.position}; {w.allowed_domains.length ? `only on ${w.allowed_domains.join(", ")}` : "any website (add allowed domains to restrict)"}; {w.limits.sessions_started} sessions, {fmtDur(w.limits.used_seconds)} of {fmtDur(w.limits.max_total_seconds)} used</p>
             <p className="label mt-3">Paste before &lt;/body&gt; on your site</p>
             <div className="flex items-start gap-2 rounded-lg bg-black/40 p-2.5"><code data-testid="snippet" className="min-w-0 flex-1 break-all font-mono text-[11px] text-gray-200">{w.snippet}</code><CopyButton text={w.snippet} label="" /></div>
-            <div className="mt-2 flex flex-wrap items-center gap-3 text-xs"><a className="inline-flex items-center gap-1 text-mirage-cyan hover:underline" href={w.share_url} target="_blank" rel="noreferrer"><ExternalLink size={12} />Open guest page</a>{!w.limits.revoked && <button className="inline-flex items-center gap-1 text-mirage-rose hover:underline" onClick={() => setRm(w)}><Trash2 size={12} />Revoke</button>}</div>
+            <div className="mt-2 flex flex-wrap items-center gap-3 text-xs"><a className="inline-flex items-center gap-1 text-vocalface-cyan hover:underline" href={w.share_url} target="_blank" rel="noreferrer"><ExternalLink size={12} />Open guest page</a>{!w.limits.revoked && <button className="inline-flex items-center gap-1 text-vocalface-rose hover:underline" onClick={() => setRm(w)}><Trash2 size={12} />Revoke</button>}</div>
           </li>))}</ul>)}
       <form onSubmit={create} className="space-y-3 rounded-xl bg-white/[0.03] p-4">
         <p className="text-sm font-medium">Create a widget</p>
@@ -53,11 +53,11 @@ function LeadCapture({ pid }: { pid: string }) {
   if (!c) return <div className="h-16 animate-pulse rounded-xl bg-white/5" />;
   async function save() { setBusy(true); setErr(""); try { setC(await api<Lc>(`/v1/personas/${pid}/lead-capture`, { method: "PUT", body: c })); toast.success("Lead capture saved."); } catch (x) { setErr(errText(x)); } finally { setBusy(false); } }
   return (
-    <Section title="Lead capture" icon={<Inbox size={16} className="text-mirage-mint" />} hint="Lets the agent politely ask for contact details and save them. It explains how the data is used first and never pushes."
-      action={<Link href="/dashboard/leads" className="text-xs text-mirage-cyan hover:underline">View leads</Link>}>
+    <Section title="Lead capture" icon={<Inbox size={16} className="text-vocalface-mint" />} hint="Lets the agent politely ask for contact details and save them. It explains how the data is used first and never pushes."
+      action={<Link href="/dashboard/leads" className="text-xs text-vocalface-cyan hover:underline">View leads</Link>}>
       <div className="space-y-3 rounded-xl border border-white/10 bg-white/[0.03] p-4">
         <Toggle checked={c.enabled} onChange={(v) => setC({ ...c, enabled: v })} label="Collect leads in conversations" />
-        <div><p className="label">Required details</p><div className="flex flex-wrap gap-1.5">{FIELDS.map((k) => { const on = c.required_fields.includes(k); return <button key={k} type="button" aria-pressed={on} onClick={() => setC({ ...c, required_fields: on ? c.required_fields.filter((x) => x !== k) : [...c.required_fields, k] })} className={`rounded-full border px-2.5 py-1 text-xs ${on ? "border-mirage-violet/60 bg-mirage-violet/15 text-white" : "border-white/10 text-gray-400"}`}>{k}</button>; })}</div></div>
+        <div><p className="label">Required details</p><div className="flex flex-wrap gap-1.5">{FIELDS.map((k) => { const on = c.required_fields.includes(k); return <button key={k} type="button" aria-pressed={on} onClick={() => setC({ ...c, required_fields: on ? c.required_fields.filter((x) => x !== k) : [...c.required_fields, k] })} className={`rounded-full border px-2.5 py-1 text-xs ${on ? "border-vocalface-violet/60 bg-vocalface-violet/15 text-white" : "border-white/10 text-gray-400"}`}>{k}</button>; })}</div></div>
         <Toggle checked={c.require_consent} onChange={(v) => setC({ ...c, require_consent: v })} label="Require a spoken yes before saving" hint="Recommended. Turning it off can break privacy rules in many countries." />
         <Field label="What the agent says about data use" hint="Stored with each lead as proof of what the person agreed to."><textarea className="input h-20" placeholder="We use your details only to follow up about your enquiry." value={c.disclosure} onChange={(e) => setC({ ...c, disclosure: e.target.value })} aria-label="Disclosure" /></Field>
         {err && <Callout tone="bad">{err}</Callout>}
@@ -80,8 +80,8 @@ function Integrations({ pid }: { pid: string }) {
       <input className="input font-mono text-xs" type="password" autoComplete="new-password" placeholder={i[which].has_secret ? "Secret saved. Type to replace." : "Signing secret (optional, write-only)"} value={s} onChange={(e) => setS(e.target.value)} aria-label={`${label} secret`} />
       {i[which].enabled && <div className="flex flex-wrap items-center gap-2"><button type="button" className="btn-ghost !px-3 !py-1.5 text-xs" disabled={!!busy} onClick={() => test(which)}>{busy === which ? <Spinner size={13} /> : <Send size={13} />}Send test call</button>{res[which] && <span className="text-xs text-gray-400" data-testid={`test-${which}`}>{res[which]}</span>}</div>}</div>);
   return (
-    <Section title="Booking and notifications" icon={<CalendarCheck size={16} className="text-mirage-amber" />} hint="Optional webhooks (Cal.com, Zapier, Make, n8n). Setting a URL gives the agent a tool to use it. The agent never claims a meeting is confirmed.">
-      <div className="space-y-3">{row("booking", "Book a meeting", "Called when a visitor wants a time. Mirage sends name, email and preferred time.", f.bu, f.bs, (v) => setF({ ...f, bu: v }), (v) => setF({ ...f, bs: v }))}
+    <Section title="Booking and notifications" icon={<CalendarCheck size={16} className="text-vocalface-amber" />} hint="Optional webhooks (Cal.com, Zapier, Make, n8n). Setting a URL gives the agent a tool to use it. The agent never claims a meeting is confirmed.">
+      <div className="space-y-3">{row("booking", "Book a meeting", "Called when a visitor wants a time. VocalFace sends name, email and preferred time.", f.bu, f.bs, (v) => setF({ ...f, bu: v }), (v) => setF({ ...f, bs: v }))}
         {row("notify", "Notify my team", "Called to alert you (for example an urgent request).", f.nu, f.ns, (v) => setF({ ...f, nu: v }), (v) => setF({ ...f, ns: v }))}
         <button type="button" className="btn" disabled={!!busy} onClick={save}>{busy === "save" ? <Spinner size={14} /> : <Save size={14} />}Save integrations</button></div>
     </Section>

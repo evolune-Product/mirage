@@ -59,7 +59,7 @@ def data(tmp_path, monkeypatch):
 
 
 def test_local_is_default_and_paths_unchanged(data, monkeypatch):
-    monkeypatch.delenv("MIRAGE_STORAGE", raising=False)
+    monkeypatch.delenv("VOCALFACE_STORAGE", raising=False)
     st = storage.get_storage()
     assert isinstance(st, LocalStorage) and st.root == data
     p = jobs.video_path("v_abc123")
@@ -83,14 +83,14 @@ def test_keys_cannot_escape(data):
 
 def test_s3_roundtrip_with_fake_client(data):
     fake = FakeS3()
-    st = S3Storage("bkt", prefix="mirage/prod", client=fake)
+    st = S3Storage("bkt", prefix="vocalface/prod", client=fake)
     storage.set_storage(st)
     face = jobs.replica_dir("r_abc") / "face.png"
     face.parent.mkdir(parents=True); face.write_bytes(b"PNGDATA")
     (face.parent / "meta.json").write_text("{}")
     storage.publish(face.parent)  # directory publish
-    assert ("bkt", "mirage/prod/replicas/r_abc/face.png") in fake.objs
-    assert fake.objs[("bkt", "mirage/prod/replicas/r_abc/face.png")][1]["ContentType"] == "image/png"
+    assert ("bkt", "vocalface/prod/replicas/r_abc/face.png") in fake.objs
+    assert fake.objs[("bkt", "vocalface/prod/replicas/r_abc/face.png")][1]["ContentType"] == "image/png"
     assert st.list("replicas/r_abc") == ["replicas/r_abc/face.png", "replicas/r_abc/meta.json"]
     # another machine: local copy gone, pull it back
     shutil.rmtree(face.parent)
@@ -124,8 +124,8 @@ def _client(monkeypatch, tmp_path):
 
 
 def test_file_endpoint_redirects_to_presigned_url_after_signature_check(data, monkeypatch, tmp_path):
-    monkeypatch.setenv("MIRAGE_SECRET_KEY", "x" * 32)
-    monkeypatch.setenv("MIRAGE_ALLOW_PUBLIC_FILES", "0")
+    monkeypatch.setenv("VOCALFACE_SECRET_KEY", "x" * 32)
+    monkeypatch.setenv("VOCALFACE_ALLOW_PUBLIC_FILES", "0")
     fake = FakeS3()
     storage.set_storage(S3Storage("bkt", client=fake))
     vid = "v_0123456789ab"
@@ -138,7 +138,7 @@ def test_file_endpoint_redirects_to_presigned_url_after_signature_check(data, mo
     assert r.status_code == 307 and r.headers["location"].startswith("https://bucket.example/videos/")
     assert "X-Amz-Expires=300" in r.headers["location"]  # capped well below the 1h signed-url TTL
     # streaming mode (no redirect) pulls it through a local cache
-    monkeypatch.setenv("MIRAGE_S3_REDIRECT", "0")
+    monkeypatch.setenv("VOCALFACE_S3_REDIRECT", "0")
     r2 = c.get(signing.sign_path(path))
     assert r2.status_code == 200 and r2.content == b"x"
     # unknown key
@@ -146,7 +146,7 @@ def test_file_endpoint_redirects_to_presigned_url_after_signature_check(data, mo
 
 
 def test_local_file_endpoint_still_works(data, monkeypatch, tmp_path):
-    monkeypatch.setenv("MIRAGE_SECRET_KEY", "x" * 32)
+    monkeypatch.setenv("VOCALFACE_SECRET_KEY", "x" * 32)
     vid = "v_aaaaaaaaaaaa"
     p = jobs.video_path(vid); p.parent.mkdir(parents=True); p.write_bytes(b"\x00\x00\x00\x18ftypmp42")
     c = _client(monkeypatch, tmp_path)
@@ -157,7 +157,7 @@ def test_local_file_endpoint_still_works(data, monkeypatch, tmp_path):
 def test_s3_requires_bucket_and_boto3_message(monkeypatch):
     with pytest.raises(RuntimeError, match="BUCKET"):
         S3Storage("")
-    monkeypatch.setenv("MIRAGE_STORAGE", "bogus")
+    monkeypatch.setenv("VOCALFACE_STORAGE", "bogus")
     with pytest.raises(RuntimeError, match="unknown"):
         storage.get_storage()
 
@@ -167,13 +167,13 @@ def test_s3_with_moto_if_available(data):
     boto3 = pytest.importorskip("boto3")
     with moto.mock_aws():
         c = boto3.client("s3", region_name="us-east-1")
-        c.create_bucket(Bucket="mirage-test")
-        st = S3Storage("mirage-test", prefix="p", client=c)
+        c.create_bucket(Bucket="vocalface-test")
+        st = S3Storage("vocalface-test", prefix="p", client=c)
         st.put_bytes("replicas/r_1/face.png", b"abc")
         assert st.exists("replicas/r_1/face.png") and not st.exists("replicas/r_2/face.png")
         assert st.get_bytes("replicas/r_1/face.png") == b"abc"
         assert st.get_bytes("nope/x.png") is None
         url = st.presign("replicas/r_1/face.png", 60)
-        assert "mirage-test" in url and "Signature" in url
+        assert "vocalface-test" in url and "Signature" in url
         assert st.list("replicas") == ["replicas/r_1/face.png"]
         assert st.delete_prefix("replicas/r_1") == 1 and st.list() == []

@@ -20,8 +20,8 @@ def env(tmp_path, monkeypatch):
                                                     poolclass=StaticPool))
     SQLModel.metadata.create_all(db.engine)
     monkeypatch.setattr(jobs, "DATA_DIR", tmp_path)
-    monkeypatch.setenv("MIRAGE_SECRET_KEY", "test-secret-key-0123456789")
-    monkeypatch.setenv("MIRAGE_RL_SIGNUP", "1000/60")
+    monkeypatch.setenv("VOCALFACE_SECRET_KEY", "test-secret-key-0123456789")
+    monkeypatch.setenv("VOCALFACE_RL_SIGNUP", "1000/60")
     safety.limiter.reset()
 
     def sess():
@@ -40,11 +40,11 @@ def signup(c, ip=None):
 
 
 # ---------- phrase matching ----------
-PHRASE = "I consent to Mirage creating an AI replica of my face and voice named Bob. My verification code is amber-river-stone."
+PHRASE = "I consent to VocalFace creating an AI replica of my face and voice named Bob. My verification code is amber-river-stone."
 
 
 def test_phrase_tolerates_asr_noise_but_needs_code_words():
-    ok = "I consent to Mirage creating an AI replica of my face and voice named Bob. My verification code is amber, river, stone."
+    ok = "I consent to VocalFace creating an AI replica of my face and voice named Bob. My verification code is amber, river, stone."
     assert safety.code_words_present(PHRASE, ok) and safety.phrase_score(PHRASE, ok) > 0.9
     slip = ok.replace("river", "rivers")
     assert safety.code_words_present(PHRASE, slip)
@@ -57,7 +57,7 @@ def test_phrase_tolerates_asr_noise_but_needs_code_words():
 
 # ---------- signed URLs ----------
 def test_signing_roundtrip_expiry_tamper(monkeypatch):
-    monkeypatch.setenv("MIRAGE_SECRET_KEY", "test-secret-key-0123456789")
+    monkeypatch.setenv("VOCALFACE_SECRET_KEY", "test-secret-key-0123456789")
     u = signing.sign_path("/v1/files/videos/v_ab12.mp4", ttl=60)
     path, q = u.split("?")
     kv = dict(x.split("=") for x in q.split("&"))
@@ -80,7 +80,7 @@ def test_files_require_signature_in_production_mode(env, tmp_path, monkeypatch):
     rid = _ready_replica(env, h, tmp_path)
     url = f"/v1/files/replicas/{rid}/face.png"
     assert env.get(url).status_code == 200  # dev default: legacy public
-    monkeypatch.setenv("MIRAGE_ALLOW_PUBLIC_FILES", "0")
+    monkeypatch.setenv("VOCALFACE_ALLOW_PUBLIC_FILES", "0")
     assert env.get(url).status_code == 403
     s = env.post("/v1/files/sign", json={"path": url}, headers=h)
     assert s.status_code == 200
@@ -91,7 +91,7 @@ def test_files_require_signature_in_production_mode(env, tmp_path, monkeypatch):
     assert env.post("/v1/files/sign", json={"path": url}, headers=h2).status_code == 404
     assert env.post("/v1/files/sign", json={"path": "/etc/passwd"}, headers=h).status_code == 422
     # a bad signature never falls back to public access even in dev mode
-    monkeypatch.setenv("MIRAGE_ALLOW_PUBLIC_FILES", "1")
+    monkeypatch.setenv("VOCALFACE_ALLOW_PUBLIC_FILES", "1")
     assert env.get(url + "?exp=1&sig=bad").status_code == 403
 
 
@@ -112,7 +112,7 @@ def test_output_url_is_signed_in_responses(env, tmp_path):
 
 # ---------- rate limit / size / headers ----------
 def test_rate_limit_429_retry_after(env, monkeypatch):
-    monkeypatch.setenv("MIRAGE_RL_CHECKOUT", "3/60")
+    monkeypatch.setenv("VOCALFACE_RL_CHECKOUT", "3/60")
     h = signup(env)
     codes = [env.post("/v1/billing/checkout", json={"provider": "stripe", "kind": "topup", "sku": "topup_60"},
                       headers=h).status_code for _ in range(5)]
@@ -125,19 +125,19 @@ def test_rate_limit_429_retry_after(env, monkeypatch):
 
 
 def test_signup_limited_per_ip(env, monkeypatch):
-    monkeypatch.setenv("MIRAGE_RL_SIGNUP", "2/60")
+    monkeypatch.setenv("VOCALFACE_RL_SIGNUP", "2/60")
     codes = [env.post("/v1/signup", json={"email": "x@y.co"}).status_code for _ in range(3)]
     assert codes == [200, 200, 429]
 
 
 def test_rate_limit_can_be_disabled(env, monkeypatch):
-    monkeypatch.setenv("MIRAGE_RL_SIGNUP", "1/60")
-    monkeypatch.setenv("MIRAGE_RATE_LIMIT", "off")
+    monkeypatch.setenv("VOCALFACE_RL_SIGNUP", "1/60")
+    monkeypatch.setenv("VOCALFACE_RATE_LIMIT", "off")
     assert all(env.post("/v1/signup", json={"email": "x@y.co"}).status_code == 200 for _ in range(3))
 
 
 def test_body_size_limit_and_security_headers(env, monkeypatch):
-    monkeypatch.setenv("MIRAGE_MAX_BODY_BYTES", "1000")
+    monkeypatch.setenv("VOCALFACE_MAX_BODY_BYTES", "1000")
     r = env.post("/v1/signup", json={"email": "a" * 5000})
     assert r.status_code == 413
     ok = env.get("/health")
@@ -147,20 +147,20 @@ def test_body_size_limit_and_security_headers(env, monkeypatch):
 
 
 def test_cors_headers_survive_429(env, monkeypatch):
-    monkeypatch.setenv("MIRAGE_RL_SIGNUP", "1/60")
+    monkeypatch.setenv("VOCALFACE_RL_SIGNUP", "1/60")
     env.post("/v1/signup", json={"email": "x@y.co"}, headers={"origin": "http://localhost:3000"})
     r = env.post("/v1/signup", json={"email": "x@y.co"}, headers={"origin": "http://localhost:3000"})
     assert r.status_code == 429 and r.headers.get("access-control-allow-origin") == "http://localhost:3000"
 
 
 def test_production_config_validation(monkeypatch):
-    monkeypatch.setenv("MIRAGE_ENV", "production")
-    monkeypatch.delenv("MIRAGE_SECRET_KEY", raising=False)
-    monkeypatch.setenv("MIRAGE_CORS_ORIGINS", "*")
+    monkeypatch.setenv("VOCALFACE_ENV", "production")
+    monkeypatch.delenv("VOCALFACE_SECRET_KEY", raising=False)
+    monkeypatch.setenv("VOCALFACE_CORS_ORIGINS", "*")
     errs = settings.validate_production()
     assert len(errs) == 2
-    monkeypatch.setenv("MIRAGE_SECRET_KEY", "x" * 32)
-    monkeypatch.setenv("MIRAGE_CORS_ORIGINS", "https://app.example.com")
+    monkeypatch.setenv("VOCALFACE_SECRET_KEY", "x" * 32)
+    monkeypatch.setenv("VOCALFACE_CORS_ORIGINS", "https://app.example.com")
     assert settings.validate_production() == []
     assert not settings.allow_public_files() and not settings.allow_typed_consent()
     assert settings.voice_match_mode() == "enforce"
@@ -173,10 +173,10 @@ def test_typed_consent_can_be_disabled(env, monkeypatch):
     rid = env.post("/v1/replicas", json={"name": "n", "train_video_url": "/x"}, headers=h).json()["id"]
     c = env.post(f"/v1/replicas/{rid}/consent/challenge", headers=h).json()
     body = {"challenge_id": c["challenge_id"], "speaker_name": "Bob", "audio_url": "x", "transcript": c["phrase"]}
-    monkeypatch.setenv("MIRAGE_ALLOW_TYPED_CONSENT", "0")
+    monkeypatch.setenv("VOCALFACE_ALLOW_TYPED_CONSENT", "0")
     r = env.post(f"/v1/replicas/{rid}/consent", json=body, headers=h)
     assert r.status_code == 403 and r.json()["detail"]["error"] == "typed_consent_disabled"
-    monkeypatch.setenv("MIRAGE_ALLOW_TYPED_CONSENT", "1")
+    monkeypatch.setenv("VOCALFACE_ALLOW_TYPED_CONSENT", "1")
     assert env.post(f"/v1/replicas/{rid}/consent", json=body, headers=h).status_code == 200
 
 
@@ -197,7 +197,7 @@ def test_consent_audio_mocked_asr(env, tmp_path, monkeypatch):
     import numpy as np, soundfile as sf
     wav = tmp_path / "a.wav"
     sf.write(wav, (np.random.randn(16000 * 3) * 0.1).astype("float32"), 16000)
-    monkeypatch.setenv("MIRAGE_CONSENT_VOICE_MATCH", "off")
+    monkeypatch.setenv("VOCALFACE_CONSENT_VOICE_MATCH", "off")
     h = signup(env)
     rid, c = _consent_setup(env, h, "/x.mp4")
     monkeypatch.setattr(consent_verify, "transcribe", lambda w: "I like turtles")
@@ -229,7 +229,7 @@ def test_consent_audio_real_asr_and_voice_match(env, tmp_path, monkeypatch):
     train = tmp_path / "train.wav"
     say("Welcome to our quarterly update. Today I will walk you through the numbers and what they mean for the team.",
         "af_heart", train)
-    monkeypatch.setenv("MIRAGE_CONSENT_VOICE_MATCH", "enforce")
+    monkeypatch.setenv("VOCALFACE_CONSENT_VOICE_MATCH", "enforce")
     h = signup(env)
     rid, c = _consent_setup(env, h, str(train))
     same = tmp_path / "same.wav"; say(c["phrase"], "af_heart", same)

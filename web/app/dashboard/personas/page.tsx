@@ -29,7 +29,7 @@ export default function Personas() {
             <motion.button key={p.id} onClick={() => openEdit(p)} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}
               className="card group flex flex-col text-left transition hover:-translate-y-0.5 hover:border-white/25 hover:bg-ink-3/80">
               <div className="flex items-start gap-3">
-                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-mirage-gradient text-white"><UserRound size={20} /></span>
+                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-vocalface-gradient text-white"><UserRound size={20} /></span>
                 <div className="min-w-0 flex-1"><p className="truncate font-medium">{p.name}</p><p className="truncate font-mono text-xs text-gray-500">{p.id}</p></div>
                 <Pencil size={15} className="text-gray-600 transition group-hover:text-white" />
               </div>
@@ -37,7 +37,7 @@ export default function Personas() {
               <div className="mt-4 flex flex-wrap gap-1.5 text-xs">
                 <span className="rounded-full bg-white/5 px-2.5 py-1 text-gray-300">{p.llm}</span>
                 <span className="inline-flex items-center gap-1 rounded-full bg-white/5 px-2.5 py-1 text-gray-300"><Mic size={11} />{p.tts_voice}</span>
-                {repName(p.replica_id) ? <span className="rounded-full bg-mirage-violet/15 px-2.5 py-1 text-mirage-violet">{repName(p.replica_id)}</span> : <Badge s="no replica" />}
+                {repName(p.replica_id) ? <span className="rounded-full bg-vocalface-violet/15 px-2.5 py-1 text-vocalface-violet">{repName(p.replica_id)}</span> : <Badge s="no replica" />}
               </div>
             </motion.button>
           ))}

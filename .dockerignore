@@ -5,5 +5,5 @@
 **/*.pyc
 .git
 data
-backend/mirage.db
+backend/vocalface.db
 *.db

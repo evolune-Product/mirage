@@ -1,7 +1,7 @@
 """SSRF guard for EVERY server-side fetch of a user-supplied URL (training video / photo / listening clip downloads,
 webhook delivery, tool webhooks, custom-LLM base_url).
 
-Policy (`blocking()`): MIRAGE_BLOCK_PRIVATE_URLS=1|0 decides; unset -> ON in production, OFF in dev (dev needs localhost
+Policy (`blocking()`): VOCALFACE_BLOCK_PRIVATE_URLS=1|0 decides; unset -> ON in production, OFF in dev (dev needs localhost
 video servers and local test endpoints). When on, a request is refused when ANY address the host resolves to is not a
 public unicast address (loopback, RFC1918, link-local incl. the 169.254.169.254 metadata service, CGNAT 100.64/10, ULA,
 multicast, reserved, unspecified, IPv4-mapped forms of those) or when the scheme is not http/https.
@@ -33,10 +33,10 @@ class UnsafeURL(ValueError):
 
 
 def blocking() -> bool:
-    v = os.getenv("MIRAGE_BLOCK_PRIVATE_URLS", "").strip().lower()
+    v = os.getenv("VOCALFACE_BLOCK_PRIVATE_URLS", "").strip().lower()
     if v:
         return v in ("1", "true", "yes", "on")
-    if os.getenv("MIRAGE_ALLOW_PRIVATE_URLS") == "1":  # legacy escape hatch (consent-time guard)
+    if os.getenv("VOCALFACE_ALLOW_PRIVATE_URLS") == "1":  # legacy escape hatch (consent-time guard)
         return False
     return settings.is_production()
 

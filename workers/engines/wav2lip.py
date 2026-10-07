@@ -2,7 +2,7 @@
 
 Upstream README (workers/Wav2Lip/README.md): "As the models are trained on the LRS2 dataset, any form of commercial use is
 strictly prohibited" and "This repository can only be used for personal/research/non-commercial purposes." The author's
-commercial offer is the hosted Sync Labs API. Refused when MIRAGE_COMMERCIAL_ONLY=1."""
+commercial offer is the hosted Sync Labs API. Refused when VOCALFACE_COMMERCIAL_ONLY=1."""
 from __future__ import annotations
 
 from pathlib import Path

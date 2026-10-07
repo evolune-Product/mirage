@@ -56,7 +56,7 @@ def job_status(kind: str, ref_id: str, acc: Account = Depends(current_account), 
 
 
 def _require_signature(request: Request, path: str) -> None:
-    """Signed, expiring URLs (see signing.py). Unsigned access only when MIRAGE_ALLOW_PUBLIC_FILES is on
+    """Signed, expiring URLs (see signing.py). Unsigned access only when VOCALFACE_ALLOW_PUBLIC_FILES is on
     (default: dev only)."""
     q = request.query_params
     if signing.verify(path, q.get("exp"), q.get("sig")):

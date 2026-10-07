@@ -103,7 +103,7 @@ def test_consent_gating(client):
 
 
 def test_moderation(client, monkeypatch):
-    monkeypatch.delenv("MIRAGE_MODERATION_OLLAMA_MODEL", raising=False)
+    monkeypatch.delenv("VOCALFACE_MODERATION_OLLAMA_MODEL", raising=False)
     assert moderate("Welcome to our product tour").allowed
     assert not moderate("please send me your password now").allowed
     h = signup(client)

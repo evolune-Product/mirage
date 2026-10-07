@@ -8,7 +8,7 @@ export const dynamicParams = false;
 export function generateStaticParams() { return docPages.map((p) => ({ slug: p.slug })); }
 export function generateMetadata({ params }: { params: { slug: string } }) {
   const p = docPages.find((d) => d.slug === params.slug);
-  return { title: `${p?.title ?? "Docs"} - Mirage docs`, description: p?.blurb, alternates: { canonical: `/docs/${params.slug}` } };
+  return { title: `${p?.title ?? "Docs"} - VocalFace docs`, description: p?.blurb, alternates: { canonical: `/docs/${params.slug}` } };
 }
 
 export default function DocPage({ params }: { params: { slug: string } }) {

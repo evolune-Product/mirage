@@ -1,4 +1,4 @@
-"""Mirage load generator: N simultaneous real WebSocket conversations replaying recorded 16 kHz question audio.
+"""VocalFace load generator: N simultaneous real WebSocket conversations replaying recorded 16 kHz question audio.
 
     cd backend && .venv/bin/python -m loadtest.loadgen --base http://localhost:8440 --db /tmp/cap.db \
         --replica r_035d420020e3 --levels 1,2,3,5,8 --mode both --turns 3 --api-log /tmp/cap_api.log
@@ -295,7 +295,7 @@ def q(v: list[float], p: float) -> float | None:
 
 
 def parse_stage_log(path: str | None, offset: int) -> dict:
-    """Server stage timings (needs MIRAGE_LOG_VOICE=1 on the API): median of stt_s / llm_ft_s / chunk1_s / tts_ft_s per turn."""
+    """Server stage timings (needs VOCALFACE_LOG_VOICE=1 on the API): median of stt_s / llm_ft_s / chunk1_s / tts_ft_s per turn."""
     if not path or not os.path.exists(path):
         return {}
     with open(path, "rb") as f:
@@ -428,7 +428,7 @@ def main():
     ap.add_argument("--db", default="/tmp/cap.db", help="sqlite file of the API under test (face mode registers replicas directly)")
     ap.add_argument("--data", default="/tmp/cap_data")
     ap.add_argument("--replica", default="r_035d420020e3", help="existing replica dir (with source.mp4) under --data/replicas")
-    ap.add_argument("--api-log", default=None, help="API stderr log (run it with MIRAGE_LOG_VOICE=1) for per-stage timings")
+    ap.add_argument("--api-log", default=None, help="API stderr log (run it with VOCALFACE_LOG_VOICE=1) for per-stage timings")
     ap.add_argument("--api-pat", default=r"uvicorn app.main:app --port 8440")
     ap.add_argument("--lip-pat", default=r"lipsync_server:app --port 8441")
     ap.add_argument("--json", default=None, help="write raw results here")

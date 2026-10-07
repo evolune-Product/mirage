@@ -19,7 +19,7 @@ export default function LazyOrb({ className = "", ...rest }: Props) {
   }, []);
   return (
     <div ref={ref} className={`relative ${className}`} aria-hidden>
-      <div className="absolute inset-[18%] rounded-full bg-mirage-gradient opacity-30 blur-3xl" />
+      <div className="absolute inset-[18%] rounded-full bg-vocalface-gradient opacity-30 blur-3xl" />
       {show && <Orb {...rest} className="absolute inset-0" />}
     </div>
   );

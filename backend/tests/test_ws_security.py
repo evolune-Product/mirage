@@ -15,9 +15,9 @@ def _clean(monkeypatch):
     wsguard.reset()
     from app.safety import limiter
     limiter.reset()
-    for k in ("MIRAGE_WS_CONNECT_IP", "MIRAGE_WS_CONNECT_ACCOUNT", "MIRAGE_WS_AUTH_FAIL_IP", "MIRAGE_WS_MAX_SESSIONS"):
+    for k in ("VOCALFACE_WS_CONNECT_IP", "VOCALFACE_WS_CONNECT_ACCOUNT", "VOCALFACE_WS_AUTH_FAIL_IP", "VOCALFACE_WS_MAX_SESSIONS"):
         monkeypatch.delenv(k, raising=False)
-    monkeypatch.delenv("MIRAGE_ALLOW_KEY_IN_URL", raising=False)
+    monkeypatch.delenv("VOCALFACE_ALLOW_KEY_IN_URL", raising=False)
     yield
     wsguard.reset()
 
@@ -60,7 +60,7 @@ def test_ticket_expired_wrong_conversation_and_other_account(env, monkeypatch):
 def test_key_in_url_refused_by_default_allowed_with_flag(env, monkeypatch):
     c, key, cid = env
     assert close_code(c, f"/v1/conversations/{cid}/stream?api_key={key}") == 4401
-    monkeypatch.setenv("MIRAGE_ALLOW_KEY_IN_URL", "1")
+    monkeypatch.setenv("VOCALFACE_ALLOW_KEY_IN_URL", "1")
     with c.websocket_connect(f"/v1/conversations/{cid}/stream?api_key={key}") as ws:
         assert ws.receive_json()["type"] == "ready"
 
@@ -72,21 +72,21 @@ def test_ticket_not_in_logs(env):
 
 def test_connection_rate_limit_per_ip(env, monkeypatch):
     c, key, cid = env
-    monkeypatch.setenv("MIRAGE_WS_CONNECT_IP", "3/60")
+    monkeypatch.setenv("VOCALFACE_WS_CONNECT_IP", "3/60")
     codes = [close_code(c, f"/v1/conversations/{cid}/stream?ticket=bad") for _ in range(5)]
     assert codes[:3] == [4401] * 3 and codes[3:] == [4429, 4429]
 
 
 def test_auth_failure_budget(env, monkeypatch):
     c, key, cid = env
-    monkeypatch.setenv("MIRAGE_WS_AUTH_FAIL_IP", "2/60")
+    monkeypatch.setenv("VOCALFACE_WS_AUTH_FAIL_IP", "2/60")
     codes = [close_code(c, f"/v1/conversations/{cid}/stream?ticket=bad") for _ in range(4)]
     assert codes == [4401, 4401, 4429, 4429]
 
 
 def test_account_connection_rate(env, monkeypatch):
     c, key, cid = env
-    monkeypatch.setenv("MIRAGE_WS_CONNECT_ACCOUNT", "1/60")
+    monkeypatch.setenv("VOCALFACE_WS_CONNECT_ACCOUNT", "1/60")
     with c.websocket_connect(ticket(c, key, cid)["ws_path"]) as ws:
         assert ws.receive_json()["type"] == "ready"
     assert close_code(c, ticket(c, key, cid)["ws_path"]) == 4429
@@ -97,7 +97,7 @@ def test_concurrent_session_cap(env, monkeypatch):
     h = {"x-api-key": key}
     pid = c.get("/v1/personas", headers=h).json()[0]["id"]
     cid2 = c.post("/v1/conversations", json={"persona_id": pid}, headers=h).json()["id"]
-    monkeypatch.setenv("MIRAGE_WS_MAX_SESSIONS", "1")
+    monkeypatch.setenv("VOCALFACE_WS_MAX_SESSIONS", "1")
     with c.websocket_connect(ticket(c, key, cid)["ws_path"]) as ws1:
         assert ws1.receive_json()["type"] == "ready"
         assert close_code(c, ticket(c, key, cid2)["ws_path"]) == 4429
@@ -115,7 +115,7 @@ def test_session_counter_refcounts_reconnect():
 
 def test_msg_guard_unit(monkeypatch):
     t = [0.0]
-    monkeypatch.setenv("MIRAGE_WS_MSG_RATE", "10/20")
+    monkeypatch.setenv("VOCALFACE_WS_MSG_RATE", "10/20")
     g = wsguard.MsgGuard(clock=lambda: t[0])
     assert all(g.check({"bytes": b"x" * 100}) is None for _ in range(20))
     assert g.check({"bytes": b"x"})[0] == 4429
@@ -136,7 +136,7 @@ def _drain_to_close(ws):
 
 def test_message_flood_closes_socket(env, monkeypatch):
     c, key, cid = env
-    monkeypatch.setenv("MIRAGE_WS_MSG_RATE", "1/5")
+    monkeypatch.setenv("VOCALFACE_WS_MSG_RATE", "1/5")
     with c.websocket_connect(ticket(c, key, cid)["ws_path"]) as ws:
         assert ws.receive_json()["type"] == "ready"
         for _ in range(20):

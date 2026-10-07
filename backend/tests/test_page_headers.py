@@ -22,7 +22,7 @@ def test_static_html_has_closed_csp():
 
 
 def test_playground_frameable_only_by_dashboard_origins(monkeypatch):
-    monkeypatch.setenv("MIRAGE_CORS_ORIGINS", "https://app.example.com,*")
+    monkeypatch.setenv("VOCALFACE_CORS_ORIGINS", "https://app.example.com,*")
     for path in ("/static/playground.html", "/v1/playground"):
         r = c.get(path)
         assert "x-frame-options" not in r.headers
@@ -32,7 +32,7 @@ def test_playground_frameable_only_by_dashboard_origins(monkeypatch):
 def test_guest_and_assets_not_frameable_by_others():
     r = c.get("/guest/sh_abc")
     assert r.headers["x-frame-options"] == "DENY" and "frame-ancestors 'none'" in r.headers["content-security-policy"]
-    j = c.get("/static/mirage-client.js")  # scripts do not need a page CSP
+    j = c.get("/static/vocalface-client.js")  # scripts do not need a page CSP
     assert "content-security-policy" not in j.headers and j.headers["x-content-type-options"] == "nosniff"
 
 

@@ -103,7 +103,7 @@ class MultilingualSTT:
 
     def __init__(self, language: str = "auto", model_size: str | None = None):
         self.language = None if language in (None, AUTO) else LANGUAGES.get(language, {}).get("whisper", language)
-        self.size = model_size or os.environ.get("MIRAGE_STT_MULTI_MODEL") or default_stt_model(language)
+        self.size = model_size or os.environ.get("VOCALFACE_STT_MULTI_MODEL") or default_stt_model(language)
         self.last_language: str | None = self.language
 
     def _model(self):

@@ -14,11 +14,11 @@ export function Stages({ c }: { c: Creative }) {
   const p = c.progress; if (!p || p.stage === "done") return null;
   const n = p.scenes ?? 1; const cur = p.scene ?? 0; const tts = p.stage === "tts";
   return (
-    <div className="rounded-xl border border-mirage-cyan/20 bg-mirage-cyan/[0.05] p-3" data-testid="video-progress">
-      <p className="flex items-center gap-2 text-xs text-mirage-cyan"><Spinner size={13} />{tts ? "Generating the voice and caption timings" : `Rendering scene ${cur || 1} of ${n}`}</p>
+    <div className="rounded-xl border border-vocalface-cyan/20 bg-vocalface-cyan/[0.05] p-3" data-testid="video-progress">
+      <p className="flex items-center gap-2 text-xs text-vocalface-cyan"><Spinner size={13} />{tts ? "Generating the voice and caption timings" : `Rendering scene ${cur || 1} of ${n}`}</p>
       <Progress className="mt-2" pct={p.percent ?? (tts ? 5 : 20)} label={`${Math.round(p.percent ?? 0)}%`} />
       {n > 1 && <ol className="mt-1 flex flex-wrap gap-1.5" aria-label="Scene progress">{Array.from({ length: n }).map((_, i) => { const done = !tts && i + 1 < cur; const on = !tts && i + 1 === cur; return (
-        <li key={i} className={`grid h-6 min-w-6 place-items-center rounded-full px-1.5 text-[10px] ring-1 ring-inset ${done ? "bg-mirage-mint text-ink ring-mirage-mint" : on ? "bg-mirage-violet/25 text-white ring-mirage-violet animate-pulse" : "text-gray-500 ring-white/15"}`}>{done ? <Check size={11} /> : i + 1}</li>); })}</ol>}
+        <li key={i} className={`grid h-6 min-w-6 place-items-center rounded-full px-1.5 text-[10px] ring-1 ring-inset ${done ? "bg-vocalface-mint text-ink ring-vocalface-mint" : on ? "bg-vocalface-violet/25 text-white ring-vocalface-violet animate-pulse" : "text-gray-500 ring-white/15"}`}>{done ? <Check size={11} /> : i + 1}</li>); })}</ol>}
     </div>
   );
 }
@@ -43,10 +43,10 @@ export default function VideoCard({ v, rname, extra, i = 0 }: { v: Video; rname:
       {extra}
       {chips.length > 0 && <div className="flex flex-wrap gap-1.5 text-[11px]">{chips.map((x) => <span key={x} className="rounded-full bg-white/5 px-2 py-0.5 text-gray-300">{x}</span>)}</div>}
       <p className="line-clamp-2 text-sm text-gray-300">{v.script}</p>
-      {v.status === "queued" && <p className="flex items-start gap-2 rounded-xl border border-mirage-violet/25 bg-mirage-violet/10 p-3 text-xs leading-relaxed text-gray-300"><Cpu size={14} className="mt-0.5 shrink-0 text-mirage-violet" /><span>Queued: rendering needs a worker, a separate background process. Run this in the backend folder:<code className="mt-1.5 block rounded bg-black/40 px-2 py-1.5 font-mono text-[11px] text-gray-200">python workers/run_worker.py</code></span></p>}
+      {v.status === "queued" && <p className="flex items-start gap-2 rounded-xl border border-vocalface-violet/25 bg-vocalface-violet/10 p-3 text-xs leading-relaxed text-gray-300"><Cpu size={14} className="mt-0.5 shrink-0 text-vocalface-violet" /><span>Queued: rendering needs a worker, a separate background process. Run this in the backend folder:<code className="mt-1.5 block rounded bg-black/40 px-2 py-1.5 font-mono text-[11px] text-gray-200">python workers/run_worker.py</code></span></p>}
       {live && c && <Stages c={c} />}
-      {v.status === "rendering" && !c?.progress && <p className="text-xs text-mirage-cyan">Rendering now. This card refreshes automatically.</p>}
-      {v.status === "error" && <div className="rounded-xl bg-mirage-rose/10 p-3 text-xs text-mirage-rose" role="alert" data-testid="video-error"><p className="font-medium">Rendering failed{job?.attempts ? ` after ${job.attempts} attempt${job.attempts === 1 ? "" : "s"}` : ""}.</p><p className="mt-1 break-words text-gray-300">{job?.error ? job.error.slice(0, 300) : "No error text was recorded. Check the worker logs, then try again."}</p><p className="mt-1 text-gray-400">Your minutes are refunded when a render fails.</p></div>}
+      {v.status === "rendering" && !c?.progress && <p className="text-xs text-vocalface-cyan">Rendering now. This card refreshes automatically.</p>}
+      {v.status === "error" && <div className="rounded-xl bg-vocalface-rose/10 p-3 text-xs text-vocalface-rose" role="alert" data-testid="video-error"><p className="font-medium">Rendering failed{job?.attempts ? ` after ${job.attempts} attempt${job.attempts === 1 ? "" : "s"}` : ""}.</p><p className="mt-1 break-words text-gray-300">{job?.error ? job.error.slice(0, 300) : "No error text was recorded. Check the worker logs, then try again."}</p><p className="mt-1 text-gray-400">Your minutes are refunded when a render fails.</p></div>}
       {v.status === "ready" && (
         <div className="flex flex-wrap gap-2">
           {mp4 && <a className="btn-ghost !px-3 !py-1.5 text-xs" href={mp4} target="_blank" rel="noreferrer"><ExternalLink size={13} />Open</a>}

@@ -2,10 +2,10 @@
 touch of nonlinearity, and fed through the real Session (Silero VAD) while the agent is 'speaking'. Counts false
 barge-ins / false user turns, and checks that a real interruption on top of the echo is still detected.
 
-  cd backend && MIRAGE_VAD=silero .venv/bin/python scripts_echo_sim.py [--app-root <dir with app/>] [--no-ref]
+  cd backend && VOCALFACE_VAD=silero .venv/bin/python scripts_echo_sim.py [--app-root <dir with app/>] [--no-ref]
 
 --app-root runs the same simulation against another checkout (A/B against the pre-change code: `git archive HEAD`).
-Needs /tmp/mirage_bench_cache/q*.pcm (written by scripts_latency.py): 12 Kokoro-synthesised 16 kHz utterances."""
+Needs /tmp/vocalface_bench_cache/q*.pcm (written by scripts_latency.py): 12 Kokoro-synthesised 16 kHz utterances."""
 import argparse
 import asyncio
 import os
@@ -20,7 +20,7 @@ ap.add_argument("--app-root", default=str(Path(__file__).resolve().parent))
 ap.add_argument("--no-ref", action="store_true", help="disable the reference-based echo test (keep the rest)")
 ap.add_argument("--quick", action="store_true")
 args = ap.parse_args()
-os.environ.setdefault("MIRAGE_VAD", "silero")
+os.environ.setdefault("VOCALFACE_VAD", "silero")
 sys.path.insert(0, args.app_root)
 from app.pipeline import session as S  # noqa: E402
 
@@ -30,7 +30,7 @@ if args.no_ref:
     E.ENABLED = False
 SR, FR = 16000, 320
 rng = np.random.default_rng(11)
-CLIPS = [np.frombuffer(p.read_bytes(), np.int16).astype(np.float32) for p in sorted(Path("/tmp/mirage_bench_cache").glob("q*.pcm"))]
+CLIPS = [np.frombuffer(p.read_bytes(), np.int16).astype(np.float32) for p in sorted(Path("/tmp/vocalface_bench_cache").glob("q*.pcm"))]
 
 
 def up24(x):
