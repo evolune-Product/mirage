@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, BookOpen, Check, Cpu, Database, Headphones, Minus, ShieldCheck, Sparkles, Terminal, Video, Globe, GraduationCap, LifeBuoy, Briefcase, X, ChevronDown, Code2, Server, Gauge } from "lucide-react";
 import LazyOrb from "./LazyOrb";
+import { TrademarkNote } from "./Partners";
 import Logo from "./Logo";
 import Reveal from "./Reveal";
 import { CodeMock, ConsentMock, ConversationMock, KnowledgeMock, LatencyBars } from "./Mockups";
@@ -230,15 +231,15 @@ export function Footer() {
     ["Product", [["Conversations", "/#product"], ["Replicas", "/#product"], ["Video generation", "/#product"], ["Compare", "/compare"], ["Roadmap", "/#roadmap"]]],
     ["Use cases", useCases.map((u) => [u.name, `/use-cases/${u.slug}`])],
     ["Developers", [["Docs", "/docs"], ["API reference", "/docs/api"], ["Self-host", "/docs/deploy"], ["API keys", "/dashboard/keys"], ["Changelog", "/changelog"]]],
-    ["Company", [["Pricing", "/pricing"], ["About", "/about"], ["Security", "/security"], ["Terms", "/terms"], ["Privacy", "/privacy"]]],
+    ["Company", [["Pricing", "/pricing"], ["About", "/about"], ["Pitch", "/pitch"], ["Security", "/security"], ["Terms", "/terms"], ["Privacy", "/privacy"]]],
   ] as const;
   return (
     <footer className="border-t border-white/10 bg-ink-2 pb-10 pt-16"><div className={wrap}>
       <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.4fr_repeat(4,1fr)]">
-        <div><Link href="/" aria-label="VocalFace home"><Logo className="text-white" /></Link><p className="mt-3 max-w-xs text-sm text-gray-400">Open-core conversational video AI. Self-host it or use the API.</p></div>
+        <div><Link href="/" aria-label="VocalFace home"><Logo className="text-white" /></Link><p className="mt-3 max-w-xs text-sm text-gray-400">Open-core conversational video AI. Self-host it or use the API.</p><p className="mt-2 max-w-xs text-xs text-gray-500">A product of Evolune EdgeTech LLP.</p></div>
         {cols.map(([t, l]) => <nav key={t} aria-label={t}><p className="font-mono text-xs uppercase tracking-widest text-gray-400">{t}</p><ul className="mt-4 space-y-2.5">{l.map(([a, h]) => <li key={a}><Link href={h} className="text-sm text-gray-300 hover:text-white">{a}</Link></li>)}</ul></nav>)}
       </div>
-      <div className="mt-14 flex flex-col justify-between gap-3 border-t border-white/10 pt-6 text-xs text-gray-400 sm:flex-row"><p>&copy; 2026 VocalFace. All rights reserved.</p><p>Replicas require the explicit, revocable consent of the person depicted.</p></div>
+      <div className="mt-14 flex flex-col justify-between gap-3 border-t border-white/10 pt-6 text-xs text-gray-400 sm:flex-row"><div className="space-y-1"><p>&copy; 2026 Evolune EdgeTech LLP. VocalFace is a product of Evolune EdgeTech LLP. All rights reserved.</p><TrademarkNote /></div><p>Replicas require the explicit, revocable consent of the person depicted.</p></div>
     </div></footer>
   );
 }

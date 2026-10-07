@@ -1,12 +1,13 @@
 import Shell from "@/components/site/Shell";
 import TryIt from "@/components/site/TryIt";
+import { Backing } from "@/components/site/Partners";
 import { Compare, Developers, FAQ, FinalCTA, Features, Hero, Marquee, Pipeline, Pricing, Roadmap, Trust, UseCases } from "@/components/site/Sections";
 
 export const metadata = { alternates: { canonical: "/" } };
 export default function Home() {
   return (
     <Shell>
-      <Hero /><Marquee /><TryIt /><Features /><Pipeline /><UseCases /><Trust /><Developers /><Compare /><Pricing /><Roadmap /><FAQ /><FinalCTA />
+      <Hero /><Marquee /><Backing /><TryIt /><Features /><Pipeline /><UseCases /><Trust /><Developers /><Compare /><Pricing /><Roadmap /><FAQ /><FinalCTA />
     </Shell>
   );
 }

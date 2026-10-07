@@ -13,7 +13,7 @@ const csp = [
   "font-src 'self' data:",
   `connect-src 'self' ${API}${isProd ? "" : " ws: wss:"}`,
   `frame-src ${API}`,
-  "media-src 'self' blob:",
+  `media-src 'self' blob: ${API}`,
   "object-src 'none'", "base-uri 'self'", "form-action 'self'", "frame-ancestors 'none'",
 ].join("; ");
 

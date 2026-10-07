@@ -250,7 +250,13 @@ def install_log_scrubbing() -> None:
         try:
             text = rec.getMessage()  # format first: scrubbing the template alone would eat the %s placeholders
             if any(h in text for h in _SCRUB_HINTS):
-                rec.msg, rec.args = settings.redact(text), None
+                if isinstance(rec.args, tuple) and rec.args:
+                    # keep the tuple shape (uvicorn's access formatter unpacks it): scrub each string argument, not the template
+                    rec.args = tuple(settings.redact(x) if isinstance(x, str) else x for x in rec.args)
+                    msg = rec.getMessage()
+                    if settings.redact(msg) == msg:  # nothing secret left (the key name may remain, its value is already ***)
+                        return rec
+                rec.msg, rec.args = settings.redact(rec.getMessage()), None  # dict args, or a secret sat in the template itself
         except Exception:  # noqa: BLE001  (logging must never break the app)
             pass
         return rec

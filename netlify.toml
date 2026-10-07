@@ -5,6 +5,7 @@
 
 [build.environment]
   NODE_VERSION = "20"
+  NEXT_PUBLIC_SITE_URL = "https://vocalface.com"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
