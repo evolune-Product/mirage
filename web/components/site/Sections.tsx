@@ -123,9 +123,11 @@ export function UseCases() {
       <Reveal><div className="max-w-3xl"><p className="eyebrow !text-[#1e5a8a]">Use cases</p><div className="mt-3"><H2 light>Built for the places people <It>talk</It> to software</H2></div></div></Reveal>
       <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {useCases.map((u, i) => (
-          <Reveal key={u.slug} delay={(i % 3) * 0.08}><Link href={`/use-cases/${u.slug}`} className="group block h-full rounded-3xl border border-black/10 bg-white p-7 transition duration-300 hover:-translate-y-1.5 hover:shadow-[0_24px_60px_-24px_rgba(79,111,168,.5)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-vocalface-violet">
-            <span className="grid h-12 w-12 place-items-center rounded-2xl bg-vocalface-gradient text-ink"><u.Icon size={22} /></span><h3 className="mt-6 font-display text-3xl">{u.name}</h3><p className="mt-2 text-black/70">{u.short}</p>
-            <p className="mt-5 flex items-center gap-1 text-sm font-medium text-black/70 transition group-hover:text-[#1e5a8a]">See how <ArrowRight size={14} className="transition group-hover:translate-x-1" /></p></Link></Reveal>
+          <Reveal key={u.slug} delay={(i % 3) * 0.08}><Link href={`/use-cases/${u.slug}`} className="group block h-full overflow-hidden rounded-3xl border border-black/10 bg-white transition duration-300 hover:-translate-y-1.5 hover:shadow-[0_24px_60px_-24px_rgba(79,111,168,.5)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-vocalface-violet">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={`/images/usecases/${u.slug}.webp`} alt="" loading="lazy" width={900} height={600} className="aspect-[3/2] w-full object-cover transition duration-500 group-hover:scale-[1.03]" />
+            <div className="p-7"><span className="grid h-12 w-12 place-items-center rounded-2xl bg-vocalface-gradient text-ink"><u.Icon size={22} /></span><h3 className="mt-5 font-display text-3xl">{u.name}</h3><p className="mt-2 text-black/70">{u.short}</p>
+            <p className="mt-5 flex items-center gap-1 text-sm font-medium text-black/70 transition group-hover:text-[#1e5a8a]">See how <ArrowRight size={14} className="transition group-hover:translate-x-1" /></p></div></Link></Reveal>
         ))}
       </div>
     </div></section>

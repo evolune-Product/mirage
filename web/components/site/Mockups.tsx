@@ -49,7 +49,9 @@ export function ConversationMock({ className = "" }: { className?: string }) {
       <Window title="vocalface.com / live conversation">
         <div className="grid md:grid-cols-[1fr_1.1fr]">
           <div className="relative flex min-h-[200px] items-center justify-center bg-[radial-gradient(circle_at_50%_40%,rgba(79,111,168,.35),transparent_65%)] p-6 md:min-h-[360px]">
-            <div className={`h-24 w-24 rounded-full bg-vocalface-gradient opacity-90 blur-[1px] md:h-32 md:w-32 ${speaking ? "animate-pulse" : ""}`} />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/images/hero/demo-face.webp" alt="" aria-hidden width={800} height={1000} className={`absolute inset-0 h-full w-full object-cover transition duration-500 ${speaking ? "brightness-105" : "brightness-90"}`} />
+            <span className="absolute right-3 top-3 rounded-full bg-black/40 px-2.5 py-1 font-mono text-[10px] text-gray-300">Illustrative image</span>
             <span className="absolute left-3 top-3 flex items-center gap-1.5 rounded-full bg-black/40 px-2.5 py-1 font-mono text-[10px] text-vocalface-mint"><i className="h-1.5 w-1.5 rounded-full bg-vocalface-mint" />{speaking ? "speaking" : cur ? "listening" : "idle"}</span>
             <span className="absolute bottom-3 left-3 rounded-full bg-black/40 px-2.5 py-1 font-mono text-[10px] text-gray-300">first audio 1.4s</span>
           </div>
