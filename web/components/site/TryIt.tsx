@@ -48,7 +48,7 @@ export default function TryIt() {
           <div className="glass relative rounded-3xl p-4">
             <LazyOrb state={orb} level={orb === "speaking" ? 0.45 : orb === "listening" ? 0.18 : 0} className="mx-auto h-[300px] w-full md:h-[380px]" />
             <div role="group" aria-label="Orb state" className="mt-2 flex flex-wrap justify-center gap-2">
-              {states.map(([s, l]) => <button key={s} aria-pressed={orb === s} onClick={() => setManual(s)} className={`rounded-full border px-4 py-1.5 text-sm transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-vocalface-cyan ${orb === s ? "border-transparent bg-vocalface-gradient text-white" : "border-white/15 text-gray-300 hover:bg-white/5"}`}>{l}</button>)}</div>
+              {states.map(([s, l]) => <button key={s} aria-pressed={orb === s} onClick={() => setManual(s)} className={`rounded-full border px-4 py-1.5 text-sm transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-vocalface-cyan ${orb === s ? "border-transparent bg-vocalface-gradient text-ink" : "border-white/15 text-gray-300 hover:bg-white/5"}`}>{l}</button>)}</div>
           </div>
           <div>
             <p className="mb-3 font-mono text-xs uppercase tracking-widest text-gray-400">Ask something</p>

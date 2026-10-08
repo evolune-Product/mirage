@@ -12,7 +12,7 @@ type Integ = { booking: { enabled: boolean; webhook_url: string; has_secret: boo
 
 function Widgets({ pid }: { pid: string }) {
   const [list, setList] = useState<Widget[] | null>(null); const [busy, setBusy] = useState(false); const [err, setErr] = useState(""); const [rm, setRm] = useState<Widget | null>(null);
-  const [f, setF] = useState({ label: "Talk to us", color: "#6d5efc", position: "bottom-right", domains: "", greeting: "", language: "", max_seconds: "300", max_total: "3600" });
+  const [f, setF] = useState({ label: "Talk to us", color: "#4f6fa8", position: "bottom-right", domains: "", greeting: "", language: "", max_seconds: "300", max_total: "3600" });
   const load = useCallback(() => api<Widget[]>(`/v1/widgets?persona_id=${pid}`).then(setList).catch((x) => { setList([]); if (!/404/.test(x.message)) toast.error(x); }), [pid]);
   useEffect(() => { setList(null); load(); }, [load]);
   async function create(e: React.FormEvent) {

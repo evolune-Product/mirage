@@ -38,7 +38,7 @@ export default function UseCasePage({ params }: { params: { slug: string } }) {
       <section className="bg-cream py-16 text-ink md:py-24"><div className="mx-auto w-full max-w-5xl px-5">
         <h2 className="font-display text-4xl md:text-5xl">Up and running in three steps</h2>
         <ol className="mt-10 grid gap-5 md:grid-cols-3">{u.steps.map(([t, d], i) => <li key={t} className="rounded-3xl border border-black/10 bg-white p-6"><span className="font-display text-5xl text-grad">{i + 1}</span><h3 className="mt-3 text-lg font-semibold">{t}</h3><p className="mt-2 text-sm text-black/70">{d}</p></li>)}</ol>
-        <div className="mt-8 flex gap-3 rounded-2xl border border-[#c2410c]/30 bg-[#fff4ea] p-5 text-sm text-black/80"><Info size={18} className="mt-0.5 shrink-0 text-[#c2410c]" /><p><strong>Honest note.</strong> {u.caution}</p></div>
+        <div className="mt-8 flex gap-3 rounded-2xl border border-[#1e5a8a]/30 bg-[#fff4ea] p-5 text-sm text-black/80"><Info size={18} className="mt-0.5 shrink-0 text-[#1e5a8a]" /><p><strong>Honest note.</strong> {u.caution}</p></div>
       </div></section>
       <section className="bg-ink py-16"><div className="mx-auto w-full max-w-7xl px-5">
         <p className="font-mono text-xs uppercase tracking-widest text-gray-400">More use cases</p>

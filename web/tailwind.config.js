@@ -3,12 +3,12 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        ink: { DEFAULT: "#0b0a10", 2: "#12111a", 3: "#1a1824" },
+        ink: { DEFAULT: "#090b10", 2: "#11141b", 3: "#181c25" },
         cream: { DEFAULT: "#f6f1e8", 2: "#ece5d8" },
-        line: "#2a2733",
-        vocalface: { amber: "#ff9e5e", rose: "#ff4d8d", violet: "#7c5cff", cyan: "#5ce1e6", mint: "#9cf0c4" },
+        line: "#252a35",
+        vocalface: { amber: "#7dd3fc", rose: "#bcd4ea", violet: "#4f6fa8", cyan: "#5ce1e6", mint: "#9cf0c4" },
         // legacy names used by the old dashboard
-        bg: "#0b0a10", panel: "#12111a", accent: "#ff6b9d",
+        bg: "#090b10", panel: "#11141b", accent: "#bcd4ea",
       },
       fontFamily: {
         display: ["var(--font-display)", "Georgia", "serif"],
@@ -16,7 +16,7 @@ module.exports = {
         mono: ["var(--font-mono)", "ui-monospace", "monospace"],
       },
       backgroundImage: {
-        "vocalface-gradient": "linear-gradient(120deg,#ff9e5e 0%,#ff4d8d 45%,#7c5cff 100%)",
+        "vocalface-gradient": "linear-gradient(120deg,#ffffff 0%,#c9d6e6 50%,#7dd3fc 100%)",
         "grid-faint": "linear-gradient(to right,rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(to bottom,rgba(255,255,255,.04) 1px,transparent 1px)",
       },
       keyframes: {

@@ -49,7 +49,7 @@ function Face({ r }: { r: Replica }) {
         : r.status === "ready" && src && !bad
         // eslint-disable-next-line @next/next/no-img-element
         ? <img src={src} alt={r.name} className="h-full w-full object-cover" onError={() => setBad(true)} />
-        : <div className="grid h-full w-full place-items-center bg-[radial-gradient(circle_at_30%_20%,rgba(124,92,255,.35),transparent_70%)] text-gray-500"><ScanFace size={26} /></div>}
+        : <div className="grid h-full w-full place-items-center bg-[radial-gradient(circle_at_30%_20%,rgba(79,111,168,.35),transparent_70%)] text-gray-500"><ScanFace size={26} /></div>}
     </div>
   );
 }

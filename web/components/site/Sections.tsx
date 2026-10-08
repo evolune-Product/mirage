@@ -60,7 +60,7 @@ function Feature({ eyebrow, title, body, bullets, mock, flip, light }: { eyebrow
   return (
     <div className={`grid items-center gap-10 md:gap-16 lg:grid-cols-2 [&>*]:min-w-0 ${flip ? "lg:[&>*:first-child]:order-2" : ""}`}>
       <Reveal>
-        <p className={`eyebrow ${light ? "!text-[#c2410c]" : ""}`}>{eyebrow}</p>
+        <p className={`eyebrow ${light ? "!text-[#1e5a8a]" : ""}`}>{eyebrow}</p>
         <div className="mt-3"><H2 light={light}>{title}</H2></div>
         <p className={`mt-5 max-w-xl text-base md:text-lg ${light ? "text-black/70" : "text-gray-300"}`}>{body}</p>
         <ul className="mt-6 space-y-3">{bullets.map((b) => <li key={b} className={`flex gap-3 text-sm md:text-base ${light ? "text-black/80" : "text-gray-200"}`}><Check size={18} className="mt-0.5 shrink-0 text-vocalface-rose" />{b}</li>)}</ul>
@@ -120,12 +120,12 @@ export function Pipeline() {
 export function UseCases() {
   return (
     <section className="bg-cream py-20 text-ink md:py-32"><div className={wrap}>
-      <Reveal><div className="max-w-3xl"><p className="eyebrow !text-[#c2410c]">Use cases</p><div className="mt-3"><H2 light>Built for the places people <It>talk</It> to software</H2></div></div></Reveal>
+      <Reveal><div className="max-w-3xl"><p className="eyebrow !text-[#1e5a8a]">Use cases</p><div className="mt-3"><H2 light>Built for the places people <It>talk</It> to software</H2></div></div></Reveal>
       <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {useCases.map((u, i) => (
-          <Reveal key={u.slug} delay={(i % 3) * 0.08}><Link href={`/use-cases/${u.slug}`} className="group block h-full rounded-3xl border border-black/10 bg-white p-7 transition duration-300 hover:-translate-y-1.5 hover:shadow-[0_24px_60px_-24px_rgba(124,92,255,.5)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-vocalface-violet">
-            <span className="grid h-12 w-12 place-items-center rounded-2xl bg-vocalface-gradient text-white"><u.Icon size={22} /></span><h3 className="mt-6 font-display text-3xl">{u.name}</h3><p className="mt-2 text-black/70">{u.short}</p>
-            <p className="mt-5 flex items-center gap-1 text-sm font-medium text-black/70 transition group-hover:text-[#c2185b]">See how <ArrowRight size={14} className="transition group-hover:translate-x-1" /></p></Link></Reveal>
+          <Reveal key={u.slug} delay={(i % 3) * 0.08}><Link href={`/use-cases/${u.slug}`} className="group block h-full rounded-3xl border border-black/10 bg-white p-7 transition duration-300 hover:-translate-y-1.5 hover:shadow-[0_24px_60px_-24px_rgba(79,111,168,.5)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-vocalface-violet">
+            <span className="grid h-12 w-12 place-items-center rounded-2xl bg-vocalface-gradient text-ink"><u.Icon size={22} /></span><h3 className="mt-6 font-display text-3xl">{u.name}</h3><p className="mt-2 text-black/70">{u.short}</p>
+            <p className="mt-5 flex items-center gap-1 text-sm font-medium text-black/70 transition group-hover:text-[#1e5a8a]">See how <ArrowRight size={14} className="transition group-hover:translate-x-1" /></p></Link></Reveal>
         ))}
       </div>
     </div></section>
@@ -160,7 +160,7 @@ const rows: [string, string, string][] = [["Open-core, self-hostable", "yes", "r
 export function Compare() {
   return (
     <section className="bg-cream py-20 text-ink md:py-32"><div className="mx-auto w-full max-w-4xl px-5">
-      <Reveal><div className="text-center"><p className="eyebrow !text-[#c2410c]">Comparison</p><div className="mt-3"><H2 light>VocalFace vs typical <It>hosted</It> platforms</H2></div></div></Reveal>
+      <Reveal><div className="text-center"><p className="eyebrow !text-[#1e5a8a]">Comparison</p><div className="mt-3"><H2 light>VocalFace vs typical <It>hosted</It> platforms</H2></div></div></Reveal>
       <Reveal delay={0.1}><div className="mt-12 overflow-hidden rounded-3xl border border-black/10 bg-white shadow-xl"><div className="overflow-x-auto"><table className="w-full min-w-[560px] text-left text-sm">
         <thead><tr className="bg-ink text-white"><th className="p-4 font-medium">&nbsp;</th><th className="p-4 font-display text-xl">VocalFace</th><th className="p-4 font-medium text-gray-300">Typical hosted avatar platforms</th></tr></thead>
         <tbody>{rows.map(([a, b, c]) => <tr key={a} className="border-t border-black/10"><td className="p-4 font-medium">{a}</td><td className="p-4"><span className="flex items-center gap-2 font-medium text-ink">{b.startsWith("yes") || b.startsWith("$0") ? <Check size={16} className="text-emerald-600" /> : <Minus size={16} className="text-amber-600" />}{b}</span></td><td className="p-4 text-black/70">{c}</td></tr>)}</tbody></table></div></div>
@@ -183,7 +183,7 @@ export function Pricing({ light = false }: { light?: boolean }) {
         {plans.map((p, i) => (
           <Reveal key={p.n} delay={i * 0.07} className="h-full"><div className={`relative flex h-full flex-col rounded-3xl border ${p.hot ? "border-transparent bg-vocalface-gradient p-[1px]" : "border-white/10 bg-ink-2 p-7"}`}>
             <div className={`flex h-full flex-col ${p.hot ? "rounded-[23px] bg-ink-2 p-7" : ""}`}>
-              {p.hot && <span className="absolute -top-3 left-7 rounded-full bg-vocalface-gradient px-3 py-1 text-[11px] font-semibold text-white">Most popular</span>}
+              {p.hot && <span className="absolute -top-3 left-7 rounded-full bg-vocalface-gradient px-3 py-1 text-[11px] font-semibold text-ink">Most popular</span>}
               <h3 className="font-display text-3xl text-white">{p.n}</h3><p className="mt-3"><span className="font-display text-5xl text-white">{p.p}</span><span className="text-gray-400">{p.per}</span></p><p className="mt-2 text-sm text-gray-300">{p.d}</p>
               <ul className="mt-6 flex-1 space-y-3">{p.l.map((x) => <li key={x} className="flex gap-2.5 text-sm text-gray-200"><Check size={16} className="mt-0.5 shrink-0 text-vocalface-mint" />{x}</li>)}</ul>
               <Link href={p.href} className={`${p.hot ? "btn-grad" : "btn-ghost"} mt-8`}>{p.cta}</Link></div></div></Reveal>
@@ -207,7 +207,7 @@ const faqs = [
 export function FAQ() {
   return (
     <section id="faq" className="bg-cream py-20 text-ink md:py-32"><div className="mx-auto w-full max-w-3xl px-5">
-      <Reveal><div className="text-center"><p className="eyebrow !text-[#c2410c]">FAQ</p><div className="mt-3"><H2 light>Straight <It>answers</It></H2></div></div></Reveal>
+      <Reveal><div className="text-center"><p className="eyebrow !text-[#1e5a8a]">FAQ</p><div className="mt-3"><H2 light>Straight <It>answers</It></H2></div></div></Reveal>
       <div className="mt-12 space-y-3">{faqs.map(([q, a]) => (
         <Reveal key={q}><details className="group rounded-2xl border border-black/10 bg-white px-6 py-5 open:shadow-lg"><summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-left font-medium [&::-webkit-details-marker]:hidden">{q}<ChevronDown size={18} className="shrink-0 transition group-open:rotate-180" /></summary><p className="mt-3 text-black/70">{a}</p></details></Reveal>))}</div>
     </div></section>

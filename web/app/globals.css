@@ -1,15 +1,15 @@
 @tailwind base;@tailwind components;@tailwind utilities;
 :root{color-scheme:dark}
 html{scroll-behavior:smooth}
-body{background:#0b0a10;color:#ece9f2;font-family:var(--font-sans),system-ui,sans-serif}
+body{background:#090b10;color:#ece9f2;font-family:var(--font-sans),system-ui,sans-serif}
 a:focus-visible,button:focus-visible,summary:focus-visible,input:focus-visible{outline:2px solid #5ce1e6;outline-offset:2px;border-radius:8px}
-::selection{background:#ff4d8d55}
+::selection{background:#bcd4ea55}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 .no-scrollbar{scrollbar-width:none}.no-scrollbar::-webkit-scrollbar{display:none}
 @layer components{
   /* legacy dashboard primitives (restyled) */
   .btn{@apply inline-flex items-center justify-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-medium text-ink transition hover:bg-cream disabled:opacity-50}
-  .btn-grad{@apply inline-flex items-center justify-center gap-2 rounded-full bg-vocalface-gradient px-5 py-2.5 text-sm font-semibold text-white shadow-[0_8px_30px_-8px_rgba(255,77,141,.6)] transition hover:brightness-110 hover:shadow-[0_8px_40px_-6px_rgba(255,77,141,.8)] disabled:opacity-50}
+  .btn-grad{@apply inline-flex items-center justify-center gap-2 rounded-full bg-vocalface-gradient px-5 py-2.5 text-sm font-semibold text-[#090b10] shadow-[0_8px_30px_-8px_rgba(125,211,252,.5)] transition hover:brightness-110 hover:shadow-[0_8px_40px_-6px_rgba(125,211,252,.7)] disabled:opacity-50}
   .btn-ghost{@apply inline-flex items-center justify-center gap-2 rounded-full border border-white/15 px-5 py-2.5 text-sm text-gray-200 transition hover:bg-white/5}
   .input{@apply w-full rounded-xl border border-white/10 bg-ink-2 px-3.5 py-2.5 text-sm outline-none transition placeholder:text-gray-500 focus:border-vocalface-rose/70 focus:ring-2 focus:ring-vocalface-rose/20}
   .card{@apply rounded-2xl border border-white/10 bg-ink-2/80 p-5 backdrop-blur}

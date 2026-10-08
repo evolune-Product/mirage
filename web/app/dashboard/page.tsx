@@ -43,15 +43,15 @@ export default function Overview() {
     <Shell title="Overview" subtitle="Your path from zero to a talking AI face."
       action={d && next >= 0 ? <Link href={steps![next].href} className="btn-grad">{steps![next].cta}<ArrowRight size={15} /></Link> : <Link href="/dashboard/conversations" className="btn-grad">New conversation<ArrowRight size={15} /></Link>}>
       {fresh && (
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} data-testid="onboarding-banner" className="mb-5 flex flex-wrap items-center gap-4 rounded-2xl border border-vocalface-violet/30 bg-[radial-gradient(40rem_12rem_at_0%_0%,rgba(124,92,255,.18),transparent)] p-5">
-          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-vocalface-gradient text-white"><Sparkles size={20} /></span>
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} data-testid="onboarding-banner" className="mb-5 flex flex-wrap items-center gap-4 rounded-2xl border border-vocalface-violet/30 bg-[radial-gradient(40rem_12rem_at_0%_0%,rgba(79,111,168,.18),transparent)] p-5">
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-vocalface-gradient text-ink"><Sparkles size={20} /></span>
           <div className="min-w-0 flex-1 basis-60"><h2 className="font-display text-2xl">New here? Set up your first agent in 5 steps</h2><p className="text-sm text-gray-400">Pick a template, add a face, give consent, create the persona and say hello. About ten minutes, and you can skip anything.</p></div>
           <Link href="/dashboard/onboarding" className="btn-grad">Start guided setup<ArrowRight size={15} /></Link>
         </motion.div>)}
       <div className="grid gap-5 lg:grid-cols-3">
         <div className="card lg:col-span-2 !p-0 overflow-hidden">
           <div className="flex items-center gap-4 border-b border-white/10 p-5">
-            <svg width="64" height="64" viewBox="0 0 64 64" className="shrink-0 -rotate-90"><defs><linearGradient id="ring" x1="0" y1="0" x2="1" y2="1"><stop stopColor="#ff9e5e" /><stop offset=".5" stopColor="#ff4d8d" /><stop offset="1" stopColor="#7c5cff" /></linearGradient></defs>
+            <svg width="64" height="64" viewBox="0 0 64 64" className="shrink-0 -rotate-90"><defs><linearGradient id="ring" x1="0" y1="0" x2="1" y2="1"><stop stopColor="#7dd3fc" /><stop offset=".5" stopColor="#bcd4ea" /><stop offset="1" stopColor="#4f6fa8" /></linearGradient></defs>
               <circle cx="32" cy="32" r={R} stroke="rgba(255,255,255,.08)" strokeWidth="5" fill="none" />
               <motion.circle cx="32" cy="32" r={R} stroke="url(#ring)" strokeWidth="5" fill="none" strokeLinecap="round" strokeDasharray={C} initial={{ strokeDashoffset: C }} animate={{ strokeDashoffset: C * (1 - doneN / 5) }} transition={{ duration: 0.9, ease: "easeOut" }} /></svg>
             <div><h2 className="text-lg font-medium">Get started</h2><p className="text-sm text-gray-400">{d ? (doneN === 5 ? "All set. You have used every part of VocalFace." : `${doneN} of 5 steps complete`) : "Loading your progress..."}</p></div>
@@ -62,7 +62,7 @@ export default function Overview() {
               return (
                 <motion.li key={s.t} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.06 }}
                   className={`flex items-center gap-4 border-b border-white/5 p-4 pl-5 last:border-0 ${cur ? "bg-white/[0.04]" : ""}`}>
-                  <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full text-xs font-semibold ${s.done ? "bg-vocalface-mint text-ink" : cur ? "bg-vocalface-gradient text-white" : "bg-white/10 text-gray-400"}`}>{s.done ? <Check size={16} /> : i + 1}</span>
+                  <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full text-xs font-semibold ${s.done ? "bg-vocalface-mint text-ink" : cur ? "bg-vocalface-gradient text-ink" : "bg-white/10 text-gray-400"}`}>{s.done ? <Check size={16} /> : i + 1}</span>
                   <div className="min-w-0 flex-1">
                     <p className={`text-sm font-medium ${s.done ? "text-gray-400 line-through decoration-white/20" : ""}`}>{s.t}</p>
                     <p className="text-xs text-gray-500">{cur ? s.s : s.n}</p>
@@ -75,7 +75,7 @@ export default function Overview() {
         </div>
         <div className="space-y-5">
           <div className="card">
-            <div className="flex items-center justify-between"><p className="label !mb-0">Credits</p><span className="rounded-full bg-vocalface-gradient px-2 py-0.5 text-[10px] font-semibold uppercase text-white">{d?.st?.plan.name ?? "..."}</span></div>
+            <div className="flex items-center justify-between"><p className="label !mb-0">Credits</p><span className="rounded-full bg-vocalface-gradient px-2 py-0.5 text-[10px] font-semibold uppercase text-ink">{d?.st?.plan.name ?? "..."}</span></div>
             {d ? <><p className="mt-3 font-display text-5xl">{Math.floor(secs / 60)}<span className="text-2xl text-gray-400"> min</span></p>
               <p className="text-xs text-gray-500">{secs} seconds remaining</p>
               <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10"><motion.div className="h-full rounded-full bg-vocalface-gradient" initial={{ width: 0 }} animate={{ width: Math.min(100, (secs / total) * 100) + "%" }} transition={{ duration: 0.9 }} /></div>

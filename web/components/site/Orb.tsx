@@ -38,7 +38,7 @@ uniform float uMode; uniform float uTime; varying float vN; varying float vSeed;
 void main(){
   vec2 uv=gl_PointCoord-.5; float d=length(uv); if(d>.5) discard;
   float a=smoothstep(.5,.0,d);
-  vec3 amber=vec3(1.,.62,.37), rose=vec3(1.,.30,.55), violet=vec3(.49,.36,1.), cyan=vec3(.36,.88,.9);
+  vec3 amber=vec3(.95,.97,1.), rose=vec3(.74,.83,.92), violet=vec3(.31,.44,.66), cyan=vec3(.49,.83,.99);
   float k=vN*.5+.5;
   vec3 col = mix(amber, rose, smoothstep(.2,.55,k)); col = mix(col, violet, smoothstep(.55,.95,k));
   if(uMode==1.) col = mix(col, cyan, .55);

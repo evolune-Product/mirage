@@ -45,8 +45,8 @@ export default function Billing() {
         {plans === null ? [0, 1, 2].map((i) => <Skeleton key={i} className="h-52" />) : paid.map((p, i) => {
           const cur = status?.plan.id === p.id; const pop = i === mid && paid.length > 2;
           return (
-            <motion.div key={p.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }} className={`card relative flex flex-col ${pop ? "!border-vocalface-rose/50 shadow-[0_0_50px_-15px_rgba(255,77,141,.5)]" : ""}`}>
-              {pop && <span className="absolute -top-2.5 right-4 rounded-full bg-vocalface-gradient px-2.5 py-0.5 text-[10px] font-semibold uppercase text-white">Popular</span>}
+            <motion.div key={p.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }} className={`card relative flex flex-col ${pop ? "!border-vocalface-rose/50 shadow-[0_0_50px_-15px_rgba(125,211,252,.5)]" : ""}`}>
+              {pop && <span className="absolute -top-2.5 right-4 rounded-full bg-vocalface-gradient px-2.5 py-0.5 text-[10px] font-semibold uppercase text-ink">Popular</span>}
               <p className="font-medium">{p.name}</p>
               <p className="mt-2 font-display text-5xl">{usd(p.price_cents)}<span className="font-sans text-sm text-gray-400"> / month</span></p>
               <p className="mt-3 flex items-center gap-2 text-sm text-gray-300"><Check size={14} className="text-vocalface-mint" />{p.included_minutes} minutes included</p>

@@ -109,8 +109,8 @@ export function Illo({ kind }: { kind: IlloKind }) {
   return (
     <svg viewBox="0 0 160 120" className="h-28 w-40" fill="none" aria-hidden>
       <defs>
-        <linearGradient id={id} x1="0" y1="0" x2="160" y2="120" gradientUnits="userSpaceOnUse"><stop stopColor="#ff9e5e" /><stop offset=".5" stopColor="#ff4d8d" /><stop offset="1" stopColor="#7c5cff" /></linearGradient>
-        <radialGradient id={id + "b"} cx=".5" cy=".5" r=".5"><stop stopColor="#7c5cff" stopOpacity=".35" /><stop offset="1" stopColor="#7c5cff" stopOpacity="0" /></radialGradient>
+        <linearGradient id={id} x1="0" y1="0" x2="160" y2="120" gradientUnits="userSpaceOnUse"><stop stopColor="#7dd3fc" /><stop offset=".5" stopColor="#bcd4ea" /><stop offset="1" stopColor="#4f6fa8" /></linearGradient>
+        <radialGradient id={id + "b"} cx=".5" cy=".5" r=".5"><stop stopColor="#4f6fa8" stopOpacity=".35" /><stop offset="1" stopColor="#4f6fa8" stopOpacity="0" /></radialGradient>
       </defs>
       <circle cx="80" cy="60" r="56" fill={`url(#${id}b)`} />
       <g stroke={`url(#${id})`} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">

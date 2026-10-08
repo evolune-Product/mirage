@@ -12,7 +12,7 @@ export default function Nav() {
   useEffect(() => { const f = () => setScrolled(window.scrollY > 20); f(); window.addEventListener("scroll", f, { passive: true }); return () => window.removeEventListener("scroll", f); }, []);
   return (
     <>
-      <div className="relative z-[60] bg-vocalface-gradient px-4 py-2 text-center text-xs font-medium text-white sm:text-[13px]">
+      <div className="relative z-[60] bg-vocalface-gradient px-4 py-2 text-center text-xs font-medium text-[#090b10] sm:text-[13px]">
         Open-core and self-hostable. Live real-time face rendering on GPU workers is coming soon. <Link href="/#roadmap" className="underline underline-offset-2">See what ships today <ArrowRight size={12} className="inline" /></Link>
       </div>
       <header className={`sticky top-0 z-50 transition ${scrolled || open ? "border-b border-white/10 bg-ink/90 backdrop-blur-xl" : "border-b border-transparent"}`}>

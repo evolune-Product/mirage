@@ -62,7 +62,7 @@ export default function UsagePanel({ onForbidden }: { onForbidden: () => void })
         {!rep ? <Skeleton className="h-56" /> : rep.used_seconds === 0 && rep.overage.seconds === 0 ? <p className="rounded-xl border border-dashed border-white/15 p-5 text-sm text-gray-500" data-testid="report-empty">No usage recorded in {rep.period}.</p> : (
           <div className="grid gap-4 lg:grid-cols-3" data-testid="report">
             <div className="card lg:col-span-2"><p className="label">Minutes used per day</p>
-              <BarChart title="Minutes used per day" data={rep.daily_used_seconds.map((d) => ({ label: d.date, value: d.seconds / 60 }))} color="#7c5cff" unit="min" fmt={(v) => String(+v.toFixed(1))} /></div>
+              <BarChart title="Minutes used per day" data={rep.daily_used_seconds.map((d) => ({ label: d.date, value: d.seconds / 60 }))} color="#4f6fa8" unit="min" fmt={(v) => String(+v.toFixed(1))} /></div>
             <div className="space-y-4"><div className="card"><p className="label">By kind</p><HBars rows={kinds.map(([l, v]) => ({ label: l as string, value: (v as number) / 60 }))} color="#22d3ee" fmt={(v) => `${+v.toFixed(1)} min`} /></div>
               <div className="card"><p className="label">Overage</p><p className="font-display text-3xl">{usd(rep.overage.spent_cents)}</p><p className="mt-1 text-xs text-gray-500">{mins(rep.overage.seconds)} over plan{rep.overage.enabled && rep.overage.cap_cents ? `, ${usd(rep.overage.remaining_cents)} of the ${usd(rep.overage.cap_cents)} cap left` : ", overage off"}</p></div></div>
           </div>)}

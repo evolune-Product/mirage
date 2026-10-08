@@ -74,7 +74,7 @@ function Sidebar({ path, credits, onNav, signOut }: { path: string; credits: Sta
       <div className="m-3 space-y-3 rounded-xl border border-white/10 bg-ink-3/70 p-3.5">
         <div className="flex items-center justify-between">
           <span className="text-xs text-gray-400">Credits</span>
-          <span className="rounded-full bg-vocalface-gradient px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">{credits?.plan.name ?? "..."}</span>
+          <span className="rounded-full bg-vocalface-gradient px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ink">{credits?.plan.name ?? "..."}</span>
         </div>
         <div>
           <p className="font-mono text-lg leading-none">{credits ? `${Math.floor(secs / 60)}m ${secs % 60}s` : "--"}</p>
@@ -105,7 +105,7 @@ export default function DashLayout({ children }: { children: ReactNode }) {
   const current = nav.find((n) => n.href === path)?.label ?? "Dashboard";
   if (!ok) return <div className="grid min-h-screen place-items-center bg-ink"><div className="h-8 w-8 animate-spin rounded-full border-2 border-white/10 border-t-vocalface-rose" /></div>;
   return (
-    <div className="min-h-screen bg-ink bg-[radial-gradient(60rem_30rem_at_80%_-10%,rgba(124,92,255,.10),transparent),radial-gradient(40rem_25rem_at_0%_0%,rgba(255,77,141,.07),transparent)]">
+    <div className="min-h-screen bg-ink bg-[radial-gradient(60rem_30rem_at_80%_-10%,rgba(79,111,168,.10),transparent),radial-gradient(40rem_25rem_at_0%_0%,rgba(125,211,252,.07),transparent)]">
       {desktop && <aside className="fixed inset-y-0 left-0 z-30 w-64 border-r border-white/[0.07] bg-ink/80 backdrop-blur"><Sidebar path={path} credits={credits} onNav={() => {}} signOut={signOut} /></aside>}
       <header className="sticky top-0 z-30 flex items-center justify-between border-b border-white/[0.07] bg-ink/85 px-4 py-3 backdrop-blur md:hidden">
         <button aria-label="Open menu" onClick={() => setOpen(true)} className="rounded-lg p-1.5 text-gray-300 hover:bg-white/10"><Menu size={20} /></button>

@@ -32,7 +32,7 @@ export default function Settings() {
         <section className="card">
           <h2 className="mb-4 flex items-center gap-2 font-display text-2xl"><Gauge size={18} className="text-vocalface-violet" />Plan and usage</h2>
           {!st ? <Skeleton className="h-32" /> : (<>
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1"><span className="rounded-full bg-vocalface-gradient px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white" data-testid="plan-name">{st.plan.name}</span>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1"><span className="rounded-full bg-vocalface-gradient px-3 py-1 text-xs font-semibold uppercase tracking-wide text-ink" data-testid="plan-name">{st.plan.name}</span>
               <span className="text-sm text-gray-400">{st.plan.price_cents ? `$${(st.plan.price_cents / 100).toFixed(0)} / month` : "Free"} - {st.plan.included_minutes} minutes included</span></div>
             <p className="mt-5 font-display text-5xl leading-none">{Math.floor(secs / 60)}<span className="text-2xl text-gray-500">m {secs % 60}s</span></p>
             <p className="mt-1 text-xs text-gray-500">credits remaining</p>

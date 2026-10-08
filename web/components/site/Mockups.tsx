@@ -5,7 +5,7 @@ import { Check, FileText, ShieldCheck, Upload } from "lucide-react";
 
 export function Window({ title, children, className = "", light = false }: { title: string; children: ReactNode; className?: string; light?: boolean }) {
   return (
-    <div className={`overflow-hidden rounded-2xl border shadow-[0_30px_80px_-30px_rgba(124,92,255,.45)] ${light ? "border-black/10 bg-white" : "border-white/10 bg-ink-2"} ${className}`}>
+    <div className={`overflow-hidden rounded-2xl border shadow-[0_30px_80px_-30px_rgba(79,111,168,.45)] ${light ? "border-black/10 bg-white" : "border-white/10 bg-ink-2"} ${className}`}>
       <div className={`flex items-center gap-2 border-b px-4 py-3 ${light ? "border-black/10 bg-black/[0.03]" : "border-white/10 bg-white/[0.03]"}`}>
         <span className="h-2.5 w-2.5 rounded-full bg-[#ff5f57]" /><span className="h-2.5 w-2.5 rounded-full bg-[#febc2e]" /><span className="h-2.5 w-2.5 rounded-full bg-[#28c840]" />
         <span className="ml-3 truncate font-mono text-[11px] text-gray-400">{title}</span>
@@ -48,7 +48,7 @@ export function ConversationMock({ className = "" }: { className?: string }) {
     <div ref={ref} className={className}>
       <Window title="vocalface.com / live conversation">
         <div className="grid md:grid-cols-[1fr_1.1fr]">
-          <div className="relative flex min-h-[200px] items-center justify-center bg-[radial-gradient(circle_at_50%_40%,rgba(124,92,255,.35),transparent_65%)] p-6 md:min-h-[360px]">
+          <div className="relative flex min-h-[200px] items-center justify-center bg-[radial-gradient(circle_at_50%_40%,rgba(79,111,168,.35),transparent_65%)] p-6 md:min-h-[360px]">
             <div className={`h-24 w-24 rounded-full bg-vocalface-gradient opacity-90 blur-[1px] md:h-32 md:w-32 ${speaking ? "animate-pulse" : ""}`} />
             <span className="absolute left-3 top-3 flex items-center gap-1.5 rounded-full bg-black/40 px-2.5 py-1 font-mono text-[10px] text-vocalface-mint"><i className="h-1.5 w-1.5 rounded-full bg-vocalface-mint" />{speaking ? "speaking" : cur ? "listening" : "idle"}</span>
             <span className="absolute bottom-3 left-3 rounded-full bg-black/40 px-2.5 py-1 font-mono text-[10px] text-gray-300">first audio 1.4s</span>

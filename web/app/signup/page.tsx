@@ -81,7 +81,7 @@ export default function Signup() {
         </div>
       </div>
       <div className="relative min-h-[380px] overflow-hidden border-t border-white/[0.07] bg-ink-2 lg:min-h-0 lg:border-l lg:border-t-0">
-        <div className="absolute inset-0 bg-[radial-gradient(40rem_30rem_at_50%_40%,rgba(124,92,255,.22),transparent),radial-gradient(30rem_20rem_at_20%_90%,rgba(255,77,141,.15),transparent)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(40rem_30rem_at_50%_40%,rgba(79,111,168,.22),transparent),radial-gradient(30rem_20rem_at_20%_90%,rgba(125,211,252,.15),transparent)]" />
         <div className="absolute inset-0 bg-grid-faint [background-size:48px_48px] [mask-image:radial-gradient(circle_at_center,black,transparent_70%)]" />
         <Orb state="idle" autoCycle className="absolute inset-0" />
         <div className="absolute inset-x-0 bottom-0 p-6 sm:p-12">

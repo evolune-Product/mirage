@@ -69,7 +69,7 @@ export default function Conversations() {
         </div>)}
       <AnimatePresence>
         {cur && (
-          <motion.div key={cur.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-6 overflow-hidden rounded-2xl border border-white/10 bg-ink-2 shadow-[0_30px_80px_-30px_rgba(124,92,255,.35)]">
+          <motion.div key={cur.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-6 overflow-hidden rounded-2xl border border-white/10 bg-ink-2 shadow-[0_30px_80px_-30px_rgba(79,111,168,.35)]">
             <div className="flex items-center justify-between gap-3 border-b border-white/10 bg-ink-3/60 px-4 py-2.5">
               <div className="flex min-w-0 items-center gap-3"><span className="hidden gap-1.5 sm:flex"><i className="h-2.5 w-2.5 rounded-full bg-vocalface-rose/70" /><i className="h-2.5 w-2.5 rounded-full bg-vocalface-amber/70" /><i className="h-2.5 w-2.5 rounded-full bg-vocalface-mint/70" /></span>
                 <span className="truncate font-mono text-xs text-gray-400">{cur.id}</span><Badge s={cur.status} />{cur.status === "ended" && <span className="text-xs text-gray-500">{cur.seconds_used}s used</span>}</div>

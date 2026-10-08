@@ -38,7 +38,7 @@ export default function VideoCard({ v, rname, extra, i = 0 }: { v: Video; rname:
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: Math.min(i, 8) * 0.04 }} className="card flex flex-col gap-3 !p-4" data-testid="video-card">
       {mp4 ? <video className={`w-full rounded-xl bg-black ${ASPECT[fmt]}`} controls preload="metadata" poster={thumb || undefined} src={mp4} />
-        : <div className={`grid w-full place-items-center rounded-xl border border-white/10 bg-[radial-gradient(circle_at_50%_40%,rgba(124,92,255,.2),transparent_70%)] text-gray-500 ${ASPECT[fmt]}`}><Clapperboard size={32} /></div>}
+        : <div className={`grid w-full place-items-center rounded-xl border border-white/10 bg-[radial-gradient(circle_at_50%_40%,rgba(79,111,168,.2),transparent_70%)] text-gray-500 ${ASPECT[fmt]}`}><Clapperboard size={32} /></div>}
       <div className="flex items-center justify-between gap-2"><p className="truncate font-mono text-xs text-gray-500">{v.id} - {rname}</p><Badge s={v.status} /></div>
       {extra}
       {chips.length > 0 && <div className="flex flex-wrap gap-1.5 text-[11px]">{chips.map((x) => <span key={x} className="rounded-full bg-white/5 px-2 py-0.5 text-gray-300">{x}</span>)}</div>}

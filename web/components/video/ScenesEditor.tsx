@@ -38,7 +38,7 @@ export default function ScriptEditor({ script, setScript, info, err, placeholder
         <ol className="space-y-2.5" data-testid="scene-list">
           {draft.map((s, i) => (
             <li key={i} className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
-              <div className="mb-1.5 flex items-center gap-2 text-xs text-gray-400"><span className="grid h-5 w-5 place-items-center rounded-full bg-vocalface-gradient text-[10px] font-semibold text-white">{i + 1}</span>Scene {i + 1}<span className="font-mono text-gray-500">{s.length} chars, about {Math.round(s.length / 15)}s</span>
+              <div className="mb-1.5 flex items-center gap-2 text-xs text-gray-400"><span className="grid h-5 w-5 place-items-center rounded-full bg-vocalface-gradient text-[10px] font-semibold text-ink">{i + 1}</span>Scene {i + 1}<span className="font-mono text-gray-500">{s.length} chars, about {Math.round(s.length / 15)}s</span>
                 <span className="ml-auto flex gap-1">
                   <button type="button" aria-label={`Move scene ${i + 1} up`} disabled={i === 0} className="rounded p-1 hover:bg-white/10 disabled:opacity-30" onClick={() => { const d = [...draft]; [d[i - 1], d[i]] = [d[i], d[i - 1]]; commit(d); }}><ArrowUp size={13} /></button>
                   <button type="button" aria-label={`Move scene ${i + 1} down`} disabled={i === draft.length - 1} className="rounded p-1 hover:bg-white/10 disabled:opacity-30" onClick={() => { const d = [...draft]; [d[i + 1], d[i]] = [d[i], d[i + 1]]; commit(d); }}><ArrowDown size={13} /></button>

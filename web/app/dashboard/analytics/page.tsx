@@ -15,7 +15,7 @@ type A = {
 };
 type Ins = { conversations: number; avg_sentiment: number | null; labels: Record<string, number>; declining: number; top_topics: { topic: string; count: number }[]; by_day: { date: string; avg_sentiment: number; conversations: number }[] };
 const RANGES = [7, 30, 90];
-const VIOLET = "#7c5cff", CYAN = "#5ce1e6", MINT = "#9cf0c4", ROSE = "#ff4d8d", AMBER = "#ff9e5e";
+const VIOLET = "#4f6fa8", CYAN = "#5ce1e6", MINT = "#9cf0c4", ROSE = "#bcd4ea", AMBER = "#7dd3fc";
 const lat = (v: number | null) => (v == null ? "-" : v >= 1000 ? (v / 1000).toFixed(2) + " s" : Math.round(v) + " ms");
 
 function Card({ title, sub, children, table }: { title: string; sub?: string; children: React.ReactNode; table?: React.ReactNode }) {

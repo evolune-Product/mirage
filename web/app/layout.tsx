@@ -16,7 +16,7 @@ export const metadata: Metadata = {
   openGraph: { type: "website", siteName: "VocalFace", title: "VocalFace - conversational video AI you can own", description: desc },
   twitter: { card: "summary_large_image", title: "VocalFace - conversational video AI you can own", description: desc },
 };
-export const viewport = { themeColor: "#0b0a10" };
+export const viewport = { themeColor: "#090b10" };
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${display.variable} ${sans.variable} ${mono.variable}`}>

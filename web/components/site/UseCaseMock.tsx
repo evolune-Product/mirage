@@ -5,8 +5,8 @@ export default function UseCaseMock({ u }: { u: UseCase }) {
   return (
     <Window title={u.window}>
       <div className="grid md:grid-cols-[0.8fr_1.2fr]">
-        <div className="relative flex min-h-[180px] items-center justify-center bg-[radial-gradient(circle_at_50%_40%,rgba(124,92,255,.35),transparent_65%)] p-6">
-          <svg viewBox="0 0 120 120" className="h-28 w-28 md:h-36 md:w-36" aria-hidden><defs><linearGradient id={`g-${u.slug}`} x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#ff9e5e" /><stop offset=".5" stopColor="#ff4d8d" /><stop offset="1" stopColor="#7c5cff" /></linearGradient></defs>
+        <div className="relative flex min-h-[180px] items-center justify-center bg-[radial-gradient(circle_at_50%_40%,rgba(79,111,168,.35),transparent_65%)] p-6">
+          <svg viewBox="0 0 120 120" className="h-28 w-28 md:h-36 md:w-36" aria-hidden><defs><linearGradient id={`g-${u.slug}`} x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#7dd3fc" /><stop offset=".5" stopColor="#bcd4ea" /><stop offset="1" stopColor="#4f6fa8" /></linearGradient></defs>
             <circle cx="60" cy="60" r="44" fill={`url(#g-${u.slug})`} /><circle cx="60" cy="60" r="54" fill="none" stroke="#fff" strokeOpacity=".15" /><circle cx="60" cy="60" r="58" fill="none" stroke="#fff" strokeOpacity=".07" /></svg>
           <span className="absolute left-3 top-3 rounded-full bg-black/40 px-2.5 py-1 font-mono text-[10px] text-vocalface-mint">illustrative</span>
         </div>
