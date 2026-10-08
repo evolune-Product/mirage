@@ -92,6 +92,6 @@ Per-step cost at 384x384 with 81 frames was 35 to 76 s (TeaCache skips some step
 
 - `p2_tight` through EchoMimic V3 (about 15 minutes more for 3 s; skipped, time-box).
 - 768x768 EchoMimic V3, longer-than-81-frame generation, Ditto streaming mode, TensorRT paths, any NVIDIA hardware.
-- Any human rating beyond the blind-test page (c5 Ditto, c6 EchoMimic V3 Flash, hidden key in `~/Desktop/Mirage_blind_test/index.html`).
+- Any human rating beyond the blind-test page (c5 Ditto, c6 EchoMimic V3 Flash, hidden key in `~/Desktop/VocalFace_blind_test/index.html`).
 
 **Oct 4 (later):** Ditto and EchoMimic V3 were removed (code, weights, videos, patches) at the owner's request after the blind test; this file is kept only as the record of what was measured.

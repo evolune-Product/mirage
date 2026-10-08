@@ -82,4 +82,4 @@ Chatterbox MIT (weights MIT upstream; the mlx-community card lists Apache-2.0 fo
 
 ## Oct 4 audit (clone samples)
 * demo_assets/demo_face_v2.mp4 audio is Kokoro af_heart (0.847 vs af_heart), not a human: do not use it as a "real voice" reference. Use the founder video.
-* Added `app/voice_clone/audio_checks.py` (clipping, silence, clicks, NaN, bandwidth) with a test, and `scripts_voice_clone_audit.py` (similarity vs reference and Kokoro, WER, checks). Results: ~/Desktop/Mirage_clone_samples/README.md.
+* Added `app/voice_clone/audio_checks.py` (clipping, silence, clicks, NaN, bandwidth) with a test, and `scripts_voice_clone_audit.py` (similarity vs reference and Kokoro, WER, checks). Results: ~/Desktop/VocalFace_clone_samples/README.md.

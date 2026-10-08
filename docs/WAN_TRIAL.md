@@ -29,7 +29,7 @@ Run: `a man looking at the camera and speaking naturally, subtle head movements,
 | First-use extras | T5 on CPU: ~3.5 min load + ~45 s per prompt (cached afterwards); DiT load ~16 s |
 | Memory | process RSS 7-12 GB; MPS driver-allocated peak 45.6 GB (above physical RAM, i.e. allocator cache plus swap/compression pressure; the real working set was not measurable more precisely); `recommended_max_memory` = 26.8 GB. It completed, but the machine is unusable alongside the dev stack during a run. |
 | Throughput | ~680 s of compute per second of video. FlashHead on the same machine is ~28 s per video second (docs/MODEL_TRIALS.md), so Wan TI2V is about 24x slower, and ~500x slower than real time. |
-| Output | 480x480, 33 frames, clip copied to `~/Desktop/Mirage_wan_trial/wan_ti2v5b_480_33f_20steps.mp4`, strip in `strip.png` |
+| Output | 480x480, 33 frames, clip copied to `~/Desktop/VocalFace_wan_trial/wan_ti2v5b_480_33f_20steps.mp4`, strip in `strip.png` |
 
 Metrics (SFace cosine against the source photo, via facelib): face found in 33/33 frames; identity cosine mean 0.748, min 0.630, last frame 0.673 (the same-person threshold for SFace cosine is about 0.363, so it is still recognisably the same face by the metric, but it drifts down over time); jaw-opening range 0.143; head jitter 0.025 (box-centre motion per frame over face width); mean frame-to-frame pixel difference 18.6/255, max 25.7, which is high and consistent with camera/background motion.
 
