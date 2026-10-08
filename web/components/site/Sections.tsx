@@ -34,6 +34,17 @@ export function Hero() {
   );
 }
 
+export function BrandBanner() {
+  return (
+    <section aria-label="VocalFace" className="bg-ink px-5 py-14 md:py-20">
+      <Reveal>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/brand/hero-logo.webp" width={1600} height={900} alt="VocalFace: AI faces. Real conversations." loading="lazy" className="mx-auto w-full max-w-4xl rounded-3xl border border-white/10" />
+      </Reveal>
+    </section>
+  );
+}
+
 export function Marquee() {
   const items = ["Self-hostable", "REST API", "Python SDK", "JavaScript SDK", "Embed widget", "WebSocket streaming", "Consent-gated replicas", "Moderation built in", "Knowledge retrieval", "Open-core"];
   return (
