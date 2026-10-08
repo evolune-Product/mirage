@@ -43,7 +43,7 @@ const road: [string, string, string][] = [
 ];
 
 const open: [string, string][] = [
-  ["SoulX-FlashHead", "face and head motion from audio (Apache-2.0 per its repository)"],
+  ["Open face-animation model", "face and head motion from audio (Apache-2.0 per its repository)"],
   ["Chatterbox", "voice cloning (MIT)"],
   ["Kokoro", "voices (Apache-2.0)"],
   ["Whisper / faster-whisper", "speech to text (MIT)"],
@@ -75,7 +75,7 @@ export default function Page() {
 
       <section className={`${shell} pb-16`}>
         <Reveal><h2 className={h2}>How we chose the face model</h2>
-          <p className="mt-4 max-w-3xl leading-relaxed text-gray-300">We tried seven open approaches for the face: Wav2Lip, MuseTalk, JoyVASA, Ditto, EchoMimic V3, a small Wan2.2 model and a prototype we trained ourselves. We kept <strong className="text-white">SoulX-FlashHead</strong>, which preserved identity best and moved the whole face most naturally from audio alone. That was one rater&apos;s judgement on one face, so independent testing is on the plan. It is designed to run in real time on a single modern NVIDIA GPU; we have not yet measured that ourselves.</p></Reveal>
+          <p className="mt-4 max-w-3xl leading-relaxed text-gray-300">We tried seven open approaches for the face, including lip-sync models, audio-driven talking-head models, a small video-generation model and a prototype we trained ourselves. We kept the one that preserved identity best and moved the whole face most naturally from audio alone. That was one rater&apos;s judgement on one face, so independent testing is on the plan. It is designed to run in real time on a single modern NVIDIA GPU; we have not yet measured that ourselves.</p></Reveal>
       </section>
 
       <section className={`${shell} pb-16`}>
