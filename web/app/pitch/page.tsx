@@ -98,7 +98,7 @@ export default function Page() {
       <section className={`${shell} pb-16`}>
         <Reveal><h2 className={h2}>Where we are, honestly</h2></Reveal>
         <div className="mt-8 grid gap-4 md:grid-cols-2">
-          <div className="card !p-6"><h3 className="font-semibold text-white">Done</h3><ul className="mt-3 space-y-2 text-sm text-gray-300"><li>Working real-time voice agent and generated-video pipeline</li><li>Consent, security and moderation layers, tested</li><li>Dashboard, API, SDKs and embeddable widget</li><li>Member of the NVIDIA Inception program</li></ul></div>
+          <div className="card !p-6"><h3 className="font-semibold text-white">Done</h3><ul className="mt-3 space-y-2 text-sm text-gray-300"><li>Working real-time voice agent and generated-video pipeline</li><li>Consent, security and moderation layers, tested</li><li>Dashboard, API, SDKs and embeddable widget</li><li>Member of the NVIDIA Inception program and Anthropic&apos;s Claude for Startups program</li></ul></div>
           <div className="card !p-6"><h3 className="font-semibold text-white">Not yet</h3><ul className="mt-3 space-y-2 text-sm text-gray-300"><li>No customers or revenue</li><li>Real-time face quality is below the best hosted platforms today</li><li>Two legacy research-licensed components (a live lip-sync model and a photo-animation fallback) must be replaced before commercial launch</li><li>Not yet tested: phones, hosted deployment, live payments</li></ul></div>
         </div>
       </section>

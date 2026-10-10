@@ -28,4 +28,4 @@ When you ship or redistribute any of these, keep their LICENSE and NOTICE files.
 
 ## Trademarks
 
-NVIDIA and NVIDIA Inception are trademarks of NVIDIA Corporation. Membership in the program does not imply endorsement. All other names belong to their owners and are used only to credit their work.
+NVIDIA and NVIDIA Inception are trademarks of NVIDIA Corporation. Membership in the program does not imply endorsement. Claude is a trademark of Anthropic, PBC. All other names belong to their owners and are used only to credit their work.
